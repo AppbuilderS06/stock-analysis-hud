@@ -442,11 +442,11 @@ def build_chart(df, ticker):
         ), row=1, col=1)
 
     # Volume
-    colors = ['#00FF8866' if df['Close'].iloc[i] >= df['Open'].iloc[i] else '#FF6B6B66'
-              for i in range(len(df))]
+    vol_colors = ['#00FF8866' if c >= o else '#FF6B6B66'
+                  for c, o in zip(df['Close'].values, df['Open'].values)]
     fig.add_trace(go.Bar(
-        x=df.index, y=df['Volume'], name='Volume',
-        marker_color=colors, showlegend=False
+        x=df.index, y=df['Volume'].values.tolist(), name='Volume',
+        marker=dict(color=vol_colors), showlegend=False
     ), row=2, col=1)
 
     # MACD
