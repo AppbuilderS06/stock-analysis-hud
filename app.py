@@ -155,17 +155,17 @@ st.markdown("""
 
   /* Signal grid */
   .sig-cell {
-    border-radius: 8px; padding: 10px 6px; text-align: center;
+    border-radius: 8px; padding: 12px 8px; text-align: center;
   }
   .sig-bull { background: #0D2818; border: 1px solid #00FF8830; }
   .sig-bear { background: #2D1015; border: 1px solid #FF6B6B30; }
   .sig-neut { background: #251800; border: 1px solid #FACC1530; }
-  .sig-label { font-size: 10px; color: #4A6080; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+  .sig-label { font-size: 10px; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; font-weight: 600; }
   .info-link { color: #4A6080; text-decoration: none; font-size: 10px; margin-left: 4px; opacity: 0.6; }
   .info-link:hover { color: #5EEAD4; opacity: 1; }
-  .sig-val-g { font-size: 13px; font-weight: 700; color: #00FF88; font-family: 'JetBrains Mono', monospace; }
-  .sig-val-r { font-size: 13px; font-weight: 700; color: #FF6B6B; font-family: 'JetBrains Mono', monospace; }
-  .sig-val-y { font-size: 13px; font-weight: 700; color: #FACC15; font-family: 'JetBrains Mono', monospace; }
+  .sig-val-g { font-size: 14px; font-weight: 700; color: #00FF88; font-family: 'JetBrains Mono', monospace; }
+  .sig-val-r { font-size: 14px; font-weight: 700; color: #FF6B6B; font-family: 'JetBrains Mono', monospace; }
+  .sig-val-y { font-size: 14px; font-weight: 700; color: #FACC15; font-family: 'JetBrains Mono', monospace; }
 
   /* Verdict card */
   .verdict-card { border-radius: 8px; padding: 16px 18px; border-left-width: 3px; border-left-style: solid; }
@@ -1212,6 +1212,13 @@ def render_hud():
           <div class="verdict-note" style="color:{vc['color']};">{a.get('risk_reason','')}</div>
         </div>''', unsafe_allow_html=True)
     with c2:
+        score_meaning = ("Strong bullish setup" if score >= 8 else
+                         "Moderately bullish"   if score >= 6 else
+                         "Mixed signals"        if score >= 4 else
+                         "Moderately bearish"   if score >= 2 else
+                         "Strong bearish setup")
+        bull_names = " · ".join(signals[k]['label'] for k in signals if signals[k]['bull']) or "None"
+        bear_names = " · ".join(signals[k]['label'] for k in signals if not signals[k]['bull']) or "None"
         st.markdown(f'''
         <div class="score-card">
           <div class="score-label">Signal Score</div>
@@ -1221,7 +1228,11 @@ def render_hud():
             <div class="score-bar-fill" style="width:{score*10}%;"></div>
           </div>
           <div class="score-markers"><span>AVOID</span><span>NEUTRAL</span><span>STRONG</span></div>
-          <div style="font-size:11px;color:#6B7280;margin-top:6px;">{bull_count} of 8 signals bullish</div>
+          <div style="font-size:12px;color:{score_col};font-weight:700;margin-top:7px;">{score_meaning}</div>
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid #243348;">
+            <div style="font-size:10px;color:#00FF88;margin-bottom:3px;line-height:1.5;">&#9650; {bull_names}</div>
+            <div style="font-size:10px;color:#FF6B6B;line-height:1.5;">&#9660; {bear_names}</div>
+          </div>
         </div>''', unsafe_allow_html=True)
 
     # ── ZONE 3b: AI SUMMARY ─────────────────────────────────
