@@ -1051,40 +1051,72 @@ def run_analysis(ticker):
         earn_date_str = analysis.get('earnings_date', 'Unknown') or 'Unknown'
         days_to_earn  = 0
         ned = None
-        try:
-            # Source 1: raw.calendar
-            cal = raw.calendar
-            if cal is not None:
-                if hasattr(cal, 'empty') and not cal.empty:
-                    ned = cal.iloc[0].get('Earnings Date', None)
-                elif isinstance(cal, dict):
-                    ned = cal.get('Earnings Date', cal.get('earningsDate', None))
-        except:
-            pass
-        try:
-            # Source 2: info dict — all known field names
-            if ned is None:
-                for key in ['earningsDate','nextEarningsDate','earningsTimestamp','nextFiscalYearEnd']:
-                    val = info.get(key)
-                    if val:
-                        # earningsTimestamp is Unix int
-                        if isinstance(val, (int, float)) and val > 1e9:
-                            ned = pd.Timestamp(val, unit='s')
-                        else:
-                            ned = val
-                        break
-        except:
-            pass
-        try:
-            if ned is not None:
-                ts = pd.Timestamp(ned)
+
+        def parse_earn_date(val):
+            """Convert any earnings date value to a clean future Timestamp or None."""
+            try:
+                if val is None:
+                    return None
+                # Unix int/float (seconds)
+                if isinstance(val, (int, float)) and val > 1e9:
+                    ts = pd.Timestamp(val, unit='s')
+                else:
+                    ts = pd.Timestamp(val)
                 if ts.tzinfo is not None:
                     ts = ts.tz_convert(None)
-                if ts > pd.Timestamp.now():
-                    days_to_earn  = (ts - pd.Timestamp.now()).days
-                    earn_date_str = ts.strftime("%b %d, %Y")
+                # Only return if it's a future date
+                return ts if ts > pd.Timestamp.now() else None
+            except:
+                return None
+
+        # Source 1: raw.calendar (most reliable)
+        try:
+            cal = raw.calendar
+            if cal is not None:
+                if isinstance(cal, dict):
+                    # Dict format: {'Earnings Date': [ts1, ts2], ...}
+                    ed = cal.get('Earnings Date', cal.get('earningsDate'))
+                    if ed is not None:
+                        ned = parse_earn_date(ed[0] if isinstance(ed, (list, tuple)) else ed)
+                elif hasattr(cal, 'columns') and 'Earnings Date' in cal.columns:
+                    # DataFrame format: columns are field names, rows are values
+                    ned = parse_earn_date(cal['Earnings Date'].iloc[0])
+                elif hasattr(cal, 'index') and 'Earnings Date' in cal.index:
+                    # Transposed DataFrame format
+                    ned = parse_earn_date(cal.loc['Earnings Date'].iloc[0])
         except:
             pass
+
+        # Source 2: info dict
+        if ned is None:
+            try:
+                for key in ['earningsDate', 'nextEarningsDate', 'earningsTimestamp']:
+                    val = info.get(key)
+                    if val:
+                        # List format
+                        if isinstance(val, (list, tuple)):
+                            val = val[0]
+                        ned = parse_earn_date(val)
+                        if ned:
+                            break
+            except:
+                pass
+
+        # Source 3: earnings_dates DataFrame (newest yfinance)
+        if ned is None:
+            try:
+                ed_df = raw.earnings_dates
+                if ed_df is not None and not ed_df.empty:
+                    future = ed_df[ed_df.index > pd.Timestamp.now()]
+                    if not future.empty:
+                        ts = future.index[-1]
+                        ned = parse_earn_date(ts)
+            except:
+                pass
+
+        if ned is not None:
+            days_to_earn  = (ned - pd.Timestamp.now()).days
+            earn_date_str = ned.strftime("%b %d, %Y")
 
         # ── Store in session state ─────────────────────────────
         prog.empty()
