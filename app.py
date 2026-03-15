@@ -733,7 +733,14 @@ def run_analysis(ticker):
             rng = h52 - l52
             fibs = [h52 - rng*0.382, h52 - rng*0.500, h52 - rng*0.618]
 
-            # Fetch market context (SP500, NASDAQ, DOW)
+            # ── Safe defaults (prevent UnboundLocalError) ─────────
+            analyst_data  = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
+            earnings_hist = []
+            insider_data  = []
+            news_items    = []
+            vol_data      = {'hv_30':0,'hv_90':0,'bb_upper':0,'bb_lower':0,'bb_mid':0,'bb_width':0,'bb_pct':50,'iv':0,'iv_vs_hv':0}
+
+            # ── Fetch market context (SP500, NASDAQ, DOW)
             try:
                 spy_df = yf.Ticker("SPY").history(period="3mo")
                 qqq_df = yf.Ticker("QQQ").history(period="3mo")
@@ -752,6 +759,25 @@ def run_analysis(ticker):
             except:
                 market_ctx = {"spy_signal":"Unknown","qqq_signal":"Unknown","dia_signal":"Unknown","spy_1m":0,"qqq_1m":0,"dia_1m":0}
             st.session_state.market_ctx = market_ctx
+
+            # ── Fetch news headlines ───────────────────────────
+            try:
+                news_raw = raw.news or []
+                news_items = []
+                for item in (news_raw or [])[:5]:
+                    title = ''
+                    pub   = ''
+                    link  = ''
+                    try:
+                        title = str(item.get('title','') or item.get('content',{}).get('title',''))
+                        pub   = str(item.get('publisher','') or item.get('content',{}).get('provider',{}).get('displayName',''))
+                        link  = str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url',''))
+                    except:
+                        pass
+                    if title:
+                        news_items.append({'title': title, 'publisher': pub, 'link': link})
+            except:
+                news_items = []
 
             # Claude analysis
             info['_market_ctx'] = market_ctx
@@ -826,18 +852,7 @@ def run_analysis(ticker):
             except:
                 insider_data = []
 
-            # ── Fetch news headlines ───────────────────────────
-            try:
-                news_raw = raw.news or []
-                news_items = []
-                for item in news_raw[:5]:
-                    news_items.append({
-                        'title':     str(item.get('title','') or item.get('content',{}).get('title','')),
-                        'publisher': str(item.get('publisher','') or item.get('content',{}).get('provider',{}).get('displayName','')),
-                        'link':      str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url','')),
-                    })
-            except:
-                news_items = []
+            # News fetch moved before Claude call (see above)
 
             # ── Calculate volatility metrics ───────────────────
             try:
