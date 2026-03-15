@@ -11,30 +11,53 @@ from datetime import datetime
 # ── Cached data fetch (15 min TTL — prevents Yahoo rate limiting) ───
 @st.cache_data(ttl=900, show_spinner=False)
 def fetch_ticker_data(ticker):
-    """Fetch all yfinance data once and cache for 15 minutes."""
+    """Fetch all yfinance data — only serializable types (no yf.Ticker object)."""
     yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
-    raw   = yf.Ticker(yf_ticker)
-    df    = raw.history(period="2y")
+    raw = yf.Ticker(yf_ticker)
+    df  = raw.history(period="2y")
     try:    info = raw.info or {}
     except: info = {}
-    try:    calendar   = raw.calendar
-    except: calendar   = None
+    # Calendar — convert DataFrame to dict so it can be pickled
+    calendar = None
+    try:
+        cal = raw.calendar
+        if cal is not None:
+            calendar = cal if isinstance(cal, dict) else (cal.to_dict() if hasattr(cal, 'to_dict') else None)
+    except: pass
     try:    rec_summary = raw.recommendations_summary
     except: rec_summary = None
-    try:    earn_hist  = raw.earnings_history
-    except: earn_hist  = None
-    try:    earn_dates = raw.earnings_dates
-    except: earn_dates = None
-    try:    insider    = raw.insider_transactions
-    except: insider    = None
-    try:    news       = raw.news or []
-    except: news       = []
-    return {
-        'raw': raw, 'df': df, 'info': info,
-        'calendar': calendar, 'rec_summary': rec_summary,
-        'earn_hist': earn_hist, 'earn_dates': earn_dates,
-        'insider': insider, 'news': news,
-    }
+    try:    earn_hist   = raw.earnings_history
+    except: earn_hist   = None
+    try:    earn_dates  = raw.earnings_dates
+    except: earn_dates  = None
+    try:    insider     = raw.insider_transactions
+    except: insider     = None
+    try:    analyst_targets = raw.analyst_price_targets
+    except: analyst_targets = None
+    news = []
+    try:
+        for item in (raw.news or [])[:5]:
+            try:
+                t = str(item.get('title','') or item.get('content',{}).get('title',''))
+                p = str(item.get('publisher','') or item.get('content',{}).get('provider',{}).get('displayName',''))
+                l = str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url',''))
+                if t: news.append({'title':t,'publisher':p,'link':l})
+            except: pass
+    except: pass
+    # IV from options (fetch here while raw is available)
+    iv = 0.0
+    try:
+        opts = raw.options
+        if opts:
+            chain  = raw.option_chain(opts[0])
+            cp     = float(df['Close'].iloc[-1]) if not df.empty else 0
+            atm    = chain.calls.iloc[(chain.calls['strike']-cp).abs().argsort()[:1]]
+            iv     = float(atm['impliedVolatility'].values[0]) * 100
+    except: pass
+    # NOTE: raw (yf.Ticker) is intentionally NOT returned — not pickle-serializable
+    return {'df':df,'info':info,'calendar':calendar,'rec_summary':rec_summary,
+            'earn_hist':earn_hist,'earn_dates':earn_dates,'insider':insider,
+            'analyst_targets':analyst_targets,'news':news,'iv':iv}
 
 @st.cache_data(ttl=900, show_spinner=False)
 def fetch_market_context():
@@ -857,7 +880,6 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         data  = fetch_ticker_data(ticker)
-        raw   = data['raw']
         df    = data['df']
         info  = data['info']
 
@@ -934,7 +956,7 @@ def run_analysis(ticker):
         # Source 2: recommendations_summary for buy/hold/sell counts
         buy_cnt = hold_cnt = sell_cnt = 0
         try:
-            rec = data.get('rec_summary') or raw.recommendations_summary
+            rec = data.get('rec_summary')
             if rec is not None and not rec.empty:
                 r = rec.iloc[0]
                 buy_cnt  = int((r.get('strongBuy',  r.get('strong_buy',  0)) or 0) +
@@ -948,7 +970,7 @@ def run_analysis(ticker):
         # Source 3: analyst_price_targets (newer yfinance)
         if target_mean == 0:
             try:
-                apt = raw.analyst_price_targets
+                apt = data.get('analyst_targets')
                 if apt and isinstance(apt, dict):
                     target_mean = float(apt.get('mean', apt.get('current', 0)) or 0)
                     target_low  = float(apt.get('low',  0) or 0)
@@ -967,18 +989,18 @@ def run_analysis(ticker):
         # ── 7. Earnings history — try multiple sources ───────────
         eh = None
         try:
-            eh = data.get('earn_hist') or raw.earnings_history
+            eh = data.get('earn_hist')
         except:
             pass
         if eh is None or (hasattr(eh, 'empty') and eh.empty):
             try:
-                eh = raw.get_earnings_history()
+                eh = None  # no raw available in cached mode
             except:
                 pass
         if eh is None or (hasattr(eh, 'empty') and eh.empty):
             try:
                 # Newer yfinance: earnings_dates has actual vs estimate
-                ed = raw.earnings_dates
+                ed = data.get('earn_dates')
                 if ed is not None and not ed.empty:
                     eh = ed
             except:
@@ -1005,10 +1027,10 @@ def run_analysis(ticker):
 
         # ── 8. Insider trading ─────────────────────────────────
         try:
-            ins = data.get('insider') or raw.insider_transactions
+            ins = data.get('insider')
             if ins is None or ins.empty:
                 try:
-                    ins = raw.get_insider_transactions()
+                    ins = None  # no raw available
                 except:
                     ins = None
             if ins is not None and not ins.empty:
@@ -1044,23 +1066,9 @@ def run_analysis(ticker):
             bb_u  = bb_m + 2 * bb_s
             bb_l  = bb_m - 2 * bb_s
             bb_w  = (bb_u - bb_l) / bb_m * 100
-            # IV from info (works for stocks with options)
-            iv_raw = (info.get('impliedVolatility') or
-                      info.get('twoHundredDayAverageChangePercent') and None or
-                      0)
-            iv = float(iv_raw or 0) * 100
-            # If still 0 try options chain (first expiry ATM IV)
-            if iv == 0:
-                try:
-                    opts = raw.options
-                    if opts:
-                        chain = raw.option_chain(opts[0])
-                        close_p = float(df['Close'].iloc[-1])
-                        calls = chain.calls
-                        atm = calls.iloc[(calls['strike'] - close_p).abs().argsort()[:1]]
-                        iv = float(atm['impliedVolatility'].values[0]) * 100
-                except:
-                    pass
+            # IV from cached data (fetched in fetch_ticker_data)
+            iv_from_info = float(info.get('impliedVolatility', 0) or 0) * 100
+            iv = data.get('iv', 0) or iv_from_info
             cnow  = float(df['Close'].iloc[-1])
             bb_p  = (cnow - bb_l) / (bb_u - bb_l) * 100 if bb_u != bb_l else 50
             vol_data = {'hv_30': hv30, 'hv_90': hv90, 'bb_upper': bb_u, 'bb_lower': bb_l,
@@ -1093,7 +1101,7 @@ def run_analysis(ticker):
 
         # Source 1: raw.calendar (most reliable)
         try:
-            cal = data.get('calendar') or raw.calendar
+            cal = data.get('calendar')
             if cal is not None:
                 if isinstance(cal, dict):
                     # Dict format: {'Earnings Date': [ts1, ts2], ...}
@@ -1127,7 +1135,7 @@ def run_analysis(ticker):
         # Source 3: earnings_dates DataFrame (newest yfinance)
         if ned is None:
             try:
-                ed_df = data.get('earn_dates') or raw.earnings_dates
+                ed_df = data.get('earn_dates')
                 if ed_df is not None and not ed_df.empty:
                     future = ed_df[ed_df.index > pd.Timestamp.now()]
                     if not future.empty:
