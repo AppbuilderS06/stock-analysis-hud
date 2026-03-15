@@ -121,6 +121,8 @@ st.markdown("""
   .sig-bear { background: #2D1015; border: 1px solid #FF6B6B30; }
   .sig-neut { background: #251800; border: 1px solid #FACC1530; }
   .sig-label { font-size: 10px; color: #4A6080; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+  .info-link { color: #4A6080; text-decoration: none; font-size: 10px; margin-left: 4px; opacity: 0.6; }
+  .info-link:hover { color: #5EEAD4; opacity: 1; }
   .sig-val-g { font-size: 13px; font-weight: 700; color: #00FF88; font-family: 'JetBrains Mono', monospace; }
   .sig-val-r { font-size: 13px; font-weight: 700; color: #FF6B6B; font-family: 'JetBrains Mono', monospace; }
   .sig-val-y { font-size: 13px; font-weight: 700; color: #FACC15; font-family: 'JetBrains Mono', monospace; }
@@ -427,41 +429,63 @@ def build_chart(df, ticker):
 
     # Candlesticks
     fig.add_trace(go.Candlestick(
-        x=df.index, open=df['Open'], high=df['High'],
-        low=df['Low'], close=df['Close'],
-        increasing_line_color='#00FF88', decreasing_line_color='#FF6B6B',
-        increasing_fillcolor='#00FF88', decreasing_fillcolor='#FF6B6B',
+        x=df.index,
+        open=df['Open'].values,
+        high=df['High'].values,
+        low=df['Low'].values,
+        close=df['Close'].values,
+        increasing_line_color='#00FF88',
+        decreasing_line_color='#FF6B6B',
+        increasing_fillcolor='#00FF88',
+        decreasing_fillcolor='#FF6B6B',
         name=ticker, line_width=1
     ), row=1, col=1)
 
     # MAs
-    for ma, color, width in [('MA20','#38BDF8',1.5), ('MA50','#F59E0B',1.5), ('MA200','#FF6B6B',1.5), ('MA100','#A78BFA',1)]:
-        fig.add_trace(go.Scatter(
-            x=df.index, y=df[ma], name=ma,
-            line=dict(color=color, width=width), opacity=0.85
-        ), row=1, col=1)
+    for ma, color, width in [('MA20','#38BDF8',1.5),('MA50','#F59E0B',1.5),('MA200','#FF6B6B',1.5),('MA100','#A78BFA',1)]:
+        if ma in df.columns:
+            fig.add_trace(go.Scatter(
+                x=df.index, y=df[ma].values,
+                name=ma, line=dict(color=color, width=width), opacity=0.85
+            ), row=1, col=1)
 
-    # Volume
-    vol_colors = ['#00FF8866' if c >= o else '#FF6B6B66'
-                  for c, o in zip(df['Close'].values, df['Open'].values)]
+    # Volume — simple bar, no per-bar colors to avoid ValueError
     fig.add_trace(go.Bar(
-        x=df.index, y=df['Volume'].values.tolist(), name='Volume',
-        marker=dict(color=vol_colors), showlegend=False
+        x=df.index,
+        y=df['Volume'].values,
+        name='Volume',
+        marker=dict(color='rgba(56,189,248,0.35)'),
+        showlegend=False
     ), row=2, col=1)
 
-    # MACD
-    fig.add_trace(go.Scatter(x=df.index, y=df['MACD'],    name='MACD',   line=dict(color='#38BDF8', width=1.2)), row=3, col=1)
-    fig.add_trace(go.Scatter(x=df.index, y=df['MACDSig'], name='Signal', line=dict(color='#F59E0B', width=1.2)), row=3, col=1)
-    macd_colors = ['#00FF8866' if v >= 0 else '#FF6B6B66' for v in df['MACDHist']]
-    fig.add_trace(go.Bar(x=df.index, y=df['MACDHist'], name='Hist', marker_color=macd_colors, showlegend=False), row=3, col=1)
+    # MACD line + signal
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df['MACD'].values,
+        name='MACD', line=dict(color='#38BDF8', width=1.2)
+    ), row=3, col=1)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df['MACDSig'].values,
+        name='Signal', line=dict(color='#F59E0B', width=1.2)
+    ), row=3, col=1)
+
+    # MACD histogram — green/red based on value
+    hist_vals = df['MACDHist'].values
+    fig.add_trace(go.Bar(
+        x=df.index,
+        y=hist_vals,
+        name='Hist',
+        marker=dict(color=['rgba(0,255,136,0.5)' if v >= 0 else 'rgba(255,107,107,0.5)' for v in hist_vals]),
+        showlegend=False
+    ), row=3, col=1)
 
     fig.update_layout(
-        height=520,
-        paper_bgcolor='#0E1828', plot_bgcolor='#0E1828',
+        height=540,
+        paper_bgcolor='#0E1828',
+        plot_bgcolor='#0E1828',
         font=dict(color='#94A3B8', family='JetBrains Mono', size=11),
         xaxis_rangeslider_visible=False,
-        legend=dict(bgcolor='#0E1828', bordercolor='#243348', borderwidth=1,
-                    font=dict(size=10), orientation='h', y=1.02),
+        legend=dict(bgcolor='#0E1828', bordercolor='#243348',
+                    borderwidth=1, font=dict(size=10), orientation='h', y=1.02),
         margin=dict(l=50, r=20, t=10, b=10),
         hovermode='x unified'
     )
@@ -469,25 +493,57 @@ def build_chart(df, ticker):
         fig.update_xaxes(showgrid=True, gridcolor='#1A2232', gridwidth=1, row=i, col=1)
         fig.update_yaxes(showgrid=True, gridcolor='#1A2232', gridwidth=1, row=i, col=1)
 
-    fig.update_yaxes(title_text="Price", row=1, col=1)
-    fig.update_yaxes(title_text="Volume", row=2, col=1)
-    fig.update_yaxes(title_text="MACD", row=3, col=1)
+    fig.update_yaxes(title_text='Price', row=1, col=1)
+    fig.update_yaxes(title_text='Vol',   row=2, col=1)
+    fig.update_yaxes(title_text='MACD',  row=3, col=1)
 
     return fig
 
 
 # ── Render helpers ────────────────────────────────────────────
+# Investopedia links for signals and ratios
+INFO_LINKS = {
+    "20 MA":   "https://www.investopedia.com/terms/m/movingaverage.asp",
+    "50 MA":   "https://www.investopedia.com/terms/m/movingaverage.asp",
+    "200 MA":  "https://www.investopedia.com/terms/m/movingaverage.asp",
+    "RSI":     "https://www.investopedia.com/terms/r/rsi.asp",
+    "MACD":    "https://www.investopedia.com/terms/m/macd.asp",
+    "OBV":     "https://www.investopedia.com/terms/o/onbalancevolume.asp",
+    "Volume":  "https://www.investopedia.com/terms/v/volume.asp",
+    "ATR%":    "https://www.investopedia.com/terms/a/atr.asp",
+    "P/E Ratio":    "https://www.investopedia.com/terms/p/price-earningsratio.asp",
+    "P/B Ratio":    "https://www.investopedia.com/terms/p/price-to-bookratio.asp",
+    "PEG Ratio":    "https://www.investopedia.com/terms/p/pegratio.asp",
+    "EPS Growth YoY": "https://www.investopedia.com/terms/e/eps.asp",
+    "Rev Growth YoY": "https://www.investopedia.com/terms/r/revenuerecognition.asp",
+    "RSI (14)":  "https://www.investopedia.com/terms/r/rsi.asp",
+    "MACD Hist": "https://www.investopedia.com/terms/m/macd.asp",
+    "VWAP":      "https://www.investopedia.com/terms/v/vwap.asp",
+    "100 EMA":   "https://www.investopedia.com/terms/e/ema.asp",
+    "52W Range": "https://www.investopedia.com/terms/1/52-week-range.asp",
+    "38.2% Fib": "https://www.investopedia.com/terms/f/fibonaccilevels.asp",
+    "50.0% Fib": "https://www.investopedia.com/terms/f/fibonaccilevels.asp",
+    "61.8% Fib": "https://www.investopedia.com/terms/f/fibonaccilevels.asp",
+    "Market Cap": "https://www.investopedia.com/terms/m/marketcapitalization.asp",
+    "OBV":       "https://www.investopedia.com/terms/o/onbalancevolume.asp",
+}
+
+def info_icon(label):
+    url = INFO_LINKS.get(label, "https://www.investopedia.com/search#q=" + label.replace(" ","+"))
+    return f'<a href="{url}" target="_blank" class="info-link" title="Learn about {label} on Investopedia">ⓘ</a>'
+
 def sig_html(label, val, bull, neut=False):
     cls = "sig-neut" if neut else ("sig-bull" if bull else "sig-bear")
     vcls = "sig-val-y" if neut else ("sig-val-g" if bull else "sig-val-r")
     prefix = "~ " if neut else ("+ " if bull else "− ")
     return f'''<div class="{cls}">
-      <div class="sig-label">{label}</div>
+      <div class="sig-label">{label}{info_icon(label)}</div>
       <div class="{vcls}">{prefix}{val}</div>
     </div>'''
 
-def data_row(label, val, cls="val-w"):
-    return f'<div class="data-row"><span class="data-lbl">{label}</span><span class="{cls}">{val}</span></div>'
+def data_row(label, val, cls="val-w", show_info=False):
+    icon = info_icon(label) if show_info and label in INFO_LINKS else ""
+    return f'<div class="data-row"><span class="data-lbl">{label}{icon}</span><span class="{cls}">{val}</span></div>'
 
 def range_bar_html(low, high, current, cur):
     if high <= low: return ""
@@ -637,7 +693,34 @@ def render_hud():
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 2: STATUS BAR ───────────────────────────────────
-    analyzed = datetime.now().strftime("%b %d · %I:%M %p")
+    # Detect user timezone via JS — works globally for any visitor
+    try:
+        import streamlit.components.v1 as components
+        tz_key = "user_timezone"
+        if tz_key not in st.session_state:
+            st.session_state[tz_key] = "UTC"
+        # Inject JS to capture browser timezone and store via query param
+        components.html("""
+            <script>
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const url = new URL(window.parent.location.href);
+            if (!url.searchParams.get('tz')) {
+                url.searchParams.set('tz', tz);
+                window.parent.history.replaceState({}, '', url.toString());
+            }
+            </script>
+        """, height=0)
+        # Read timezone from query params if available
+        params = st.query_params
+        user_tz = params.get("tz", "UTC")
+        import zoneinfo
+        try:
+            tz_obj   = zoneinfo.ZoneInfo(user_tz)
+            analyzed = datetime.now(tz_obj).strftime("%b %d · %I:%M %p")
+        except:
+            analyzed = datetime.now().strftime("%b %d · %I:%M %p")
+    except:
+        analyzed = datetime.now().strftime("%b %d · %I:%M %p")
     st.markdown(f'''
     <div class="status-bar">
       O&nbsp;<span>{row['Open']:.2f}</span>&nbsp;&nbsp;
@@ -697,9 +780,9 @@ def render_hud():
         levels_html += data_row("Entry zone", f"{cur}{a.get('entry_low',0):.2f} – {cur}{a.get('entry_high',0):.2f}", "val-y")
         levels_html += data_row("VWAP",    f"{cur}{vwap:.2f}",   "val-g" if close > vwap  else "val-r")
         levels_html += data_row("100 EMA", f"{cur}{ema100:.2f}", "val-g" if close > ema100 else "val-r")
-        levels_html += data_row("38.2% Fib", f"{cur}{fib382:.2f}", "val-m")
-        levels_html += data_row("50.0% Fib", f"{cur}{fib500:.2f}", "val-m")
-        levels_html += data_row("61.8% Fib", f"{cur}{fib618:.2f}", "val-m")
+        levels_html += data_row("38.2% Fib", f"{cur}{fib382:.2f}", "val-m", show_info=True)
+        levels_html += data_row("50.0% Fib", f"{cur}{fib500:.2f}", "val-m", show_info=True)
+        levels_html += data_row("61.8% Fib", f"{cur}{fib618:.2f}", "val-m", show_info=True)
         levels_html += data_row(a.get('support1_label','Support 1'),    f"{cur}{a.get('support1',0):.2f}",    "val-g")
         levels_html += data_row(a.get('resistance1_label','Resistance 1'), f"{cur}{a.get('resistance1',0):.2f}", "val-r")
         levels_html += data_row(a.get('support2_label','Support 2'),    f"{cur}{a.get('support2',0):.2f}",    "val-g")
@@ -721,7 +804,7 @@ def render_hud():
         ma200_pct= (close/float(row['MA200'])-1)*100
 
         funds_html = '<div class="panel-body">'
-        funds_html += data_row("Market Cap",     fmt_cap(mc) if mc else "N/A", "val-w")
+        funds_html += data_row("Market Cap",     fmt_cap(mc, show_info=True) if mc else "N/A", "val-w", show_info=True)
         funds_html += data_row("P/E Ratio",      f"{pe:.1f}" if pe else "N/A", "val-r" if pe > 40 else "val-y" if pe > 20 else "val-g")
         funds_html += data_row("P/B Ratio",      f"{pb:.1f}" if pb else "N/A", "val-r" if pb > 5 else "val-g")
         funds_html += data_row("PEG Ratio",      f"{peg:.1f}" if peg else "N/A","val-r" if peg > 3 else "val-y" if peg > 1.5 else "val-g")
@@ -757,16 +840,51 @@ def render_hud():
         st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">Invest</div><div class="tf-note">{a.get("invest_note","")}</div></div>', unsafe_allow_html=True)
 
     # ── ZONE 8: EARNINGS ─────────────────────────────────────
-    earn_days  = a.get('earnings_days', 0) or 0
-    earn_col   = "#FF6B6B" if earn_days < 14 else "#FACC15" if earn_days < 30 else "#94A3B8"
-    beat_str   = a.get('last_earnings_beat','Unknown') or 'Unknown'
+    # Get earnings from yfinance directly — more reliable than Claude
+    try:
+        cal = raw.calendar
+        if cal is not None and not cal.empty:
+            next_earn = cal.iloc[0].get('Earnings Date', None)
+            if next_earn:
+                from datetime import timezone
+                next_earn_dt = pd.Timestamp(next_earn).tz_localize(None) if hasattr(next_earn, 'tzinfo') and next_earn.tzinfo is None else pd.Timestamp(next_earn).tz_convert(None)
+                days_to_earn = (next_earn_dt - pd.Timestamp.now()).days
+                earn_date_str = next_earn_dt.strftime("%b %d, %Y")
+            else:
+                days_to_earn = 0
+                earn_date_str = "Unknown"
+        else:
+            days_to_earn = 0
+            earn_date_str = a.get('earnings_date', 'Unknown') or 'Unknown'
+    except:
+        days_to_earn = 0
+        earn_date_str = a.get('earnings_date', 'Unknown') or 'Unknown'
+
+    # Last earnings beat from yfinance
+    try:
+        earnings_hist = raw.earnings_history
+        if earnings_hist is not None and not earnings_hist.empty:
+            last = earnings_hist.iloc[-1]
+            surprise = last.get('surprisePercent', None)
+            if surprise is not None:
+                surprise_pct = float(surprise) * 100
+                beat_str = f"Beat +{surprise_pct:.1f}%" if surprise_pct > 0 else f"Missed {surprise_pct:.1f}%"
+            else:
+                beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
+        else:
+            beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
+    except:
+        beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
+
+    earn_days  = days_to_earn
+    earn_col   = "#FF6B6B" if 0 < earn_days < 14 else "#FACC15" if 0 < earn_days < 30 else "#94A3B8"
     beat_col   = "#00FF88" if "Beat" in beat_str else "#FF6B6B" if "Miss" in beat_str else "#FACC15"
     c1,c2,c3,c4 = st.columns(4)
     for col, lbl, val, col2 in [
-        (c1,"Next Earnings",  a.get('earnings_date','Unknown'), "#94A3B8"),
-        (c2,"Countdown",      f"{earn_days} days" if earn_days else "Unknown", earn_col),
+        (c1,"Next Earnings",  earn_date_str, "#94A3B8"),
+        (c2,"Countdown",      f"{earn_days} days" if earn_days > 0 else "Unknown", earn_col),
         (c3,"Last Result",    beat_str, beat_col),
-        (c4,"Sector",         a.get('sector','N/A'), "#6B7280"),
+        (c4,"Sector",         info.get('sector', a.get('sector','N/A')), "#6B7280"),
     ]:
         with col:
             st.markdown(f'<div class="earn-bar"><div class="earn-label">{lbl}</div><div class="earn-val" style="color:{col2};">{val}</div></div>', unsafe_allow_html=True)
