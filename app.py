@@ -881,37 +881,94 @@ def run_analysis(ticker):
             st.error(f"Claude API error: {analysis['error']}")
             return
 
-        # ── 6. Analyst ratings ─────────────────────────────────
+        # ── 6. Analyst ratings — try all known yfinance sources ─
         prog.info("⏳ Fetching analyst & earnings data...")
+
+        # Source 1: info dict (most reliable across versions)
+        target_mean = float(info.get('targetMeanPrice',  info.get('targetPrice', 0)) or 0)
+        target_low  = float(info.get('targetLowPrice',   0) or 0)
+        target_high = float(info.get('targetHighPrice',  0) or 0)
+        num_ana     = int(info.get('numberOfAnalystOpinions', info.get('numAnalystOpinions', 0)) or 0)
+        rec_mean    = float(info.get('recommendationMean', 0) or 0)
+        rec_key     = str(info.get('recommendationKey', '') or '')
+
+        # Map rec_mean to key if key missing (1=Strong Buy, 2=Buy, 3=Hold, 4=Sell, 5=Strong Sell)
+        if not rec_key and rec_mean:
+            if rec_mean <= 1.5:   rec_key = 'strong-buy'
+            elif rec_mean <= 2.5: rec_key = 'buy'
+            elif rec_mean <= 3.5: rec_key = 'hold'
+            elif rec_mean <= 4.5: rec_key = 'sell'
+            else:                 rec_key = 'strong-sell'
+
+        # Source 2: recommendations_summary for buy/hold/sell counts
+        buy_cnt = hold_cnt = sell_cnt = 0
         try:
             rec = raw.recommendations_summary
             if rec is not None and not rec.empty:
-                latest = rec.iloc[0]
-                analyst_data = {
-                    'buy':         int(latest.get('strongBuy', 0) + latest.get('buy', 0)),
-                    'hold':        int(latest.get('hold', 0)),
-                    'sell':        int(latest.get('sell', 0) + latest.get('strongSell', 0)),
-                    'target':      float(info.get('targetMeanPrice', 0) or 0),
-                    'target_low':  float(info.get('targetLowPrice', 0) or 0),
-                    'target_high': float(info.get('targetHighPrice', 0) or 0),
-                    'num_analysts':int(info.get('numberOfAnalystOpinions', 0) or 0),
-                    'rec_mean':    float(info.get('recommendationMean', 0) or 0),
-                    'rec_key':     str(info.get('recommendationKey', 'N/A') or 'N/A'),
-                }
+                r = rec.iloc[0]
+                buy_cnt  = int((r.get('strongBuy',  r.get('strong_buy',  0)) or 0) +
+                               (r.get('buy',        0) or 0))
+                hold_cnt = int(r.get('hold', 0) or 0)
+                sell_cnt = int((r.get('strongSell', r.get('strong_sell', 0)) or 0) +
+                               (r.get('sell',       0) or 0))
         except:
             pass
 
-        # ── 7. Earnings history ────────────────────────────────
+        # Source 3: analyst_price_targets (newer yfinance)
+        if target_mean == 0:
+            try:
+                apt = raw.analyst_price_targets
+                if apt and isinstance(apt, dict):
+                    target_mean = float(apt.get('mean', apt.get('current', 0)) or 0)
+                    target_low  = float(apt.get('low',  0) or 0)
+                    target_high = float(apt.get('high', 0) or 0)
+            except:
+                pass
+
+        if target_mean > 0 or buy_cnt > 0 or num_ana > 0:
+            analyst_data = {
+                'buy': buy_cnt, 'hold': hold_cnt, 'sell': sell_cnt,
+                'target': target_mean, 'target_low': target_low,
+                'target_high': target_high, 'num_analysts': num_ana,
+                'rec_mean': rec_mean, 'rec_key': rec_key or 'N/A',
+            }
+
+        # ── 7. Earnings history — try multiple sources ───────────
+        eh = None
         try:
             eh = raw.earnings_history
+        except:
+            pass
+        if eh is None or (hasattr(eh, 'empty') and eh.empty):
+            try:
+                eh = raw.get_earnings_history()
+            except:
+                pass
+        if eh is None or (hasattr(eh, 'empty') and eh.empty):
+            try:
+                # Newer yfinance: earnings_dates has actual vs estimate
+                ed = raw.earnings_dates
+                if ed is not None and not ed.empty:
+                    eh = ed
+            except:
+                pass
+        try:
             if eh is not None and not eh.empty:
+                # Detect column naming convention
+                cols = list(eh.columns) if hasattr(eh, 'columns') else []
                 for _, er in eh.tail(4).iterrows():
-                    est  = float(er.get('epsEstimate', 0) or 0)
-                    act  = float(er.get('epsActual', 0) or 0)
-                    surp = float(er.get('surprisePercent', 0) or 0) * 100
-                    qtr  = str(er.get('period', ''))
-                    earnings_hist.append({'quarter': qtr, 'estimate': est,
-                                          'actual': act, 'surprise': surp, 'beat': surp > 0})
+                    # Try all known field names
+                    est  = float(er.get('EPS Estimate',    er.get('epsEstimate',   er.get('estimate', 0))) or 0)
+                    act  = float(er.get('Reported EPS',    er.get('epsActual',     er.get('actual',   0))) or 0)
+                    surp_raw = er.get('Surprise(%)', er.get('surprisePercent', er.get('surprise', None)))
+                    if surp_raw is not None:
+                        surp = float(surp_raw or 0) * (1 if abs(float(surp_raw or 0)) > 1 else 100)
+                    else:
+                        surp = ((act - est) / abs(est) * 100) if est != 0 else 0
+                    qtr  = str(er.get('period', er.get('Date', er.name if hasattr(er, 'name') else '')))[:10]
+                    if act != 0 or est != 0:
+                        earnings_hist.append({'quarter': qtr, 'estimate': est,
+                                              'actual': act, 'surprise': surp, 'beat': surp > 0})
         except:
             pass
 
@@ -956,7 +1013,23 @@ def run_analysis(ticker):
             bb_u  = bb_m + 2 * bb_s
             bb_l  = bb_m - 2 * bb_s
             bb_w  = (bb_u - bb_l) / bb_m * 100
-            iv    = float(info.get('impliedVolatility', 0) or 0) * 100
+            # IV from info (works for stocks with options)
+            iv_raw = (info.get('impliedVolatility') or
+                      info.get('twoHundredDayAverageChangePercent') and None or
+                      0)
+            iv = float(iv_raw or 0) * 100
+            # If still 0 try options chain (first expiry ATM IV)
+            if iv == 0:
+                try:
+                    opts = raw.options
+                    if opts:
+                        chain = raw.option_chain(opts[0])
+                        close_p = float(df['Close'].iloc[-1])
+                        calls = chain.calls
+                        atm = calls.iloc[(calls['strike'] - close_p).abs().argsort()[:1]]
+                        iv = float(atm['impliedVolatility'].values[0]) * 100
+                except:
+                    pass
             cnow  = float(df['Close'].iloc[-1])
             bb_p  = (cnow - bb_l) / (bb_u - bb_l) * 100 if bb_u != bb_l else 50
             vol_data = {'hv_30': hv30, 'hv_90': hv90, 'bb_upper': bb_u, 'bb_lower': bb_l,
