@@ -862,6 +862,8 @@ def run_analysis(ticker):
         except: pass
 
         # ── Earnings date from calendar ────────────────────────
+        earn_date_str = analysis.get('earnings_date', 'Unknown') or 'Unknown'
+        days_to_earn  = 0
         try:
             cal = raw.calendar
             if cal is not None and not cal.empty:
