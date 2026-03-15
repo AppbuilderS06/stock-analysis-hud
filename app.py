@@ -751,12 +751,24 @@ def main():
             st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Enter a ticker</div>', unsafe_allow_html=True)
             st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:20px;">Type any stock symbol and press Analyze</div>', unsafe_allow_html=True)
 
-            ticker_in = st.text_input("", placeholder="NVDA", key="ticker_input", label_visibility="collapsed")
+            with st.form("ticker_form"):
+                ticker_in = st.text_input("", placeholder="NVDA", key="ticker_input", label_visibility="collapsed")
+                submitted = st.form_submit_button("Analyze →")
+
             ticker_upper = ticker_in.strip().upper() if ticker_in else ""
 
-            if ticker_upper in MULTI_LISTED and len(MULTI_LISTED[ticker_upper]) > 1:
+            if submitted and ticker_upper:
+                if ticker_upper in MULTI_LISTED and len(MULTI_LISTED[ticker_upper]) > 1:
+                    st.session_state['show_multi'] = ticker_upper
+                else:
+                    t = MULTI_LISTED.get(ticker_upper, [{'ticker': ticker_upper}])[0]['ticker']
+                    run_analysis(t)
+
+            # Show disambiguation if needed
+            if 'show_multi' in st.session_state and st.session_state['show_multi'] == ticker_upper:
+                mu = st.session_state['show_multi']
                 st.markdown('<div style="background:#0F3030;border:1px solid #14B8A6;border-radius:8px;padding:8px 14px;margin-top:8px;font-size:11px;color:#5EEAD4;letter-spacing:1px;">MULTIPLE LISTINGS FOUND — SELECT ONE:</div>', unsafe_allow_html=True)
-                for opt in MULTI_LISTED[ticker_upper]:
+                for opt in MULTI_LISTED[mu]:
                     ca, cb, cc = st.columns([2, 3, 1])
                     with ca:
                         st.markdown(f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{opt["ticker"]}</span>', unsafe_allow_html=True)
@@ -764,11 +776,8 @@ def main():
                         st.markdown(f'<span style="font-size:12px;color:#E2E8F0;">{opt["name"]}</span>', unsafe_allow_html=True)
                     with cc:
                         if st.button(opt["exchange"], key=f'btn_{opt["ticker"]}'):
+                            del st.session_state['show_multi']
                             run_analysis(opt["ticker"])
-            elif st.button("Analyze →"):
-                if ticker_upper:
-                    t = MULTI_LISTED.get(ticker_upper, [{'ticker': ticker_upper}])[0]['ticker']
-                    run_analysis(t)
 
             st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:16px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: add .TO (RY.TO) &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
         return
@@ -1053,11 +1062,17 @@ def run_analysis(ticker):
         except:
             pass
         try:
-            # Source 2: info dict
+            # Source 2: info dict — all known field names
             if ned is None:
-                ned = (info.get('earningsDate') or
-                       info.get('nextEarningsDate') or
-                       info.get('earningsTimestamp'))
+                for key in ['earningsDate','nextEarningsDate','earningsTimestamp','nextFiscalYearEnd']:
+                    val = info.get(key)
+                    if val:
+                        # earningsTimestamp is Unix int
+                        if isinstance(val, (int, float)) and val > 1e9:
+                            ned = pd.Timestamp(val, unit='s')
+                        else:
+                            ned = val
+                        break
         except:
             pass
         try:
