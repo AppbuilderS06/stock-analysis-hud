@@ -705,200 +705,201 @@ def main():
 
 
 def run_analysis(ticker):
-    with st.spinner(f"Analyzing {ticker}..."):
+    prog = st.empty()
+    try:
+        prog.info(f"⏳ Fetching price data for {ticker}...")
+
+        # Normalize ticker for yfinance
+        yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
+        raw = yf.Ticker(yf_ticker)
+        df  = raw.history(period="2y")
+        if df.empty or len(df) < 50:
+            prog.empty()
+            st.error(f"No data found for {ticker}. Check the ticker symbol.")
+            return
+
+        df = calculate_indicators(df)
+        if len(df) < 20:
+            prog.empty()
+            st.error("Not enough data to calculate indicators.")
+            return
+
+        prog.info(f"⏳ Fetching fundamentals for {ticker}...")
         try:
-            # Fetch data — 2 years for enough MA200 history
-            # yfinance uses hyphens not dots for some tickers
-            yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
-            raw = yf.Ticker(yf_ticker)
-            df  = raw.history(period="2y")
-            if df.empty or len(df) < 50:
-                st.error(f"No data found for {ticker}. Check the ticker symbol.")
-                return
-
-            df = calculate_indicators(df)
-            if len(df) < 20:
-                st.error("Not enough data to calculate indicators.")
-                return
-
             info = raw.info or {}
-            row  = df.iloc[-1]
-            prev = df.iloc[-2]
+        except:
+            info = {}
 
-            signals, score = calc_signals(row)
+        row  = df.iloc[-1]
+        prev = df.iloc[-2]
+        signals, score = calc_signals(row)
 
-            # Fibonacci
-            h52 = float(info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()))
-            l52 = float(info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min()))
-            rng = h52 - l52
-            fibs = [h52 - rng*0.382, h52 - rng*0.500, h52 - rng*0.618]
+        # Fibonacci
+        h52 = float(info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()))
+        l52 = float(info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min()))
+        rng = h52 - l52
+        fibs = [h52 - rng*0.382, h52 - rng*0.500, h52 - rng*0.618]
 
-            # ── Safe defaults (prevent UnboundLocalError) ─────────
-            analyst_data  = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
-            earnings_hist = []
-            insider_data  = []
-            news_items    = []
-            vol_data      = {'hv_30':0,'hv_90':0,'bb_upper':0,'bb_lower':0,'bb_mid':0,'bb_width':0,'bb_pct':50,'iv':0,'iv_vs_hv':0}
+        # ── Safe defaults ──────────────────────────────────────
+        analyst_data  = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
+        earnings_hist = []
+        insider_data  = []
+        news_items    = []
+        vol_data      = {'hv_30':0,'hv_90':0,'bb_upper':0,'bb_lower':0,'bb_mid':0,'bb_width':0,'bb_pct':50,'iv':0,'iv_vs_hv':0}
 
-            # ── Fetch market context (SP500, NASDAQ, DOW)
-            try:
-                spy_df = yf.Ticker("SPY").history(period="3mo")
-                qqq_df = yf.Ticker("QQQ").history(period="3mo")
-                dia_df = yf.Ticker("DIA").history(period="3mo")
-                def idx_signal(d):
-                    if d.empty or len(d)<20: return "Unknown"
-                    c=float(d["Close"].iloc[-1]); m20=float(d["Close"].tail(20).mean())
-                    m50=float(d["Close"].tail(50).mean()) if len(d)>=50 else m20
-                    return "Bullish" if c>m20 and c>m50 else "Bearish" if c<m20 and c<m50 else "Neutral"
-                def idx_chg(d, days=20):
-                    return 0 if d.empty or len(d)<days else (float(d["Close"].iloc[-1])/float(d["Close"].iloc[-days])-1)*100
-                market_ctx = {
-                    "spy_signal": idx_signal(spy_df), "qqq_signal": idx_signal(qqq_df), "dia_signal": idx_signal(dia_df),
-                    "spy_1m": idx_chg(spy_df), "qqq_1m": idx_chg(qqq_df), "dia_1m": idx_chg(dia_df),
+        # ── Market context — batched ───────────────────────────
+        prog.info("⏳ Fetching market context (SPY/QQQ/DIA)...")
+        try:
+            idx_batch = yf.download(
+                ["SPY","QQQ","DIA"], period="3mo",
+                auto_adjust=True, progress=False, threads=True
+            )
+            def idx_sig(sym):
+                try:
+                    s = idx_batch["Close"][sym].dropna() if ("Close",sym) in idx_batch.columns else idx_batch["Close"].dropna()
+                    if len(s)<20: return "Unknown", 0
+                    c=float(s.iloc[-1]); m20=float(s.tail(20).mean())
+                    m50=float(s.tail(50).mean()) if len(s)>=50 else m20
+                    sig = "Bullish" if c>m20 and c>m50 else "Bearish" if c<m20 and c<m50 else "Neutral"
+                    return sig, round((c/float(s.iloc[-20])-1)*100,2)
+                except: return "Unknown", 0
+            spy_sig,spy_chg = idx_sig("SPY")
+            qqq_sig,qqq_chg = idx_sig("QQQ")
+            dia_sig,dia_chg = idx_sig("DIA")
+            market_ctx = {"spy_signal":spy_sig,"qqq_signal":qqq_sig,"dia_signal":dia_sig,
+                          "spy_1m":spy_chg,"qqq_1m":qqq_chg,"dia_1m":dia_chg}
+        except:
+            market_ctx = {"spy_signal":"Unknown","qqq_signal":"Unknown","dia_signal":"Unknown",
+                          "spy_1m":0,"qqq_1m":0,"dia_1m":0}
+        st.session_state.market_ctx = market_ctx
+
+        # ── News (before Claude so it can analyze them) ────────
+        prog.info(f"⏳ Fetching news for {ticker}...")
+        try:
+            news_raw = raw.news or []
+            for item in (news_raw or [])[:5]:
+                try:
+                    title = str(item.get('title','') or item.get('content',{}).get('title',''))
+                    pub   = str(item.get('publisher','') or item.get('content',{}).get('provider',{}).get('displayName',''))
+                    link  = str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url',''))
+                    if title: news_items.append({'title':title,'publisher':pub,'link':link})
+                except: pass
+        except: pass
+
+        # ── Claude AI analysis ─────────────────────────────────
+        prog.info(f"🤖 Running AI analysis... (10-15 sec)")
+        info['_market_ctx'] = market_ctx
+        info['_news']       = news_items
+        analysis = get_claude_analysis(ticker, info, df, signals, score, fibs)
+        if 'error' in analysis:
+            prog.empty()
+            st.error(f"Claude API error: {analysis['error']}")
+            return
+
+        # ── Analyst ratings ────────────────────────────────────
+        prog.info("⏳ Fetching analyst & earnings data...")
+        try:
+            rec = raw.recommendations_summary
+            if rec is not None and not rec.empty:
+                latest = rec.iloc[0]
+                analyst_data = {
+                    'buy':       int(latest.get('strongBuy',0) + latest.get('buy',0)),
+                    'hold':      int(latest.get('hold',0)),
+                    'sell':      int(latest.get('sell',0) + latest.get('strongSell',0)),
+                    'target':    float(info.get('targetMeanPrice',0) or 0),
+                    'target_low':float(info.get('targetLowPrice',0) or 0),
+                    'target_high':float(info.get('targetHighPrice',0) or 0),
+                    'num_analysts':int(info.get('numberOfAnalystOpinions',0) or 0),
+                    'rec_mean':  float(info.get('recommendationMean',0) or 0),
+                    'rec_key':   str(info.get('recommendationKey','N/A') or 'N/A'),
                 }
-            except:
-                market_ctx = {"spy_signal":"Unknown","qqq_signal":"Unknown","dia_signal":"Unknown","spy_1m":0,"qqq_1m":0,"dia_1m":0}
-            st.session_state.market_ctx = market_ctx
+        except: pass
 
-            # ── Fetch news headlines ───────────────────────────
-            try:
-                news_raw = raw.news or []
-                news_items = []
-                for item in (news_raw or [])[:5]:
-                    title = ''
-                    pub   = ''
-                    link  = ''
-                    try:
-                        title = str(item.get('title','') or item.get('content',{}).get('title',''))
-                        pub   = str(item.get('publisher','') or item.get('content',{}).get('provider',{}).get('displayName',''))
-                        link  = str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url',''))
-                    except:
-                        pass
-                    if title:
-                        news_items.append({'title': title, 'publisher': pub, 'link': link})
-            except:
-                news_items = []
+        # ── Earnings history ───────────────────────────────────
+        try:
+            eh = raw.earnings_history
+            if eh is not None and not eh.empty:
+                for _, row_e in eh.tail(4).iterrows():
+                    est  = float(row_e.get('epsEstimate',0) or 0)
+                    act  = float(row_e.get('epsActual',0) or 0)
+                    surp = float(row_e.get('surprisePercent',0) or 0) * 100
+                    qtr  = str(row_e.get('period',''))
+                    earnings_hist.append({'quarter':qtr,'estimate':est,'actual':act,'surprise':surp,'beat':surp>0})
+        except: pass
 
-            # Claude analysis
-            info['_market_ctx'] = market_ctx
-            info['_news'] = news_items
-            analysis = get_claude_analysis(ticker, info, df, signals, score, fibs)
-            if 'error' in analysis:
-                st.error(f"Claude API error: {analysis['error']}")
-                return
+        # ── Insider trading ────────────────────────────────────
+        try:
+            ins = raw.insider_transactions
+            if ins is not None and not ins.empty:
+                for _, row_i in ins.head(5).iterrows():
+                    shares = int(row_i.get('shares',0) or 0)
+                    val    = float(row_i.get('value',0) or 0)
+                    text   = str(row_i.get('text','') or '')
+                    name   = str(row_i.get('filerName','') or row_i.get('insider',''))
+                    role   = str(row_i.get('filerRelation','') or '')
+                    date_i = str(row_i.get('startDate','') or '')
+                    is_buy = 'purchase' in text.lower() or 'buy' in text.lower() or shares > 0
+                    insider_data.append({'name':name[:20],'role':role[:20],'type':'BUY' if is_buy else 'SELL',
+                                         'shares':abs(shares),'value':abs(val),'date':str(date_i)[:10]})
+        except: pass
 
-            # ── Fetch analyst ratings ─────────────────────────
-            try:
-                rec = raw.recommendations_summary
-                if rec is not None and not rec.empty:
-                    latest = rec.iloc[0]
-                    analyst_data = {
-                        'buy':       int(latest.get('strongBuy',0) + latest.get('buy',0)),
-                        'hold':      int(latest.get('hold',0)),
-                        'sell':      int(latest.get('sell',0) + latest.get('strongSell',0)),
-                        'target':    float(info.get('targetMeanPrice',0) or 0),
-                        'target_low':float(info.get('targetLowPrice',0) or 0),
-                        'target_high':float(info.get('targetHighPrice',0) or 0),
-                        'num_analysts': int(info.get('numberOfAnalystOpinions',0) or 0),
-                        'rec_mean':  float(info.get('recommendationMean',0) or 0),
-                        'rec_key':   str(info.get('recommendationKey','N/A') or 'N/A'),
-                    }
+        # ── Volatility metrics ─────────────────────────────────
+        try:
+            log_returns = np.log(df['Close'] / df['Close'].shift(1)).dropna()
+            hv_30 = float(log_returns.tail(30).std() * np.sqrt(252) * 100)
+            hv_90 = float(log_returns.tail(90).std() * np.sqrt(252) * 100) if len(log_returns)>=90 else hv_30
+            bb_mid   = float(df['Close'].tail(20).mean())
+            bb_std   = float(df['Close'].tail(20).std())
+            bb_upper = bb_mid + 2*bb_std
+            bb_lower = bb_mid - 2*bb_std
+            bb_width = (bb_upper - bb_lower) / bb_mid * 100
+            iv       = float(info.get('impliedVolatility',0) or 0) * 100
+            close_now= float(df['Close'].iloc[-1])
+            bb_pct   = (close_now - bb_lower)/(bb_upper - bb_lower)*100 if bb_upper != bb_lower else 50
+            vol_data = {'hv_30':hv_30,'hv_90':hv_90,'bb_upper':bb_upper,'bb_lower':bb_lower,
+                        'bb_mid':bb_mid,'bb_width':bb_width,'bb_pct':bb_pct,'iv':iv,
+                        'iv_vs_hv':iv/hv_30 if hv_30>0 else 0}
+        except: pass
+
+        # ── Earnings date from calendar ────────────────────────
+        try:
+            cal = raw.calendar
+            if cal is not None and not cal.empty:
+                next_earn = cal.iloc[0].get('Earnings Date', None)
+                if next_earn:
+                    next_earn_dt = pd.Timestamp(next_earn).tz_localize(None) if hasattr(next_earn,'tzinfo') and next_earn.tzinfo is None else pd.Timestamp(next_earn).tz_convert(None)
+                    days_to_earn = (next_earn_dt - pd.Timestamp.now()).days
+                    earn_date_str = next_earn_dt.strftime("%b %d, %Y")
                 else:
-                    analyst_data = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
-            except:
-                analyst_data = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
+                    days_to_earn = 0; earn_date_str = analysis.get('earnings_date','Unknown') or 'Unknown'
+            else:
+                days_to_earn = 0; earn_date_str = analysis.get('earnings_date','Unknown') or 'Unknown'
+        except:
+            days_to_earn = 0; earn_date_str = analysis.get('earnings_date','Unknown') or 'Unknown'
 
-            # ── Fetch earnings history ─────────────────────────
-            try:
-                eh = raw.earnings_history
-                earnings_hist = []
-                if eh is not None and not eh.empty:
-                    for _, row_e in eh.tail(4).iterrows():
-                        est  = float(row_e.get('epsEstimate',0) or 0)
-                        act  = float(row_e.get('epsActual',0) or 0)
-                        surp = float(row_e.get('surprisePercent',0) or 0) * 100
-                        qtr  = str(row_e.get('period',''))
-                        earnings_hist.append({
-                            'quarter': qtr,
-                            'estimate': est,
-                            'actual': act,
-                            'surprise': surp,
-                            'beat': surp > 0
-                        })
-            except:
-                earnings_hist = []
+        # ── Store in session ───────────────────────────────────
+        prog.empty()
+        st.session_state.analysis      = analysis
+        st.session_state.analyst_data  = analyst_data
+        st.session_state.earnings_hist = earnings_hist
+        st.session_state.insider_data  = insider_data
+        st.session_state.news_items    = news_items
+        st.session_state.vol_data      = vol_data
+        st.session_state.earn_date_str = earn_date_str
+        st.session_state.days_to_earn  = days_to_earn
+        st.session_state.df            = df
+        st.session_state.info          = info
+        st.session_state.ticker        = ticker
+        st.session_state.signals       = signals
+        st.session_state.score         = score
+        st.session_state.fibs          = fibs
+        st.session_state.row           = row
+        st.session_state.prev          = prev
+        st.rerun()
 
-            # ── Fetch insider trading ──────────────────────────
-            try:
-                ins = raw.insider_transactions
-                insider_data = []
-                if ins is not None and not ins.empty:
-                    for _, row_i in ins.head(5).iterrows():
-                        shares = int(row_i.get('shares',0) or 0)
-                        val    = float(row_i.get('value',0) or 0)
-                        text   = str(row_i.get('text','') or '')
-                        name   = str(row_i.get('filerName','') or row_i.get('insider',''))
-                        role   = str(row_i.get('filerRelation','') or '')
-                        date_i = str(row_i.get('startDate','') or '')
-                        is_buy = 'purchase' in text.lower() or 'buy' in text.lower() or shares > 0
-                        insider_data.append({
-                            'name': name[:20],
-                            'role': role[:20],
-                            'type': 'BUY' if is_buy else 'SELL',
-                            'shares': abs(shares),
-                            'value': abs(val),
-                            'date': str(date_i)[:10]
-                        })
-            except:
-                insider_data = []
-
-            # News fetch moved before Claude call (see above)
-
-            # ── Calculate volatility metrics ───────────────────
-            try:
-                import numpy as np
-                log_returns  = np.log(df['Close'] / df['Close'].shift(1)).dropna()
-                hv_30        = float(log_returns.tail(30).std() * np.sqrt(252) * 100)
-                hv_90        = float(log_returns.tail(90).std() * np.sqrt(252) * 100) if len(log_returns) >= 90 else hv_30
-                bb_mid       = float(df['Close'].tail(20).mean())
-                bb_std       = float(df['Close'].tail(20).std())
-                bb_upper     = bb_mid + 2 * bb_std
-                bb_lower     = bb_mid - 2 * bb_std
-                bb_width     = (bb_upper - bb_lower) / bb_mid * 100
-                iv           = float(info.get('impliedVolatility', 0) or 0) * 100
-                close_now    = float(df['Close'].iloc[-1])
-                bb_pct       = (close_now - bb_lower) / (bb_upper - bb_lower) * 100 if bb_upper != bb_lower else 50
-                vol_data = {
-                    'hv_30': hv_30, 'hv_90': hv_90,
-                    'bb_upper': bb_upper, 'bb_lower': bb_lower,
-                    'bb_mid': bb_mid, 'bb_width': bb_width,
-                    'bb_pct': bb_pct, 'iv': iv,
-                    'iv_vs_hv': iv / hv_30 if hv_30 > 0 else 0
-                }
-            except:
-                vol_data = {'hv_30':0,'hv_90':0,'bb_upper':0,'bb_lower':0,'bb_mid':0,'bb_width':0,'bb_pct':50,'iv':0,'iv_vs_hv':0}
-
-            # ── Store everything in session ────────────────────
-            st.session_state.analysis     = analysis
-            st.session_state.analyst_data = analyst_data
-            st.session_state.earnings_hist = earnings_hist
-            st.session_state.insider_data  = insider_data
-            st.session_state.news_items    = news_items
-            st.session_state.vol_data      = vol_data
-            if 'market_ctx' not in st.session_state:
-                st.session_state.market_ctx = {}
-            st.session_state.df        = df
-            st.session_state.info      = info
-            st.session_state.ticker    = ticker
-            st.session_state.signals   = signals
-            st.session_state.score     = score
-            st.session_state.fibs      = fibs
-            st.session_state.row       = row
-            st.session_state.prev      = prev
-            st.rerun()
-
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
+    except Exception as e:
+        prog.empty()
+        st.error(f"Error: {str(e)}")
 
 
 def render_hud():
@@ -915,7 +916,9 @@ def render_hud():
     earnings_hist = st.session_state.get('earnings_hist', [])
     insider_data = st.session_state.get('insider_data', [])
     news_items   = st.session_state.get('news_items', [])
-    vol_data     = st.session_state.get('vol_data', {})
+    vol_data      = st.session_state.get('vol_data', {})
+    earn_date_str = st.session_state.get('earn_date_str', 'Unknown')
+    days_to_earn  = st.session_state.get('days_to_earn', 0)
 
     close    = float(row['Close'])
     prev_c   = float(prev['Close'])
@@ -1222,41 +1225,12 @@ def render_hud():
         st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">Invest</div><div class="tf-note">{a.get("invest_note","")}</div></div>', unsafe_allow_html=True)
 
     # ── ZONE 8: EARNINGS ─────────────────────────────────────
-    # Get earnings from yfinance directly — more reliable than Claude
-    try:
-        cal = raw.calendar
-        if cal is not None and not cal.empty:
-            next_earn = cal.iloc[0].get('Earnings Date', None)
-            if next_earn:
-                from datetime import timezone
-                next_earn_dt = pd.Timestamp(next_earn).tz_localize(None) if hasattr(next_earn, 'tzinfo') and next_earn.tzinfo is None else pd.Timestamp(next_earn).tz_convert(None)
-                days_to_earn = (next_earn_dt - pd.Timestamp.now()).days
-                earn_date_str = next_earn_dt.strftime("%b %d, %Y")
-            else:
-                days_to_earn = 0
-                earn_date_str = "Unknown"
-        else:
-            days_to_earn = 0
-            earn_date_str = a.get('earnings_date', 'Unknown') or 'Unknown'
-    except:
-        days_to_earn = 0
-        earn_date_str = a.get('earnings_date', 'Unknown') or 'Unknown'
-
-    # Last earnings beat from yfinance
-    try:
-        earnings_hist = raw.earnings_history
-        if earnings_hist is not None and not earnings_hist.empty:
-            last = earnings_hist.iloc[-1]
-            surprise = last.get('surprisePercent', None)
-            if surprise is not None:
-                surprise_pct = float(surprise) * 100
-                beat_str = f"Beat +{surprise_pct:.1f}%" if surprise_pct > 0 else f"Missed {surprise_pct:.1f}%"
-            else:
-                beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
-        else:
-            beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
-    except:
-        beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
+    # Earnings from session state (computed in run_analysis)
+    beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
+    if earnings_hist:
+        last_e = earnings_hist[-1]
+        s = last_e.get('surprise', 0) or 0
+        beat_str = f"Beat +{s:.1f}%" if s > 0 else f"Missed {s:.1f}%"
 
     earn_days  = days_to_earn
     earn_col   = "#FF6B6B" if 0 < earn_days < 14 else "#FACC15" if 0 < earn_days < 30 else "#94A3B8"
