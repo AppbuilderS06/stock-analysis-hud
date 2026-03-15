@@ -1247,26 +1247,26 @@ def render_hud():
       <span style="float:right;color:#5EEAD4;">{analyzed}</span>
     </div>''', unsafe_allow_html=True)
 
-    # ── ZONE 3: VERDICT + SCORE ──────────────────────────────
+    # ── ZONE 3: VERDICT + SCORE + AI SUMMARY ────────────────
     bull_count = sum(1 for k,v in signals.items() if v['bull'])
-    c1, c2 = st.columns([1.5, 0.7])
+    score_meaning = ("Strong bullish setup" if score >= 8 else
+                     "Moderately bullish"   if score >= 6 else
+                     "Mixed signals"        if score >= 4 else
+                     "Moderately bearish"   if score >= 2 else
+                     "Strong bearish setup")
+    bull_names = " · ".join(signals[k]["label"] for k in signals if signals[k]["bull"]) or "None"
+    bear_names = " · ".join(signals[k]["label"] for k in signals if not signals[k]["bull"]) or "None"
+    c1, c2, c3 = st.columns([1.2, 0.7, 1.5])
     with c1:
-        st.markdown(f'''
+        st.markdown(f"""
         <div class="verdict-card" style="background:{vc['bg']};border-left-color:{vc['border']};">
           <div class="verdict-label" style="color:{vc['color']};">AI Verdict</div>
           <div class="verdict-value" style="color:{vc['color']};">{a.get('verdict','')}</div>
           <div class="verdict-meta">Confidence: {a.get('confidence','')} &nbsp;·&nbsp; Risk: {a.get('risk','')}</div>
           <div class="verdict-note" style="color:{vc['color']};">{a.get('risk_reason','')}</div>
-        </div>''', unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
     with c2:
-        score_meaning = ("Strong bullish setup" if score >= 8 else
-                         "Moderately bullish"   if score >= 6 else
-                         "Mixed signals"        if score >= 4 else
-                         "Moderately bearish"   if score >= 2 else
-                         "Strong bearish setup")
-        bull_names = " · ".join(signals[k]['label'] for k in signals if signals[k]['bull']) or "None"
-        bear_names = " · ".join(signals[k]['label'] for k in signals if not signals[k]['bull']) or "None"
-        st.markdown(f'''
+        st.markdown(f"""
         <div class="score-card">
           <div class="score-label">Signal Score</div>
           <div><span class="score-num" style="color:{score_col};">{score}</span><span class="score-denom">/10</span></div>
@@ -1280,11 +1280,23 @@ def render_hud():
             <div style="font-size:10px;color:#00FF88;margin-bottom:3px;line-height:1.5;">&#9650; {bull_names}</div>
             <div style="font-size:10px;color:#FF6B6B;line-height:1.5;">&#9660; {bear_names}</div>
           </div>
-        </div>''', unsafe_allow_html=True)
-
-    # ── ZONE 3b: AI SUMMARY ─────────────────────────────────
-    st.markdown('<div class="section-header" style="border-radius:8px 8px 0 0;margin-top:8px;">AI Summary</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="summary-box"><div class="summary-text">{a.get("summary","")}</div></div>', unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+        <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
+                    border-radius:8px;padding:14px 16px;min-height:160px;">
+          <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                      margin-bottom:10px;font-weight:600;">AI Summary</div>
+          <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{a.get('summary','')}</div>
+        </div>""", unsafe_allow_html=True)
+    with c3:
+        st.markdown(f"""
+        <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
+                    border-radius:8px;padding:14px 16px;height:100%;min-height:160px;">
+          <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                      margin-bottom:10px;font-weight:600;">AI Summary</div>
+          <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{a.get('summary','')}</div>
+        </div>""", unsafe_allow_html=True)
 
     # ── ZONE 4: SIGNAL GRID ──────────────────────────────────
     sig_keys = ['MA20','MA50','MA200','RSI','MACD','OBV','Vol','ATR']
