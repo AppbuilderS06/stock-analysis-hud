@@ -491,11 +491,18 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         f"Revenue Growth: {rev_g} | Earnings Growth: {eps_g}\n"
         f"Next Earnings: {earn_date} | Sector: {sector}\n\n"
         "INSTRUCTIONS:\n"
-        "- Use 60 closes to detect chart patterns (Cup&Handle, Head&Shoulders, Flags, Triangles, Wedges)\n"
-        "- Use last 5 OHLCV for candlestick patterns (Hammer, Doji, Engulfing, Marubozu)\n"
+        "CHART PATTERNS — analyze the 60 closes carefully:\n"
+        "- Identify patterns: Cup&Handle, Head&Shoulders, Flags, Triangles, Wedges, Double Top/Bottom\n"
+        "- description: explain WHAT you see in the price data — mention actual price levels and closes\n"
+        "- confidence_reason: explain WHY that score. 40-55%=early/weak, 56-70%=developing, 71-85%=confirmed, 86%+=textbook\n"
+        "- still_valid: true if price is still within the pattern structure, false if already broken or resolved\n"
+        "- validity_note: one sentence — is the signal still actionable or already played out?\n"
+        "- Only include patterns with confidence >40%. Return empty array if nothing clear.\n\n"
+        "CANDLESTICK PATTERNS — use last 5 OHLCV:\n"
+        "- meaning: explain what the candle body/wick structure tells you about buyer vs seller pressure\n\n"
+        "OTHER:\n"
         "- Classify each news headline as bullish/bearish/neutral for this specific stock\n"
         "- ALWAYS return trend_short/medium/long — NEVER return N/A\n"
-        "- Only flag patterns with >40% confidence\n"
         "- Use market context for business cycle phase\n\n"
         "Return ONLY this JSON (no markdown, no extra text):\n"
         '{"verdict":"DAY TRADE|SWING TRADE|INVEST|AVOID|MULTI-TIMEFRAME",'
@@ -521,7 +528,7 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         '"earnings_date":"MMM DD YYYY","earnings_days":0,'
         '"last_earnings_beat":"Beat +X% or Missed X%",'
         '"sector":"sector name",'
-        '"chart_patterns":[{"name":"pattern","type":"bullish|bearish|neutral","confidence":70,"description":"one sentence","target_pct":10,"target_price":0}],'
+        '"chart_patterns":[{"name":"pattern name","type":"bullish|bearish|neutral","confidence":70,"description":"what you see in the price data and key levels involved","confidence_reason":"why this confidence score — what confirms or weakens it","still_valid":true,"validity_note":"is price still within pattern or has it broken","target_pct":10,"target_price":0}],'
         '"candle_patterns":[{"name":"pattern","type":"bullish|bearish|neutral","session":"Today|Yesterday|2d ago","meaning":"one sentence"}],'
         '"trend_short":"Uptrend|Downtrend|Sideways","trend_short_desc":"one sentence",'
         '"trend_medium":"Uptrend|Downtrend|Sideways","trend_medium_desc":"one sentence",'
@@ -911,20 +918,31 @@ def run_analysis(ticker):
         # ── 8. Insider trading ─────────────────────────────────
         try:
             ins = raw.insider_transactions
+            if ins is None or ins.empty:
+                try:
+                    ins = raw.get_insider_transactions()
+                except:
+                    ins = None
             if ins is not None and not ins.empty:
                 for _, ri in ins.head(5).iterrows():
-                    shares = int(ri.get('shares', 0) or 0)
-                    val    = float(ri.get('value', 0) or 0)
-                    text   = str(ri.get('text', '') or '')
-                    name   = str(ri.get('filerName', '') or ri.get('insider', ''))
-                    role   = str(ri.get('filerRelation', '') or '')
-                    date_i = str(ri.get('startDate', '') or '')
-                    is_buy = 'purchase' in text.lower() or 'buy' in text.lower() or shares > 0
-                    insider_data.append({
-                        'name': name[:20], 'role': role[:20],
-                        'type': 'BUY' if is_buy else 'SELL',
-                        'shares': abs(shares), 'value': abs(val), 'date': str(date_i)[:10]
-                    })
+                    # yfinance field names vary by version — try all known variants
+                    shares = int(ri.get('Shares',      ri.get('shares', 0)) or 0)
+                    val    = float(ri.get('Value',     ri.get('value', 0)) or 0)
+                    text   = str(ri.get('Text',        ri.get('text', '')) or '')
+                    trans  = str(ri.get('Transaction', ri.get('transaction', '')) or '')
+                    name   = str(ri.get('Insider',     ri.get('filerName', ri.get('insider', ''))) or '')
+                    role   = str(ri.get('Position',    ri.get('filerRelation', '')) or '')
+                    date_i = str(ri.get('Date',        ri.get('startDate', '')) or '')
+                    combined = (text + trans).lower()
+                    is_buy = ('purchase' in combined or 'buy' in combined or
+                              'acquisition' in combined or shares > 0)
+                    if name.strip():
+                        insider_data.append({
+                            'name': name[:22], 'role': role[:22],
+                            'type': 'BUY' if is_buy else 'SELL',
+                            'shares': abs(shares), 'value': abs(val),
+                            'date': str(date_i)[:10]
+                        })
         except:
             pass
 
@@ -947,19 +965,36 @@ def run_analysis(ticker):
         except:
             pass
 
-        # ── 10. Earnings date ──────────────────────────────────
+        # ── 10. Earnings date — try multiple sources ───────────
         earn_date_str = analysis.get('earnings_date', 'Unknown') or 'Unknown'
         days_to_earn  = 0
+        ned = None
         try:
+            # Source 1: raw.calendar
             cal = raw.calendar
-            if cal is not None and not cal.empty:
-                ned = cal.iloc[0].get('Earnings Date', None)
-                if ned:
-                    ned_ts = (pd.Timestamp(ned).tz_localize(None)
-                              if hasattr(ned, 'tzinfo') and ned.tzinfo is None
-                              else pd.Timestamp(ned).tz_convert(None))
-                    days_to_earn  = (ned_ts - pd.Timestamp.now()).days
-                    earn_date_str = ned_ts.strftime("%b %d, %Y")
+            if cal is not None:
+                if hasattr(cal, 'empty') and not cal.empty:
+                    ned = cal.iloc[0].get('Earnings Date', None)
+                elif isinstance(cal, dict):
+                    ned = cal.get('Earnings Date', cal.get('earningsDate', None))
+        except:
+            pass
+        try:
+            # Source 2: info dict
+            if ned is None:
+                ned = (info.get('earningsDate') or
+                       info.get('nextEarningsDate') or
+                       info.get('earningsTimestamp'))
+        except:
+            pass
+        try:
+            if ned is not None:
+                ts = pd.Timestamp(ned)
+                if ts.tzinfo is not None:
+                    ts = ts.tz_convert(None)
+                if ts > pd.Timestamp.now():
+                    days_to_earn  = (ts - pd.Timestamp.now()).days
+                    earn_date_str = ts.strftime("%b %d, %Y")
         except:
             pass
 
@@ -1215,7 +1250,11 @@ def render_hud():
     bb_col    = "#FF6B6B" if bb_pct > 80 else "#00FF88" if bb_pct < 20 else "#FACC15"
     hv_col    = "#FF6B6B" if hv_30 > 50 else "#FACC15" if hv_30 > 25 else "#00FF88"
     iv_col    = "#FF6B6B" if iv > 60 else "#FACC15" if iv > 30 else "#00FF88"
-    iv_label  = "IV > HV — big move expected" if iv_vs_hv > 1.3 else "IV < HV — calm expected" if iv_vs_hv < 0.7 and iv > 0 else "IV ≈ HV — normal" if iv > 0 else "N/A"
+    no_options = iv == 0
+    iv_label  = ("No options data" if no_options else
+                 "IV > HV — big move expected" if iv_vs_hv > 1.3 else
+                 "IV < HV — calm expected" if iv_vs_hv < 0.7 else
+                 "IV ≈ HV — normal")
 
     st.markdown('<div class="section-header">Volatility Analysis</div>', unsafe_allow_html=True)
     vc1, vc2, vc3 = st.columns(3)
@@ -1235,7 +1274,7 @@ def render_hud():
         bb_rows += f'<div class="vol-row"><span class="vol-lbl">Lower Band</span><span style="color:#00FF88;font-weight:700;font-family:monospace;">{cur}{bb_lower:.2f}</span></div>'
         bb_rows += f'<div class="vol-row"><span class="vol-lbl">BB Width</span><span style="color:#A78BFA;font-weight:700;font-family:monospace;">{vol_data.get("bb_width",0):.1f}%</span></div>'
         # BB position bar
-        bb_rows += f'<div class="vol-row" style="flex-direction:column;gap:4px;"><span class="vol-lbl">Price position in band</span><div style="width:100%;height:6px;background:#243348;border-radius:3px;margin-top:4px;position:relative;"><div style="position:absolute;left:{min(max(bb_pct,2),98):.0f}%;top:-3px;width:10px;height:10px;background:{bb_col};border-radius:50%;transform:translateX(-50%);"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;margin-top:6px;"><span style="color:#00FF88;">Oversold</span><span style="color:{bb_col};">{bb_pct:.0f}%</span><span style="color:#FF6B6B;">Overbought</span></div></div>'
+        bb_rows += f'<div class="vol-row" style="flex-direction:column;gap:4px;"><span class="vol-lbl">Price position in band</span><div style="width:100%;height:6px;background:#243348;border-radius:3px;margin-top:4px;position:relative;"><div style="position:absolute;left:{min(max(bb_pct,2),98):.0f}%;top:-3px;width:10px;height:10px;background:{bb_col};border-radius:50%;transform:translateX(-50%);"></div></div><div style="display:flex;justify-content:space-between;font-size:10px;margin-top:6px;"><span style="color:#00FF88;">Oversold</span><span style="color:{bb_col};margin:0 6px;">{bb_pct:.0f}%</span><span style="color:#FF6B6B;">Overbought</span></div></div>'
         st.markdown(bb_rows + '</div>', unsafe_allow_html=True)
     with vc3:
         st.markdown('<div class="vol-panel"><div class="data-header">Implied Volatility</div>', unsafe_allow_html=True)
@@ -1400,27 +1439,31 @@ def render_hud():
 
     st.markdown('<div class="section-header" style="margin-top:8px;">Market Context & Business Cycle</div>', unsafe_allow_html=True)
     mc1,mc2,mc3,mc4,mc5 = st.columns(5)
-    for mcol, lbl, val, chg, sig in [
-        (mc1,"S&P 500","SPY", mctx.get("spy_1m",0), mctx.get("spy_signal","—")),
-        (mc2,"NASDAQ", "QQQ", mctx.get("qqq_1m",0), mctx.get("qqq_signal","—")),
-        (mc3,"DOW",    "DIA", mctx.get("dia_1m",0), mctx.get("dia_signal","—")),
-        (mc4,"Cycle Phase", cycle, 0, ""),
-        (mc5,"Market Risk",  mkt_risk, 0, ""),
+    for mcol, lbl, idx_key_chg, idx_key_sig in [
+        (mc1, "S&P 500", "spy_1m",  "spy_signal"),
+        (mc2, "NASDAQ",  "qqq_1m",  "qqq_signal"),
+        (mc3, "DOW",     "dia_1m",  "dia_signal"),
     ]:
-        scol = "#00FF88" if sig=="Bullish" or val in ["Early"] else "#FF6B6B" if sig=="Bearish" or val in ["Recession"] else "#FACC15"
-        if lbl in ["Cycle Phase","Market Risk"]:
-            vcol = cycle_col if lbl=="Cycle Phase" else risk_col
-            vval = val or "—"
-            desc_txt = a.get("cycle_desc","") if lbl=="Cycle Phase" else a.get("market_risk_desc","")
-        else:
-            vcol = "#00FF88" if chg >= 0 else "#FF6B6B"
-            vval = f"{chg:+.1f}% (1M)"
-            desc_txt = sig
+        chg  = mctx.get(idx_key_chg, 0) or 0
+        sig  = mctx.get(idx_key_sig, "Unknown")
+        vcol = "#00FF88" if chg >= 0 else "#FF6B6B"
+        sign = "+" if chg >= 0 else ""
         with mcol:
             st.markdown(f'''<div class="earn-bar" style="border-left-color:{vcol};">
               <div class="earn-label">{lbl}</div>
-              <div class="earn-val" style="color:{vcol};font-size:12px;">{vval}</div>
-              <div style="font-size:10px;color:#6B7280;margin-top:2px;">{desc_txt}</div>
+              <div class="earn-val" style="color:{vcol};font-size:14px;">{sign}{chg:.1f}%</div>
+              <div style="font-size:10px;color:#6B7280;margin-top:2px;">Last month · {sig}</div>
+            </div>''', unsafe_allow_html=True)
+    # Cycle phase and market risk
+    for mcol2, lbl2, val2, col2, desc2 in [
+        (mc4, "Cycle Phase", cycle,    cycle_col, a.get("cycle_desc","")),
+        (mc5, "Market Risk", mkt_risk, risk_col,  a.get("market_risk_desc","")),
+    ]:
+        with mcol2:
+            st.markdown(f'''<div class="earn-bar" style="border-left-color:{col2};">
+              <div class="earn-label">{lbl2}</div>
+              <div class="earn-val" style="color:{col2};font-size:13px;">{val2 or "—"}</div>
+              <div style="font-size:10px;color:#6B7280;margin-top:2px;">{desc2[:60]}</div>
             </div>''', unsafe_allow_html=True)
 
     # ── ZONE 10: LIVE CHART ──────────────────────────────────
@@ -1446,18 +1489,28 @@ def render_hud():
                 inv_url    = f"https://www.investopedia.com/search#q={pat_name.replace(' ','+')}"
                 bias_label = "▲ Bullish" if ptype=="bullish" else "▼ Bearish" if ptype=="bearish" else "↔ Neutral"
                 target_html = f'<div class="pat-target" style="color:{pcol};">Target: {p.get("target_pct",0):+.1f}% → {cur}{p.get("target_price",0):.2f}</div>' if p.get('target_price') else ''
+                conf_reason  = p.get("confidence_reason", "")
+                still_valid  = p.get("still_valid", True)
+                validity_note= p.get("validity_note", "")
+                valid_col    = "#00FF88" if still_valid else "#FF6B6B"
+                valid_label  = "✓ Pattern still valid" if still_valid else "✗ Pattern broken/resolved"
                 st.markdown(f"""
                 <div class="{pcls}">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
                     <div class="pat-name" style="color:{pcol};">{pat_name}</div>
                     <a href="{inv_url}" target="_blank" style="font-size:10px;color:#4A6080;text-decoration:none;" title="Learn on Investopedia">ⓘ</a>
                   </div>
-                  <div style="font-size:11px;font-weight:700;color:{pcol};margin-bottom:4px;">{bias_label}</div>
-                  <div style="font-size:10px;color:#6B7280;margin-bottom:4px;">Confidence: {conf}%</div>
-                  <div style="height:3px;background:#243348;border-radius:2px;margin-bottom:6px;">
-                    <div style="width:{conf}%;height:3px;background:{pcol};border-radius:2px;"></div>
+                  <div style="font-size:11px;font-weight:700;color:{pcol};margin-bottom:6px;">{bias_label}</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <div style="font-size:10px;color:#6B7280;">Confidence: {conf}%</div>
+                    <div style="flex:1;height:3px;background:#243348;border-radius:2px;">
+                      <div style="width:{conf}%;height:3px;background:{pcol};border-radius:2px;"></div>
+                    </div>
                   </div>
-                  <div class="pat-desc">{p.get("description","")}</div>
+                  {f'<div style="font-size:11px;color:#64748B;font-style:italic;margin-bottom:5px;">{conf_reason}</div>' if conf_reason else ''}
+                  <div class="pat-desc" style="margin-bottom:6px;">{p.get("description","")}</div>
+                  <div style="font-size:11px;color:{valid_col};font-weight:600;margin-bottom:3px;">{valid_label}</div>
+                  {f'<div style="font-size:11px;color:#64748B;">{validity_note}</div>' if validity_note else ''}
                   {target_html}
                 </div>""", unsafe_allow_html=True)
 
