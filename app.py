@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import anthropic
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # ── Page config ──────────────────────────────────────────────
 st.set_page_config(
@@ -16,28 +16,68 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ── Colors ────────────────────────────────────────────────────
-C = {
-    "bg":       "#111827",
-    "panel":    "#1A2232",
-    "header":   "#0F3030",
-    "green":    "#00FF88",
-    "red":      "#FF6B6B",
-    "yellow":   "#FACC15",
-    "blue":     "#38BDF8",
-    "purple":   "#818CF8",
-    "teal":     "#5EEAD4",
-    "white":    "#F1F5F9",
-    "muted":    "#94A3B8",
-    "dim":      "#4A6080",
-}
-
 VERDICT_COLORS = {
     "SWING TRADE":     {"bg": "#0A1525", "border": "#38BDF8", "color": "#38BDF8"},
     "INVEST":          {"bg": "#0A1E12", "border": "#00FF88", "color": "#00FF88"},
     "DAY TRADE":       {"bg": "#1A1000", "border": "#FACC15", "color": "#FACC15"},
     "AVOID":           {"bg": "#1E0A0A", "border": "#FF6B6B", "color": "#FF6B6B"},
     "MULTI-TIMEFRAME": {"bg": "#0A1E12", "border": "#00FF88", "color": "#00FF88"},
+}
+
+MULTI_LISTED = {
+    'BRK':  [{'ticker':'BRK-B','name':'Berkshire Hathaway Class B','exchange':'NYSE'},
+             {'ticker':'BRK-A','name':'Berkshire Hathaway Class A','exchange':'NYSE'}],
+    'RY':   [{'ticker':'RY',   'name':'Royal Bank of Canada (US)','exchange':'NYSE'},
+             {'ticker':'RY.TO','name':'Royal Bank of Canada (TSX)','exchange':'TSX'}],
+    'TD':   [{'ticker':'TD',   'name':'TD Bank (US)','exchange':'NYSE'},
+             {'ticker':'TD.TO','name':'TD Bank (TSX)','exchange':'TSX'}],
+    'SHOP': [{'ticker':'SHOP',   'name':'Shopify (NYSE)','exchange':'NYSE'},
+             {'ticker':'SHOP.TO','name':'Shopify (TSX)','exchange':'TSX'}],
+    'SU':   [{'ticker':'SU',   'name':'Suncor Energy (US)','exchange':'NYSE'},
+             {'ticker':'SU.TO','name':'Suncor Energy (TSX)','exchange':'TSX'}],
+    'ENB':  [{'ticker':'ENB',   'name':'Enbridge (US)','exchange':'NYSE'},
+             {'ticker':'ENB.TO','name':'Enbridge (TSX)','exchange':'TSX'}],
+    'CNR':  [{'ticker':'CNI',   'name':'Canadian National (US)','exchange':'NYSE'},
+             {'ticker':'CNR.TO','name':'Canadian National (TSX)','exchange':'TSX'}],
+    'AC':   [{'ticker':'AC.TO','name':'Air Canada (TSX)','exchange':'TSX'}],
+    'TSM':  [{'ticker':'TSM','name':'Taiwan Semiconductor (ADR)','exchange':'NYSE'}],
+    'TSMC': [{'ticker':'TSM','name':'Taiwan Semiconductor (ADR)','exchange':'NYSE'}],
+}
+
+INFO_LINKS = {
+    "20 MA":"https://www.investopedia.com/terms/m/movingaverage.asp",
+    "50 MA":"https://www.investopedia.com/terms/m/movingaverage.asp",
+    "200 MA":"https://www.investopedia.com/terms/m/movingaverage.asp",
+    "100 EMA":"https://www.investopedia.com/terms/e/ema.asp",
+    "RSI":"https://www.investopedia.com/terms/r/rsi.asp",
+    "RSI (14)":"https://www.investopedia.com/terms/r/rsi.asp",
+    "MACD":"https://www.investopedia.com/terms/m/macd.asp",
+    "MACD Hist":"https://www.investopedia.com/terms/m/macd.asp",
+    "OBV":"https://www.investopedia.com/terms/o/onbalancevolume.asp",
+    "Volume":"https://www.investopedia.com/terms/v/volume.asp",
+    "ATR":"https://www.investopedia.com/terms/a/atr.asp",
+    "ATR (14)":"https://www.investopedia.com/terms/a/atr.asp",
+    "ATR%":"https://www.investopedia.com/terms/a/atr.asp",
+    "VWAP":"https://www.investopedia.com/terms/v/vwap.asp",
+    "38.2% Fib":"https://www.investopedia.com/terms/f/fibonaccilevels.asp",
+    "50.0% Fib":"https://www.investopedia.com/terms/f/fibonaccilevels.asp",
+    "61.8% Fib":"https://www.investopedia.com/terms/f/fibonaccilevels.asp",
+    "52W Range":"https://www.investopedia.com/terms/1/52-week-range.asp",
+    "Market Cap":"https://www.investopedia.com/terms/m/marketcapitalization.asp",
+    "P/E (Trailing)":"https://www.investopedia.com/terms/p/price-earningsratio.asp",
+    "P/E (Forward)":"https://www.investopedia.com/terms/p/price-earningsratio.asp",
+    "P/B Ratio":"https://www.investopedia.com/terms/p/price-to-bookratio.asp",
+    "PEG Ratio":"https://www.investopedia.com/terms/p/pegratio.asp",
+    "EPS Growth YoY":"https://www.investopedia.com/terms/e/eps.asp",
+    "Rev Growth YoY":"https://www.investopedia.com/terms/r/revenuerecognition.asp",
+    "Operating Margin":"https://www.investopedia.com/terms/o/operatingmargin.asp",
+    "Profit Margin":"https://www.investopedia.com/terms/p/profitmargin.asp",
+    "Return on Equity":"https://www.investopedia.com/terms/r/returnonequity.asp",
+    "Debt / Equity":"https://www.investopedia.com/terms/d/debtequityratio.asp",
+    "Current Ratio":"https://www.investopedia.com/terms/c/currentratio.asp",
+    "Dividend Yield":"https://www.investopedia.com/terms/d/dividendyield.asp",
+    "Short % Float":"https://www.investopedia.com/terms/s/shortinterest.asp",
+    "Float Shares":"https://www.investopedia.com/terms/f/floating-stock.asp",
 }
 
 # ── CSS ───────────────────────────────────────────────────────
@@ -359,113 +399,140 @@ def val_color(val, good="g"):
     return f"val-{good}"
 
 
+
 # ── Claude Analysis ───────────────────────────────────────────
-def get_claude_analysis(ticker, info, df, signals, score, fibs):
-    row    = df.iloc[-1]
-    prev   = df.iloc[-2]
-    close  = float(row['Close'])
-    cur    = "CA$" if ticker.endswith(".TO") else "$"
+def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, market_ctx):
+    """Build prompt and call Claude. All data passed as explicit args — no f-string surprises."""
+    row   = df.iloc[-1]
+    prev  = df.iloc[-2]
+    close = float(row['Close'])
+    cur   = "CA$" if ticker.endswith(".TO") else "$"
 
     # Last 60 closes for pattern detection
-    last60 = df['Close'].tail(60).round(2).tolist()
-    last60_str = ",".join(str(x) for x in last60)
+    last60 = ",".join(str(round(float(x), 2)) for x in df['Close'].tail(60))
 
-    # Last 5 OHLCV for candlestick patterns
-    last5 = []
+    # Last 5 OHLCV
+    last5_parts = []
     for i in range(-5, 0):
         r = df.iloc[i]
-        last5.append(f"O:{r['Open']:.2f} H:{r['High']:.2f} L:{r['Low']:.2f} C:{r['Close']:.2f} V:{r['Volume']:.0f}")
-    last5_str = " | ".join(last5)
+        last5_parts.append(
+            f"O:{float(r['Open']):.2f} H:{float(r['High']):.2f} "
+            f"L:{float(r['Low']):.2f} C:{float(r['Close']):.2f} V:{float(r['Volume']):.0f}"
+        )
+    last5 = " | ".join(last5_parts)
 
-    ma_context = (
-        f"Price vs MAs: {'ABOVE' if close > row['MA20'] else 'BELOW'} 20MA | "
-        f"{'ABOVE' if close > row['MA50'] else 'BELOW'} 50MA | "
-        f"{'ABOVE' if close > row['MA200'] else 'BELOW'} 200MA"
+    # MA context
+    above_below = lambda v, ma: "ABOVE" if close > float(row[ma]) else "BELOW"
+    ma_ctx = (f"Price vs MAs: {above_below(close,'MA20')} 20MA | "
+              f"{above_below(close,'MA50')} 50MA | "
+              f"{above_below(close,'MA200')} 200MA")
+
+    # Daily change
+    prev_close = float(prev['Close'])
+    chg_abs = close - prev_close
+    chg_pct = (chg_abs / prev_close * 100) if prev_close else 0
+
+    # Market context
+    spy_sig = market_ctx.get('spy_signal', 'Unknown')
+    qqq_sig = market_ctx.get('qqq_signal', 'Unknown')
+    dia_sig = market_ctx.get('dia_signal', 'Unknown')
+    spy_chg = market_ctx.get('spy_1m', 0)
+    qqq_chg = market_ctx.get('qqq_1m', 0)
+    dia_chg = market_ctx.get('dia_1m', 0)
+
+    # News headlines — plain string, NOT inside f-string braces
+    if news_items:
+        headlines_text = "\n".join(f"- {n.get('title','')}" for n in news_items[:5])
+    else:
+        headlines_text = "No recent news available"
+
+    # Fundamentals
+    mc  = info.get('marketCap', 0) or 0
+    pe  = info.get('trailingPE', 'N/A')
+    fpe = info.get('forwardPE', 'N/A')
+    eps = info.get('trailingEps', 'N/A')
+    pb  = info.get('priceToBook', 'N/A')
+    rev_g = info.get('revenueGrowth', 'N/A')
+    eps_g = info.get('earningsGrowth', 'N/A')
+    earn_date = info.get('earningsDate', 'Unknown')
+    sector = info.get('sector', 'N/A')
+    h52 = info.get('fiftyTwoWeekHigh', 0) or 0
+    l52 = info.get('fiftyTwoWeekLow', 0) or 0
+
+    # Build prompt with NO f-string JSON schemas — use string concatenation for JSON examples
+    prompt = (
+        f"You are an expert stock market analyst. Analyze {ticker}.\n"
+        "Return ONLY raw JSON — no markdown, no backticks, no explanation.\n\n"
+        f"TECHNICAL DATA:\n"
+        f"{ma_ctx}\n"
+        f"Close: {close:.2f} | Change: {chg_abs:.2f} ({chg_pct:.2f}%)\n"
+        f"20MA: {float(row['MA20']):.2f} | 50MA: {float(row['MA50']):.2f} | "
+        f"200MA: {float(row['MA200']):.2f} | 100MA: {float(row['MA100']):.2f}\n"
+        f"RSI: {float(row['RSI']):.1f} | ATR%: {float(row['ATRPct'])*100:.1f}% | Score: {score}/10\n"
+        f"MACD: {float(row['MACD']):.3f} | Signal: {float(row['MACDSig']):.3f} | "
+        f"Hist: {float(row['MACDHist']):.3f}\n"
+        f"OBV: {'Rising' if float(row['OBV']) > float(prev['OBV']) else 'Falling'} | "
+        f"Vol vs avg: {float(row['VolTrend']):.2f}x\n"
+        f"52W High: {h52:.2f} | 52W Low: {l52:.2f}\n"
+        f"Fib 38.2%: {fibs[0]:.2f} | 50%: {fibs[1]:.2f} | 61.8%: {fibs[2]:.2f}\n\n"
+        f"LAST 60 DAILY CLOSES (oldest to newest, use for pattern detection):\n"
+        f"{last60}\n\n"
+        f"LAST 5 SESSIONS OHLCV (for candlestick patterns):\n"
+        f"{last5}\n\n"
+        f"MARKET CONTEXT:\n"
+        f"S&P500: {spy_sig} ({spy_chg:+.1f}% last month)\n"
+        f"NASDAQ: {qqq_sig} ({qqq_chg:+.1f}% last month)\n"
+        f"DOW:    {dia_sig} ({dia_chg:+.1f}% last month)\n\n"
+        f"RECENT NEWS HEADLINES:\n"
+        f"{headlines_text}\n\n"
+        f"FUNDAMENTALS:\n"
+        f"Market Cap: {fmt_cap(mc)} | P/E: {pe} | Fwd P/E: {fpe}\n"
+        f"EPS: {eps} | P/B: {pb}\n"
+        f"Revenue Growth: {rev_g} | Earnings Growth: {eps_g}\n"
+        f"Next Earnings: {earn_date} | Sector: {sector}\n\n"
+        "INSTRUCTIONS:\n"
+        "- Use 60 closes to detect chart patterns (Cup&Handle, Head&Shoulders, Flags, Triangles, Wedges)\n"
+        "- Use last 5 OHLCV for candlestick patterns (Hammer, Doji, Engulfing, Marubozu)\n"
+        "- Classify each news headline as bullish/bearish/neutral for this specific stock\n"
+        "- ALWAYS return trend_short/medium/long — NEVER return N/A\n"
+        "- Only flag patterns with >40% confidence\n"
+        "- Use market context for business cycle phase\n\n"
+        "Return ONLY this JSON (no markdown, no extra text):\n"
+        '{"verdict":"DAY TRADE|SWING TRADE|INVEST|AVOID|MULTI-TIMEFRAME",'
+        '"confidence":"Low|Medium|High",'
+        '"risk":"Low|Medium|High|Very High",'
+        '"risk_reason":"one sentence",'
+        '"entry_low":0,"entry_high":0,'
+        '"vwap":0,"ema100":0,'
+        '"support1":0,"support1_label":"label",'
+        '"support2":0,"support2_label":"label",'
+        '"support3":0,"support3_label":"label",'
+        '"resistance1":0,"resistance1_label":"label",'
+        '"resistance2":0,"resistance2_label":"label",'
+        '"resistance3":0,"resistance3_label":"label",'
+        '"reasons_bull":["r1","r2","r3"],'
+        '"reasons_bear":["r1","r2"],'
+        '"summary":"2-3 sentence plain English analysis",'
+        '"day_trade_note":"one sentence",'
+        '"swing_note":"one sentence",'
+        '"invest_note":"one sentence",'
+        '"pb_ratio":0,"peg_ratio":0,'
+        '"eps_growth_yoy":0,"rev_growth_yoy":0,'
+        '"earnings_date":"MMM DD YYYY","earnings_days":0,'
+        '"last_earnings_beat":"Beat +X% or Missed X%",'
+        '"sector":"sector name",'
+        '"chart_patterns":[{"name":"pattern","type":"bullish|bearish|neutral","confidence":70,"description":"one sentence","target_pct":10,"target_price":0}],'
+        '"candle_patterns":[{"name":"pattern","type":"bullish|bearish|neutral","session":"Today|Yesterday|2d ago","meaning":"one sentence"}],'
+        '"trend_short":"Uptrend|Downtrend|Sideways","trend_short_desc":"one sentence",'
+        '"trend_medium":"Uptrend|Downtrend|Sideways","trend_medium_desc":"one sentence",'
+        '"trend_long":"Uptrend|Downtrend|Sideways","trend_long_desc":"one sentence",'
+        '"pattern_bias":"Bullish|Bearish|Neutral","pattern_bias_desc":"one sentence",'
+        '"cycle_phase":"Early|Mid|Late|Recession",'
+        '"cycle_desc":"one sentence",'
+        '"market_risk":"Low|Moderate|High|Extreme",'
+        '"market_risk_desc":"one sentence",'
+        '"news_sentiment":[{"headline":"title","sentiment":"bullish|bearish|neutral","reason":"one sentence"}]}'
     )
-
-    mctx = info.get('_market_ctx', {})
-    prompt = f"""You are an expert stock market analyst. Analyze {ticker}.
-Return ONLY raw JSON — no markdown, no backticks, no explanation.
-
-TECHNICAL DATA:
-{ma_context}
-Close: {close:.2f} | Change: {close - float(prev['Close']):.2f} ({(close/float(prev['Close'])-1)*100:.2f}%)
-20MA: {row['MA20']:.2f} | 50MA: {row['MA50']:.2f} | 200MA: {row['MA200']:.2f} | 100MA: {row['MA100']:.2f}
-RSI: {row['RSI']:.1f} | ATR: {row['ATRPct']*100:.1f}% | Score: {score}/10
-MACD: {row['MACD']:.3f} | Signal: {row['MACDSig']:.3f} | Hist: {row['MACDHist']:.3f}
-OBV: {'Rising' if row['OBV'] > df.iloc[-2]['OBV'] else 'Falling'} | Vol vs avg: {row['VolTrend']:.2f}x
-52W High: {info.get('fiftyTwoWeekHigh', 0):.2f} | 52W Low: {info.get('fiftyTwoWeekLow', 0):.2f}
-Fib 38.2%: {fibs[0]:.2f} | 50%: {fibs[1]:.2f} | 61.8%: {fibs[2]:.2f}
-
-LAST 60 DAILY CLOSES (oldest→newest, use for pattern detection):
-{last60_str}
-
-LAST 5 SESSIONS OHLCV (for candlestick patterns):
-{last5_str}
-
-MARKET CONTEXT (for business cycle analysis):
-S&P500: {mctx.get("spy_signal","Unknown")} ({mctx.get("spy_1m",0):+.1f}% last month)
-NASDAQ: {mctx.get("qqq_signal","Unknown")} ({mctx.get("qqq_1m",0):+.1f}% last month)
-DOW:    {mctx.get("dia_signal","Unknown")} ({mctx.get("dia_1m",0):+.1f}% last month)
-Use this to determine if we are in early/mid/late cycle and adjust conviction accordingly.
-
-FUNDAMENTALS:
-Market Cap: {fmt_cap(info.get('marketCap', 0))}
-P/E: {info.get('trailingPE', 'N/A')} | Forward P/E: {info.get('forwardPE', 'N/A')}
-EPS: {info.get('trailingEps', 'N/A')} | P/B: {info.get('priceToBook', 'N/A')}
-Revenue Growth: {info.get('revenueGrowth', 'N/A')} | Earnings Growth: {info.get('earningsGrowth', 'N/A')}
-Next Earnings: {info.get('earningsDate', 'Unknown')}
-Sector: {info.get('sector', 'N/A')}
-
-NEWS SENTIMENT INSTRUCTIONS:
-- Analyze the headlines provided below and classify each as bullish, bearish, or neutral
-- Consider the impact on the specific stock {ticker}, not just general market news
-- Provide a one-sentence reason for each classification
-- Return results in news_sentiment array
-
-PATTERN DETECTION INSTRUCTIONS:
-- Use the 60 daily closes to detect chart patterns (Cup&Handle, Bull/Bear Flag, H&S, Double Top/Bottom, Triangles, Wedges)
-- Use last 5 OHLCV sessions for candlestick patterns (Hammer, Doji, Engulfing, Marubozu, etc.)
-- Derive trend direction from MA positions (price vs MA20=short, vs MA50=medium, vs MA200=long)
-- Only flag patterns with >40% confidence — be honest if nothing clear
-- ALWAYS return trend_short/medium/long — NEVER return N/A for these
-- Return at least 1-2 candlestick observations even if subtle
-
-Return ONLY this exact JSON:
-{{"verdict":"DAY TRADE|SWING TRADE|INVEST|AVOID|MULTI-TIMEFRAME",
-"confidence":"Low|Medium|High",
-"risk":"Low|Medium|High|Very High",
-"risk_reason":"one sentence",
-"entry_low":0,"entry_high":0,
-"vwap":0,"ema100":0,
-"support1":0,"support1_label":"e.g. 61.8% Fib 3x bounce",
-"support2":0,"support2_label":"e.g. 20MA support",
-"support3":0,"support3_label":"e.g. prev weekly low",
-"resistance1":0,"resistance1_label":"e.g. 200MA",
-"resistance2":0,"resistance2_label":"e.g. 38.2% Fib",
-"resistance3":0,"resistance3_label":"e.g. recent swing high",
-"reasons_bull":["r1","r2","r3"],
-"reasons_bear":["r1","r2"],
-"summary":"2-3 sentence plain English analysis",
-"day_trade_note":"one sentence",
-"swing_note":"one sentence",
-"invest_note":"one sentence",
-"pb_ratio":0,"peg_ratio":0,
-"eps_growth_yoy":0,"rev_growth_yoy":0,
-"earnings_date":"MMM DD YYYY",
-"earnings_days":0,
-"last_earnings_beat":"Beat by X% or Missed by X% or Unknown",
-"sector":"sector name",
-"chart_patterns":[{{"name":"pattern name","type":"bullish|bearish|neutral","confidence":72,"description":"one sentence describing what you see in the 60-day price series","target_pct":12,"target_price":0}}],
-"candle_patterns":[{{"name":"pattern name","type":"bullish|bearish|neutral","session":"Today|Yesterday|2d ago|3d ago|4d ago","meaning":"one sentence plain English"}}],
-"trend_short":"Uptrend|Downtrend|Sideways","trend_short_desc":"one sentence based on price vs 20MA",
-"trend_medium":"Uptrend|Downtrend|Sideways","trend_medium_desc":"one sentence based on price vs 50MA",
-"trend_long":"Uptrend|Downtrend|Sideways","trend_long_desc":"one sentence based on price vs 200MA",
-"pattern_bias":"Bullish|Bearish|Neutral","pattern_bias_desc":"one sentence overall",
-"cycle_phase":"Early|Mid|Late|Recession",
-"cycle_desc":"one sentence on where we are in business cycle and impact on this stock",
-"market_risk":"Low|Moderate|High|Extreme",
-"market_risk_desc":"one sentence on macro/market risk for this position","news_sentiment":[{"headline":"title","sentiment":"bullish|bearish|neutral","reason":"one sentence"}]}}"""
 
     try:
         client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
@@ -475,7 +542,7 @@ Return ONLY this exact JSON:
             messages=[{"role": "user", "content": prompt}]
         )
         raw = msg.content[0].text.strip()
-        # Strip any accidental markdown
+        # Strip accidental markdown
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
@@ -483,7 +550,6 @@ Return ONLY this exact JSON:
         return json.loads(raw.strip())
     except Exception as e:
         return {"error": str(e)}
-
 
 # ── Chart ─────────────────────────────────────────────────────
 def build_chart(df, ticker):
@@ -667,9 +733,9 @@ def range_bar_html(low, high, current, cur):
     </div>'''
 
 
+
 # ── Main App ──────────────────────────────────────────────────
 def main():
-    # Input screen
     if 'analysis' not in st.session_state:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -677,39 +743,50 @@ def main():
             st.markdown('<div style="text-align:center;font-size:12px;color:#4A6080;letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;">Stock Analysis · AI HUD</div>', unsafe_allow_html=True)
             st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Enter a ticker</div>', unsafe_allow_html=True)
             st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:20px;">Type any stock symbol and press Analyze</div>', unsafe_allow_html=True)
+
             ticker_in = st.text_input("", placeholder="NVDA", key="ticker_input", label_visibility="collapsed")
             ticker_upper = ticker_in.strip().upper() if ticker_in else ""
 
-            # Check disambiguation
             if ticker_upper in MULTI_LISTED and len(MULTI_LISTED[ticker_upper]) > 1:
                 st.markdown('<div style="background:#0F3030;border:1px solid #14B8A6;border-radius:8px;padding:8px 14px;margin-top:8px;font-size:11px;color:#5EEAD4;letter-spacing:1px;">MULTIPLE LISTINGS FOUND — SELECT ONE:</div>', unsafe_allow_html=True)
                 for opt in MULTI_LISTED[ticker_upper]:
-                    col_a, col_b, col_c = st.columns([2,3,1])
-                    with col_a:
+                    ca, cb, cc = st.columns([2, 3, 1])
+                    with ca:
                         st.markdown(f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{opt["ticker"]}</span>', unsafe_allow_html=True)
-                    with col_b:
+                    with cb:
                         st.markdown(f'<span style="font-size:12px;color:#E2E8F0;">{opt["name"]}</span>', unsafe_allow_html=True)
-                    with col_c:
-                        if st.button(f'{opt["exchange"]}', key=f'btn_{opt["ticker"]}'):
+                    with cc:
+                        if st.button(opt["exchange"], key=f'btn_{opt["ticker"]}'):
                             run_analysis(opt["ticker"])
             elif st.button("Analyze →"):
                 if ticker_upper:
-                    # Normalize for yfinance
                     t = MULTI_LISTED.get(ticker_upper, [{'ticker': ticker_upper}])[0]['ticker']
                     run_analysis(t)
+
             st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:16px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: add .TO (RY.TO) &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
         return
 
-    # HUD screen
     render_hud()
 
 
 def run_analysis(ticker):
     prog = st.empty()
-    try:
-        prog.info(f"⏳ Fetching price data for {ticker}...")
+    # All variables initialized BEFORE any try block
+    analyst_data  = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,
+                     'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
+    earnings_hist = []
+    insider_data  = []
+    news_items    = []
+    vol_data      = {'hv_30':0,'hv_90':0,'bb_upper':0,'bb_lower':0,
+                     'bb_mid':0,'bb_width':0,'bb_pct':50,'iv':0,'iv_vs_hv':0}
+    market_ctx    = {'spy_signal':'Unknown','qqq_signal':'Unknown','dia_signal':'Unknown',
+                     'spy_1m':0,'qqq_1m':0,'dia_1m':0}
+    earn_date_str = 'Unknown'
+    days_to_earn  = 0
 
-        # Normalize ticker for yfinance
+    try:
+        # ── 1. Price data ──────────────────────────────────────
+        prog.info(f"⏳ Fetching price data for {ticker}...")
         yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
         raw = yf.Ticker(yf_ticker)
         df  = raw.history(period="2y")
@@ -724,171 +801,171 @@ def run_analysis(ticker):
             st.error("Not enough data to calculate indicators.")
             return
 
+        row  = df.iloc[-1]
+        prev = df.iloc[-2]
+        signals, score = calc_signals(row)
+
+        # Fibonacci
+        h52  = float(raw.info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()) if raw.info else df['High'].tail(252).max())
+        l52  = float(raw.info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min())  if raw.info else df['Low'].tail(252).min())
+        rng  = h52 - l52
+        fibs = [h52 - rng*0.382, h52 - rng*0.500, h52 - rng*0.618]
+
+        # ── 2. Fundamentals ────────────────────────────────────
         prog.info(f"⏳ Fetching fundamentals for {ticker}...")
         try:
             info = raw.info or {}
         except:
             info = {}
 
-        row  = df.iloc[-1]
-        prev = df.iloc[-2]
-        signals, score = calc_signals(row)
-
-        # Fibonacci
-        h52 = float(info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()))
-        l52 = float(info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min()))
-        rng = h52 - l52
-        fibs = [h52 - rng*0.382, h52 - rng*0.500, h52 - rng*0.618]
-
-        # ── Safe defaults ──────────────────────────────────────
-        analyst_data  = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
-        earnings_hist = []
-        insider_data  = []
-        news_items    = []
-        vol_data      = {'hv_30':0,'hv_90':0,'bb_upper':0,'bb_lower':0,'bb_mid':0,'bb_width':0,'bb_pct':50,'iv':0,'iv_vs_hv':0}
-
-        # ── Market context — batched ───────────────────────────
-        prog.info("⏳ Fetching market context (SPY/QQQ/DIA)...")
+        # ── 3. Market context (batched) ────────────────────────
+        prog.info("⏳ Fetching market context...")
         try:
-            idx_batch = yf.download(
-                ["SPY","QQQ","DIA"], period="3mo",
-                auto_adjust=True, progress=False, threads=True
-            )
+            idx_df = yf.download(["SPY","QQQ","DIA"], period="3mo",
+                                  auto_adjust=True, progress=False, threads=True)
             def idx_sig(sym):
                 try:
-                    s = idx_batch["Close"][sym].dropna() if ("Close",sym) in idx_batch.columns else idx_batch["Close"].dropna()
-                    if len(s)<20: return "Unknown", 0
-                    c=float(s.iloc[-1]); m20=float(s.tail(20).mean())
-                    m50=float(s.tail(50).mean()) if len(s)>=50 else m20
-                    sig = "Bullish" if c>m20 and c>m50 else "Bearish" if c<m20 and c<m50 else "Neutral"
-                    return sig, round((c/float(s.iloc[-20])-1)*100,2)
-                except: return "Unknown", 0
-            spy_sig,spy_chg = idx_sig("SPY")
-            qqq_sig,qqq_chg = idx_sig("QQQ")
-            dia_sig,dia_chg = idx_sig("DIA")
-            market_ctx = {"spy_signal":spy_sig,"qqq_signal":qqq_sig,"dia_signal":dia_sig,
-                          "spy_1m":spy_chg,"qqq_1m":qqq_chg,"dia_1m":dia_chg}
+                    if ("Close", sym) in idx_df.columns:
+                        s = idx_df["Close"][sym].dropna()
+                    else:
+                        s = idx_df["Close"].dropna()
+                    if len(s) < 20:
+                        return "Unknown", 0
+                    c   = float(s.iloc[-1])
+                    m20 = float(s.tail(20).mean())
+                    m50 = float(s.tail(50).mean()) if len(s) >= 50 else m20
+                    sig = "Bullish" if c > m20 and c > m50 else "Bearish" if c < m20 and c < m50 else "Neutral"
+                    chg = round((c / float(s.iloc[-20]) - 1) * 100, 2)
+                    return sig, chg
+                except:
+                    return "Unknown", 0
+            spy_s, spy_c = idx_sig("SPY")
+            qqq_s, qqq_c = idx_sig("QQQ")
+            dia_s, dia_c = idx_sig("DIA")
+            market_ctx = {"spy_signal":spy_s,"qqq_signal":qqq_s,"dia_signal":dia_s,
+                          "spy_1m":spy_c,"qqq_1m":qqq_c,"dia_1m":dia_c}
         except:
-            market_ctx = {"spy_signal":"Unknown","qqq_signal":"Unknown","dia_signal":"Unknown",
-                          "spy_1m":0,"qqq_1m":0,"dia_1m":0}
-        st.session_state.market_ctx = market_ctx
+            pass  # market_ctx stays as safe default
 
-        # ── News (before Claude so it can analyze them) ────────
+        # ── 4. News ────────────────────────────────────────────
         prog.info(f"⏳ Fetching news for {ticker}...")
         try:
-            news_raw = raw.news or []
-            for item in (news_raw or [])[:5]:
+            raw_news = raw.news or []
+            for item in raw_news[:5]:
                 try:
-                    title = str(item.get('title','') or item.get('content',{}).get('title',''))
-                    pub   = str(item.get('publisher','') or item.get('content',{}).get('provider',{}).get('displayName',''))
-                    link  = str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url',''))
-                    if title: news_items.append({'title':title,'publisher':pub,'link':link})
-                except: pass
-        except: pass
+                    title = (item.get('title') or
+                             item.get('content', {}).get('title', ''))
+                    pub   = (item.get('publisher') or
+                             item.get('content', {}).get('provider', {}).get('displayName', ''))
+                    link  = (item.get('link') or
+                             item.get('content', {}).get('canonicalUrl', {}).get('url', ''))
+                    if title:
+                        news_items.append({'title': str(title), 'publisher': str(pub), 'link': str(link)})
+                except:
+                    pass
+        except:
+            pass  # news_items stays as safe default []
 
-        # ── Claude AI analysis ─────────────────────────────────
-        prog.info(f"🤖 Running AI analysis... (10-15 sec)")
-        info['_market_ctx'] = market_ctx
-        info['_news']       = news_items
-        analysis = get_claude_analysis(ticker, info, df, signals, score, fibs)
+        # ── 5. Claude AI ───────────────────────────────────────
+        prog.info(f"🤖 Running AI analysis for {ticker}... (10-15 sec)")
+        analysis = get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, market_ctx)
         if 'error' in analysis:
             prog.empty()
             st.error(f"Claude API error: {analysis['error']}")
             return
 
-        # ── Analyst ratings ────────────────────────────────────
+        # ── 6. Analyst ratings ─────────────────────────────────
         prog.info("⏳ Fetching analyst & earnings data...")
         try:
             rec = raw.recommendations_summary
             if rec is not None and not rec.empty:
                 latest = rec.iloc[0]
                 analyst_data = {
-                    'buy':       int(latest.get('strongBuy',0) + latest.get('buy',0)),
-                    'hold':      int(latest.get('hold',0)),
-                    'sell':      int(latest.get('sell',0) + latest.get('strongSell',0)),
-                    'target':    float(info.get('targetMeanPrice',0) or 0),
-                    'target_low':float(info.get('targetLowPrice',0) or 0),
-                    'target_high':float(info.get('targetHighPrice',0) or 0),
-                    'num_analysts':int(info.get('numberOfAnalystOpinions',0) or 0),
-                    'rec_mean':  float(info.get('recommendationMean',0) or 0),
-                    'rec_key':   str(info.get('recommendationKey','N/A') or 'N/A'),
+                    'buy':         int(latest.get('strongBuy', 0) + latest.get('buy', 0)),
+                    'hold':        int(latest.get('hold', 0)),
+                    'sell':        int(latest.get('sell', 0) + latest.get('strongSell', 0)),
+                    'target':      float(info.get('targetMeanPrice', 0) or 0),
+                    'target_low':  float(info.get('targetLowPrice', 0) or 0),
+                    'target_high': float(info.get('targetHighPrice', 0) or 0),
+                    'num_analysts':int(info.get('numberOfAnalystOpinions', 0) or 0),
+                    'rec_mean':    float(info.get('recommendationMean', 0) or 0),
+                    'rec_key':     str(info.get('recommendationKey', 'N/A') or 'N/A'),
                 }
-        except: pass
+        except:
+            pass
 
-        # ── Earnings history ───────────────────────────────────
+        # ── 7. Earnings history ────────────────────────────────
         try:
             eh = raw.earnings_history
             if eh is not None and not eh.empty:
-                for _, row_e in eh.tail(4).iterrows():
-                    est  = float(row_e.get('epsEstimate',0) or 0)
-                    act  = float(row_e.get('epsActual',0) or 0)
-                    surp = float(row_e.get('surprisePercent',0) or 0) * 100
-                    qtr  = str(row_e.get('period',''))
-                    earnings_hist.append({'quarter':qtr,'estimate':est,'actual':act,'surprise':surp,'beat':surp>0})
-        except: pass
+                for _, er in eh.tail(4).iterrows():
+                    est  = float(er.get('epsEstimate', 0) or 0)
+                    act  = float(er.get('epsActual', 0) or 0)
+                    surp = float(er.get('surprisePercent', 0) or 0) * 100
+                    qtr  = str(er.get('period', ''))
+                    earnings_hist.append({'quarter': qtr, 'estimate': est,
+                                          'actual': act, 'surprise': surp, 'beat': surp > 0})
+        except:
+            pass
 
-        # ── Insider trading ────────────────────────────────────
+        # ── 8. Insider trading ─────────────────────────────────
         try:
             ins = raw.insider_transactions
             if ins is not None and not ins.empty:
-                for _, row_i in ins.head(5).iterrows():
-                    shares = int(row_i.get('shares',0) or 0)
-                    val    = float(row_i.get('value',0) or 0)
-                    text   = str(row_i.get('text','') or '')
-                    name   = str(row_i.get('filerName','') or row_i.get('insider',''))
-                    role   = str(row_i.get('filerRelation','') or '')
-                    date_i = str(row_i.get('startDate','') or '')
+                for _, ri in ins.head(5).iterrows():
+                    shares = int(ri.get('shares', 0) or 0)
+                    val    = float(ri.get('value', 0) or 0)
+                    text   = str(ri.get('text', '') or '')
+                    name   = str(ri.get('filerName', '') or ri.get('insider', ''))
+                    role   = str(ri.get('filerRelation', '') or '')
+                    date_i = str(ri.get('startDate', '') or '')
                     is_buy = 'purchase' in text.lower() or 'buy' in text.lower() or shares > 0
-                    insider_data.append({'name':name[:20],'role':role[:20],'type':'BUY' if is_buy else 'SELL',
-                                         'shares':abs(shares),'value':abs(val),'date':str(date_i)[:10]})
-        except: pass
+                    insider_data.append({
+                        'name': name[:20], 'role': role[:20],
+                        'type': 'BUY' if is_buy else 'SELL',
+                        'shares': abs(shares), 'value': abs(val), 'date': str(date_i)[:10]
+                    })
+        except:
+            pass
 
-        # ── Volatility metrics ─────────────────────────────────
+        # ── 9. Volatility ──────────────────────────────────────
         try:
-            log_returns = np.log(df['Close'] / df['Close'].shift(1)).dropna()
-            hv_30 = float(log_returns.tail(30).std() * np.sqrt(252) * 100)
-            hv_90 = float(log_returns.tail(90).std() * np.sqrt(252) * 100) if len(log_returns)>=90 else hv_30
-            bb_mid   = float(df['Close'].tail(20).mean())
-            bb_std   = float(df['Close'].tail(20).std())
-            bb_upper = bb_mid + 2*bb_std
-            bb_lower = bb_mid - 2*bb_std
-            bb_width = (bb_upper - bb_lower) / bb_mid * 100
-            iv       = float(info.get('impliedVolatility',0) or 0) * 100
-            close_now= float(df['Close'].iloc[-1])
-            bb_pct   = (close_now - bb_lower)/(bb_upper - bb_lower)*100 if bb_upper != bb_lower else 50
-            vol_data = {'hv_30':hv_30,'hv_90':hv_90,'bb_upper':bb_upper,'bb_lower':bb_lower,
-                        'bb_mid':bb_mid,'bb_width':bb_width,'bb_pct':bb_pct,'iv':iv,
-                        'iv_vs_hv':iv/hv_30 if hv_30>0 else 0}
-        except: pass
+            lr    = np.log(df['Close'] / df['Close'].shift(1)).dropna()
+            hv30  = float(lr.tail(30).std() * np.sqrt(252) * 100)
+            hv90  = float(lr.tail(90).std() * np.sqrt(252) * 100) if len(lr) >= 90 else hv30
+            bb_m  = float(df['Close'].tail(20).mean())
+            bb_s  = float(df['Close'].tail(20).std())
+            bb_u  = bb_m + 2 * bb_s
+            bb_l  = bb_m - 2 * bb_s
+            bb_w  = (bb_u - bb_l) / bb_m * 100
+            iv    = float(info.get('impliedVolatility', 0) or 0) * 100
+            cnow  = float(df['Close'].iloc[-1])
+            bb_p  = (cnow - bb_l) / (bb_u - bb_l) * 100 if bb_u != bb_l else 50
+            vol_data = {'hv_30': hv30, 'hv_90': hv90, 'bb_upper': bb_u, 'bb_lower': bb_l,
+                        'bb_mid': bb_m, 'bb_width': bb_w, 'bb_pct': bb_p, 'iv': iv,
+                        'iv_vs_hv': iv / hv30 if hv30 > 0 else 0}
+        except:
+            pass
 
-        # ── Earnings date from calendar ────────────────────────
+        # ── 10. Earnings date ──────────────────────────────────
         earn_date_str = analysis.get('earnings_date', 'Unknown') or 'Unknown'
         days_to_earn  = 0
         try:
             cal = raw.calendar
             if cal is not None and not cal.empty:
-                next_earn = cal.iloc[0].get('Earnings Date', None)
-                if next_earn:
-                    next_earn_dt = pd.Timestamp(next_earn).tz_localize(None) if hasattr(next_earn,'tzinfo') and next_earn.tzinfo is None else pd.Timestamp(next_earn).tz_convert(None)
-                    days_to_earn = (next_earn_dt - pd.Timestamp.now()).days
-                    earn_date_str = next_earn_dt.strftime("%b %d, %Y")
-                else:
-                    days_to_earn = 0; earn_date_str = analysis.get('earnings_date','Unknown') or 'Unknown'
-            else:
-                days_to_earn = 0; earn_date_str = analysis.get('earnings_date','Unknown') or 'Unknown'
+                ned = cal.iloc[0].get('Earnings Date', None)
+                if ned:
+                    ned_ts = (pd.Timestamp(ned).tz_localize(None)
+                              if hasattr(ned, 'tzinfo') and ned.tzinfo is None
+                              else pd.Timestamp(ned).tz_convert(None))
+                    days_to_earn  = (ned_ts - pd.Timestamp.now()).days
+                    earn_date_str = ned_ts.strftime("%b %d, %Y")
         except:
-            days_to_earn = 0; earn_date_str = analysis.get('earnings_date','Unknown') or 'Unknown'
+            pass
 
-        # ── Store in session ───────────────────────────────────
+        # ── Store in session state ─────────────────────────────
         prog.empty()
         st.session_state.analysis      = analysis
-        st.session_state.analyst_data  = analyst_data
-        st.session_state.earnings_hist = earnings_hist
-        st.session_state.insider_data  = insider_data
-        st.session_state.news_items    = news_items
-        st.session_state.vol_data      = vol_data
-        st.session_state.earn_date_str = earn_date_str
-        st.session_state.days_to_earn  = days_to_earn
         st.session_state.df            = df
         st.session_state.info          = info
         st.session_state.ticker        = ticker
@@ -897,6 +974,14 @@ def run_analysis(ticker):
         st.session_state.fibs          = fibs
         st.session_state.row           = row
         st.session_state.prev          = prev
+        st.session_state.market_ctx    = market_ctx
+        st.session_state.analyst_data  = analyst_data
+        st.session_state.earnings_hist = earnings_hist
+        st.session_state.insider_data  = insider_data
+        st.session_state.news_items    = news_items
+        st.session_state.vol_data      = vol_data
+        st.session_state.earn_date_str = earn_date_str
+        st.session_state.days_to_earn  = days_to_earn
         st.rerun()
 
     except Exception as e:
@@ -1227,13 +1312,12 @@ def render_hud():
         st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">Invest</div><div class="tf-note">{a.get("invest_note","")}</div></div>', unsafe_allow_html=True)
 
     # ── ZONE 8: EARNINGS ─────────────────────────────────────
-    # Earnings from session state (computed in run_analysis)
+    # Earnings from session state
     beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
     if earnings_hist:
-        last_e = earnings_hist[-1]
-        s = last_e.get('surprise', 0) or 0
+        last_e   = earnings_hist[-1]
+        s        = last_e.get('surprise', 0) or 0
         beat_str = f"Beat +{s:.1f}%" if s > 0 else f"Missed {s:.1f}%"
-
     earn_days  = days_to_earn
     earn_col   = "#FF6B6B" if 0 < earn_days < 14 else "#FACC15" if 0 < earn_days < 30 else "#94A3B8"
     beat_col   = "#00FF88" if "Beat" in beat_str else "#FF6B6B" if "Miss" in beat_str else "#FACC15"
@@ -1422,6 +1506,7 @@ def render_hud():
             </div>''', unsafe_allow_html=True)
 
     st.markdown('<div class="hud-footer">NOT FINANCIAL ADVICE · AI-GENERATED · EDUCATIONAL PURPOSES ONLY</div>', unsafe_allow_html=True)
+
 
 
 if __name__ == "__main__":
