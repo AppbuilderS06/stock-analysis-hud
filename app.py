@@ -8,6 +8,58 @@ import anthropic
 import json
 from datetime import datetime
 
+# ── Cached data fetch (15 min TTL — prevents Yahoo rate limiting) ───
+@st.cache_data(ttl=900, show_spinner=False)
+def fetch_ticker_data(ticker):
+    """Fetch all yfinance data once and cache for 15 minutes."""
+    yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
+    raw   = yf.Ticker(yf_ticker)
+    df    = raw.history(period="2y")
+    try:    info = raw.info or {}
+    except: info = {}
+    try:    calendar   = raw.calendar
+    except: calendar   = None
+    try:    rec_summary = raw.recommendations_summary
+    except: rec_summary = None
+    try:    earn_hist  = raw.earnings_history
+    except: earn_hist  = None
+    try:    earn_dates = raw.earnings_dates
+    except: earn_dates = None
+    try:    insider    = raw.insider_transactions
+    except: insider    = None
+    try:    news       = raw.news or []
+    except: news       = []
+    return {
+        'raw': raw, 'df': df, 'info': info,
+        'calendar': calendar, 'rec_summary': rec_summary,
+        'earn_hist': earn_hist, 'earn_dates': earn_dates,
+        'insider': insider, 'news': news,
+    }
+
+@st.cache_data(ttl=900, show_spinner=False)
+def fetch_market_context():
+    """Cache SPY/QQQ/DIA for 15 minutes — shared across all users."""
+    try:
+        idx_df = yf.download(["SPY","QQQ","DIA"], period="3mo",
+                              auto_adjust=True, progress=False, threads=True)
+        def idx_sig(sym):
+            try:
+                s = idx_df["Close"][sym].dropna() if ("Close",sym) in idx_df.columns else idx_df["Close"].dropna()
+                if len(s) < 20: return "Unknown", 0
+                c=float(s.iloc[-1]); m20=float(s.tail(20).mean())
+                m50=float(s.tail(50).mean()) if len(s)>=50 else m20
+                sig = "Bullish" if c>m20 and c>m50 else "Bearish" if c<m20 and c<m50 else "Neutral"
+                return sig, round((c/float(s.iloc[-20])-1)*100, 2)
+            except: return "Unknown", 0
+        spy_s,spy_c = idx_sig("SPY")
+        qqq_s,qqq_c = idx_sig("QQQ")
+        dia_s,dia_c = idx_sig("DIA")
+        return {"spy_signal":spy_s,"qqq_signal":qqq_s,"dia_signal":dia_s,
+                "spy_1m":spy_c,"qqq_1m":qqq_c,"dia_1m":dia_c}
+    except:
+        return {"spy_signal":"Unknown","qqq_signal":"Unknown","dia_signal":"Unknown",
+                "spy_1m":0,"qqq_1m":0,"dia_1m":0}
+
 # ── Page config ──────────────────────────────────────────────
 st.set_page_config(
     page_title="Stock Analysis HUD",
@@ -785,6 +837,7 @@ def main():
     render_hud()
 
 
+
 def run_analysis(ticker):
     prog = st.empty()
     # All variables initialized BEFORE any try block
@@ -801,11 +854,13 @@ def run_analysis(ticker):
     days_to_earn  = 0
 
     try:
-        # ── 1. Price data ──────────────────────────────────────
-        prog.info(f"⏳ Fetching price data for {ticker}...")
-        yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
-        raw = yf.Ticker(yf_ticker)
-        df  = raw.history(period="2y")
+        # ── 1. Fetch all data (cached 15 min) ──────────────────
+        prog.info(f"⏳ Fetching data for {ticker}...")
+        data  = fetch_ticker_data(ticker)
+        raw   = data['raw']
+        df    = data['df']
+        info  = data['info']
+
         if df.empty or len(df) < 50:
             prog.empty()
             st.error(f"No data found for {ticker}. Check the ticker symbol.")
@@ -822,52 +877,19 @@ def run_analysis(ticker):
         signals, score = calc_signals(row)
 
         # Fibonacci
-        h52  = float(raw.info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()) if raw.info else df['High'].tail(252).max())
-        l52  = float(raw.info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min())  if raw.info else df['Low'].tail(252).min())
+        h52  = float(info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()))
+        l52  = float(info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min()))
         rng  = h52 - l52
         fibs = [h52 - rng*0.382, h52 - rng*0.500, h52 - rng*0.618]
 
-        # ── 2. Fundamentals ────────────────────────────────────
-        prog.info(f"⏳ Fetching fundamentals for {ticker}...")
-        try:
-            info = raw.info or {}
-        except:
-            info = {}
-
-        # ── 3. Market context (batched) ────────────────────────
+        # ── 2. Market context (cached 15 min, shared) ──────────
         prog.info("⏳ Fetching market context...")
-        try:
-            idx_df = yf.download(["SPY","QQQ","DIA"], period="3mo",
-                                  auto_adjust=True, progress=False, threads=True)
-            def idx_sig(sym):
-                try:
-                    if ("Close", sym) in idx_df.columns:
-                        s = idx_df["Close"][sym].dropna()
-                    else:
-                        s = idx_df["Close"].dropna()
-                    if len(s) < 20:
-                        return "Unknown", 0
-                    c   = float(s.iloc[-1])
-                    m20 = float(s.tail(20).mean())
-                    m50 = float(s.tail(50).mean()) if len(s) >= 50 else m20
-                    sig = "Bullish" if c > m20 and c > m50 else "Bearish" if c < m20 and c < m50 else "Neutral"
-                    chg = round((c / float(s.iloc[-20]) - 1) * 100, 2)
-                    return sig, chg
-                except:
-                    return "Unknown", 0
-            spy_s, spy_c = idx_sig("SPY")
-            qqq_s, qqq_c = idx_sig("QQQ")
-            dia_s, dia_c = idx_sig("DIA")
-            market_ctx = {"spy_signal":spy_s,"qqq_signal":qqq_s,"dia_signal":dia_s,
-                          "spy_1m":spy_c,"qqq_1m":qqq_c,"dia_1m":dia_c}
-        except:
-            pass  # market_ctx stays as safe default
+        market_ctx = fetch_market_context()
 
-        # ── 4. News ────────────────────────────────────────────
-        prog.info(f"⏳ Fetching news for {ticker}...")
+        # ── 3. News ────────────────────────────────────────────
+        prog.info(f"⏳ Processing news for {ticker}...")
         try:
-            raw_news = raw.news or []
-            for item in raw_news[:5]:
+            for item in (data['news'] or [])[:5]:
                 try:
                     title = (item.get('title') or
                              item.get('content', {}).get('title', ''))
@@ -880,7 +902,7 @@ def run_analysis(ticker):
                 except:
                     pass
         except:
-            pass  # news_items stays as safe default []
+            pass
 
         # ── 5. Claude AI ───────────────────────────────────────
         prog.info(f"🤖 Running AI analysis for {ticker}... (10-15 sec)")
@@ -912,7 +934,7 @@ def run_analysis(ticker):
         # Source 2: recommendations_summary for buy/hold/sell counts
         buy_cnt = hold_cnt = sell_cnt = 0
         try:
-            rec = raw.recommendations_summary
+            rec = data.get('rec_summary') or raw.recommendations_summary
             if rec is not None and not rec.empty:
                 r = rec.iloc[0]
                 buy_cnt  = int((r.get('strongBuy',  r.get('strong_buy',  0)) or 0) +
@@ -945,7 +967,7 @@ def run_analysis(ticker):
         # ── 7. Earnings history — try multiple sources ───────────
         eh = None
         try:
-            eh = raw.earnings_history
+            eh = data.get('earn_hist') or raw.earnings_history
         except:
             pass
         if eh is None or (hasattr(eh, 'empty') and eh.empty):
@@ -983,7 +1005,7 @@ def run_analysis(ticker):
 
         # ── 8. Insider trading ─────────────────────────────────
         try:
-            ins = raw.insider_transactions
+            ins = data.get('insider') or raw.insider_transactions
             if ins is None or ins.empty:
                 try:
                     ins = raw.get_insider_transactions()
@@ -1071,7 +1093,7 @@ def run_analysis(ticker):
 
         # Source 1: raw.calendar (most reliable)
         try:
-            cal = raw.calendar
+            cal = data.get('calendar') or raw.calendar
             if cal is not None:
                 if isinstance(cal, dict):
                     # Dict format: {'Earnings Date': [ts1, ts2], ...}
@@ -1105,7 +1127,7 @@ def run_analysis(ticker):
         # Source 3: earnings_dates DataFrame (newest yfinance)
         if ned is None:
             try:
-                ed_df = raw.earnings_dates
+                ed_df = data.get('earn_dates') or raw.earnings_dates
                 if ed_df is not None and not ed_df.empty:
                     future = ed_df[ed_df.index > pd.Timestamp.now()]
                     if not future.empty:
@@ -1256,7 +1278,7 @@ def render_hud():
                      "Strong bearish setup")
     bull_names = " · ".join(signals[k]["label"] for k in signals if signals[k]["bull"]) or "None"
     bear_names = " · ".join(signals[k]["label"] for k in signals if not signals[k]["bull"]) or "None"
-    c1, c2, c3 = st.columns([1.2, 0.7, 1.5])
+    c1, c2 = st.columns([1.2, 0.8])
     with c1:
         st.markdown(f"""
         <div class="verdict-card" style="background:{vc['bg']};border-left-color:{vc['border']};">
@@ -1281,22 +1303,14 @@ def render_hud():
             <div style="font-size:10px;color:#FF6B6B;line-height:1.5;">&#9660; {bear_names}</div>
           </div>
         </div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""
-        <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
-                    border-radius:8px;padding:14px 16px;min-height:160px;">
-          <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
-                      margin-bottom:10px;font-weight:600;">AI Summary</div>
-          <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{a.get('summary','')}</div>
-        </div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""
-        <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
-                    border-radius:8px;padding:14px 16px;height:100%;min-height:160px;">
-          <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
-                      margin-bottom:10px;font-weight:600;">AI Summary</div>
-          <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{a.get('summary','')}</div>
-        </div>""", unsafe_allow_html=True)
+    # ── ZONE 3b: AI SUMMARY (full width) ────────────────────
+    st.markdown(f"""
+    <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
+                border-radius:8px;padding:14px 18px;margin-top:6px;">
+      <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                  margin-bottom:8px;font-weight:600;">AI Summary</div>
+      <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{a.get('summary','')}</div>
+    </div>""", unsafe_allow_html=True)
 
     # ── ZONE 4: SIGNAL GRID ──────────────────────────────────
     sig_keys = ['MA20','MA50','MA200','RSI','MACD','OBV','Vol','ATR']
