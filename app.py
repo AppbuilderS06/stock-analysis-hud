@@ -591,7 +591,9 @@ def run_analysis(ticker):
     with st.spinner(f"Analyzing {ticker}..."):
         try:
             # Fetch data — 2 years for enough MA200 history
-            raw = yf.Ticker(ticker)
+            # yfinance uses hyphens not dots for some tickers
+            yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
+            raw = yf.Ticker(yf_ticker)
             df  = raw.history(period="2y")
             if df.empty or len(df) < 50:
                 st.error(f"No data found for {ticker}. Check the ticker symbol.")
@@ -804,19 +806,19 @@ def render_hud():
         ma200_pct= (close/float(row['MA200'])-1)*100
 
         funds_html = '<div class="panel-body">'
-        funds_html += data_row("Market Cap",     fmt_cap(mc, show_info=True) if mc else "N/A", "val-w", show_info=True)
-        funds_html += data_row("P/E Ratio",      f"{pe:.1f}" if pe else "N/A", "val-r" if pe > 40 else "val-y" if pe > 20 else "val-g")
-        funds_html += data_row("P/B Ratio",      f"{pb:.1f}" if pb else "N/A", "val-r" if pb > 5 else "val-g")
-        funds_html += data_row("PEG Ratio",      f"{peg:.1f}" if peg else "N/A","val-r" if peg > 3 else "val-y" if peg > 1.5 else "val-g")
-        funds_html += data_row("EPS Growth YoY", f"{eps_g:+.1f}%" if eps_g else "N/A", "val-g" if eps_g > 0 else "val-r")
-        funds_html += data_row("Rev Growth YoY", f"{rev_g:+.1f}%" if rev_g else "N/A", "val-g" if rev_g > 0 else "val-r")
-        funds_html += data_row("20 MA",  f"{cur}{row['MA20']:.2f}  ({ma20_pct:+.1f}%)",  "val-g" if close > row['MA20']  else "val-r")
-        funds_html += data_row("50 MA",  f"{cur}{row['MA50']:.2f}  ({ma50_pct:+.1f}%)",  "val-g" if close > row['MA50']  else "val-r")
-        funds_html += data_row("200 MA", f"{cur}{row['MA200']:.2f}  ({ma200_pct:+.1f}%)", "val-g" if close > row['MA200'] else "val-r")
-        funds_html += data_row("RSI (14)", f"{row['RSI']:.1f}  {'Overbought' if row['RSI']>70 else 'Oversold' if row['RSI']<30 else 'Neutral'}", "val-r" if row['RSI']>70 else "val-g" if row['RSI']<30 else "val-y")
-        funds_html += data_row("MACD Hist", f"{row['MACDHist']:+.3f}", "val-g" if row['MACDHist']>0 else "val-r")
-        funds_html += data_row("OBV", "Rising" if row['OBV'] > prev['OBV'] else "Falling", "val-g" if row['OBV'] > prev['OBV'] else "val-r")
-        funds_html += '</div>'
+        funds_html += data_row("Market Cap",      fmt_cap(mc) if mc else "N/A",                    "val-w",  True)
+        funds_html += data_row("P/E Ratio",       f"{pe:.1f}" if pe else "N/A",                    "val-r" if pe > 40 else "val-y" if pe > 20 else "val-g", True)
+        funds_html += data_row("P/B Ratio",       f"{pb:.1f}" if pb else "N/A",                    "val-r" if pb > 5 else "val-g", True)
+        funds_html += data_row("PEG Ratio",       f"{peg:.1f}" if peg else "N/A",                  "val-r" if peg > 3 else "val-y" if peg > 1.5 else "val-g", True)
+        funds_html += data_row("EPS Growth YoY",  f"{eps_g:+.1f}%" if eps_g else "N/A",            "val-g" if eps_g > 0 else "val-r", True)
+        funds_html += data_row("Rev Growth YoY",  f"{rev_g:+.1f}%" if rev_g else "N/A",            "val-g" if rev_g > 0 else "val-r", True)
+        funds_html += data_row("20 MA",           f"{cur}{row['MA20']:.2f}  ({ma20_pct:+.1f}%)",   "val-g" if close > row['MA20']  else "val-r")
+        funds_html += data_row("50 MA",           f"{cur}{row['MA50']:.2f}  ({ma50_pct:+.1f}%)",   "val-g" if close > row['MA50']  else "val-r")
+        funds_html += data_row("200 MA",          f"{cur}{row['MA200']:.2f}  ({ma200_pct:+.1f}%)", "val-g" if close > row['MA200'] else "val-r")
+        funds_html += data_row("RSI (14)",        f"{row['RSI']:.1f}  {'Overbought' if row['RSI']>70 else 'Oversold' if row['RSI']<30 else 'Neutral'}", "val-r" if row['RSI']>70 else "val-g" if row['RSI']<30 else "val-y", True)
+        funds_html += data_row("MACD Hist",       f"{row['MACDHist']:+.3f}",                       "val-g" if row['MACDHist']>0 else "val-r", True)
+        funds_html += data_row("OBV",             "Rising" if row['OBV'] > prev['OBV'] else "Falling", "val-g" if row['OBV'] > prev['OBV'] else "val-r", True)
+        funds_html += '</div>' 
         st.markdown(funds_html, unsafe_allow_html=True)
 
     # ── ZONE 6: REASONS ──────────────────────────────────────
