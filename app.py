@@ -1049,96 +1049,103 @@ def main():
     if 'analysis' not in st.session_state:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown("<br><br>", unsafe_allow_html=True)
-            st.markdown('<div style="text-align:center;font-size:12px;color:#4A6080;letter-spacing:3px;text-transform:uppercase;margin-bottom:24px;">Stock Analysis · AI HUD</div>', unsafe_allow_html=True)
-            st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Enter a ticker</div>', unsafe_allow_html=True)
-            st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:16px;">Type any symbol — a dropdown will guide you</div>', unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown('<div style="text-align:center;font-size:12px;color:#4A6080;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Stock Analysis · AI HUD</div>', unsafe_allow_html=True)
 
-            fmp_key_lp = st.secrets.get("FMP_API_KEY", "")
+            tab1, tab2 = st.tabs(["📊 Stock Analysis", "🎙️ Earnings Call Analyzer"])
 
-            # ── Ticker input — NO form so it updates on every keystroke ──
-            ticker_in = st.text_input("", placeholder="NVDA",
-                                      key="ticker_input",
-                                      label_visibility="collapsed")
-            ticker_upper = ticker_in.strip().upper() if ticker_in else ""
+            with tab1:
+                st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Enter a ticker</div>', unsafe_allow_html=True)
+                st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:16px;">Type any symbol — a dropdown will guide you</div>', unsafe_allow_html=True)
 
-            analyze_clicked = st.button("Analyze →", type="primary",
-                                        use_container_width=True)
+                fmp_key_lp = st.secrets.get("FMP_API_KEY", "")
 
-            # ── Enter key detection ────────────────────────────
-            # Streamlit reruns on Enter but doesn't set analyze_clicked.
-            # If the ticker value is the same as the last rerun, Enter was pressed.
-            prev_val = st.session_state.get('_prev_ticker_val', '')
-            st.session_state['_prev_ticker_val'] = ticker_upper
-            enter_pressed = (ticker_upper != '' and ticker_upper == prev_val and not analyze_clicked)
-            should_analyze = analyze_clicked or enter_pressed
+                # ── Ticker input — NO form so it updates on every keystroke ──
+                ticker_in = st.text_input("", placeholder="NVDA",
+                                          key="ticker_input",
+                                          label_visibility="collapsed")
+                ticker_upper = ticker_in.strip().upper() if ticker_in else ""
 
-            # ── Live dropdown ─────────────────────────────────
-            selected_ticker = None
+                analyze_clicked = st.button("Analyze →", type="primary",
+                                            use_container_width=True)
 
-            def show_dropdown(rows):
-                """Render a dropdown list. rows = list of dicts with sym/name/exch/curr/key."""
-                st.markdown(
-                    '<div style="background:#0D1B2A;border:1px solid #14B8A6;'
-                    'border-radius:8px;margin-top:6px;overflow:hidden;">'
-                    '<div style="padding:5px 14px;font-size:10px;color:#5EEAD4;'
-                    'letter-spacing:1.5px;background:#071420;">'
-                    '▼ SELECT EXCHANGE / SHARE CLASS</div>',
-                    unsafe_allow_html=True)
-                for row in rows:
-                    rl, rr = st.columns([5, 1])
-                    with rl:
-                        st.markdown(
-                            f'<div style="padding:7px 14px;border-bottom:1px solid #111827;">'
-                            f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{row["sym"]}</span>'
-                            f'&nbsp;&nbsp;<span style="font-size:12px;color:#CBD5E1;">{row["name"]}</span>'
-                            f'&nbsp;&nbsp;<span style="font-size:11px;color:#5EEAD4;">{row["exch"]} · {row["curr"]}</span>'
-                            f'</div>', unsafe_allow_html=True)
-                    with rr:
-                        if st.button("▶ Analyze", key=row["key"]):
-                            return row["sym"]
-                st.markdown("</div>", unsafe_allow_html=True)
-                return None
+                # ── Enter key detection ────────────────────────────
+                # Streamlit reruns on Enter but doesn't set analyze_clicked.
+                # If the ticker value is the same as the last rerun, Enter was pressed.
+                prev_val = st.session_state.get('_prev_ticker_val', '')
+                st.session_state['_prev_ticker_val'] = ticker_upper
+                enter_pressed = (ticker_upper != '' and ticker_upper == prev_val and not analyze_clicked)
+                should_analyze = analyze_clicked or enter_pressed
 
-            if ticker_upper:
-                # ── STEP 1: hardcoded MULTI_LISTED — always checked first ──
-                # Handles BRK→BRK-A/BRK-B, RY→NYSE/TSX, SHOP→NYSE/TSX etc.
-                if ticker_upper in MULTI_LISTED:
-                    rows = [{"sym": o["ticker"], "name": o["name"],
-                             "exch": o["exchange"], "curr": o["currency"],
-                             "key": f'ml_{o["ticker"]}'}
-                            for o in MULTI_LISTED[ticker_upper]]
-                    result = show_dropdown(rows)
-                    if result:
-                        selected_ticker = result
+                # ── Live dropdown ─────────────────────────────────
+                selected_ticker = None
 
-                # ── STEP 2: FMP live search for everything else ──
-                elif fmp_key_lp:
-                    results = search_ticker_fmp(ticker_upper, fmp_key_lp)
-                    if results:
-                        rows = [{"sym":  r.get("symbol",""),
-                                 "name": r.get("name","")[:42],
-                                 "exch": r.get("exchangeShortName",""),
-                                 "curr": r.get("currency","USD"),
-                                 "key":  f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
-                                for r in results[:10] if r.get("symbol","")]
+                def show_dropdown(rows):
+                    """Render a dropdown list. rows = list of dicts with sym/name/exch/curr/key."""
+                    st.markdown(
+                        '<div style="background:#0D1B2A;border:1px solid #14B8A6;'
+                        'border-radius:8px;margin-top:6px;overflow:hidden;">'
+                        '<div style="padding:5px 14px;font-size:10px;color:#5EEAD4;'
+                        'letter-spacing:1.5px;background:#071420;">'
+                        '▼ SELECT EXCHANGE / SHARE CLASS</div>',
+                        unsafe_allow_html=True)
+                    for row in rows:
+                        rl, rr = st.columns([5, 1])
+                        with rl:
+                            st.markdown(
+                                f'<div style="padding:7px 14px;border-bottom:1px solid #111827;">'
+                                f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{row["sym"]}</span>'
+                                f'&nbsp;&nbsp;<span style="font-size:12px;color:#CBD5E1;">{row["name"]}</span>'
+                                f'&nbsp;&nbsp;<span style="font-size:11px;color:#5EEAD4;">{row["exch"]} · {row["curr"]}</span>'
+                                f'</div>', unsafe_allow_html=True)
+                        with rr:
+                            if st.button("▶ Analyze", key=row["key"]):
+                                return row["sym"]
+                    st.markdown("</div>", unsafe_allow_html=True)
+                    return None
+
+                if ticker_upper:
+                    # ── STEP 1: hardcoded MULTI_LISTED — always checked first ──
+                    # Handles BRK→BRK-A/BRK-B, RY→NYSE/TSX, SHOP→NYSE/TSX etc.
+                    if ticker_upper in MULTI_LISTED:
+                        rows = [{"sym": o["ticker"], "name": o["name"],
+                                 "exch": o["exchange"], "curr": o["currency"],
+                                 "key": f'ml_{o["ticker"]}'}
+                                for o in MULTI_LISTED[ticker_upper]]
                         result = show_dropdown(rows)
                         if result:
                             selected_ticker = result
-                    elif should_analyze:
-                        # FMP has nothing → try the ticker directly (e.g. NPK.TO typed in full)
-                        selected_ticker = ticker_upper
 
-                # ── STEP 3: No FMP key → direct run ──
-                else:
-                    if should_analyze:
-                        selected_ticker = ticker_upper
+                    # ── STEP 2: FMP live search for everything else ──
+                    elif fmp_key_lp:
+                        results = search_ticker_fmp(ticker_upper, fmp_key_lp)
+                        if results:
+                            rows = [{"sym":  r.get("symbol",""),
+                                     "name": r.get("name","")[:42],
+                                     "exch": r.get("exchangeShortName",""),
+                                     "curr": r.get("currency","USD"),
+                                     "key":  f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
+                                    for r in results[:10] if r.get("symbol","")]
+                            result = show_dropdown(rows)
+                            if result:
+                                selected_ticker = result
+                        elif should_analyze:
+                            # FMP has nothing → try the ticker directly (e.g. NPK.TO typed in full)
+                            selected_ticker = ticker_upper
 
-            # ── Run analysis on selection ─────────────────────
-            if selected_ticker:
-                run_analysis(selected_ticker)
+                    # ── STEP 3: No FMP key → direct run ──
+                    else:
+                        if should_analyze:
+                            selected_ticker = ticker_upper
 
-            st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:20px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: add .TO (RY.TO) &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
+                # ── Run analysis on selection ─────────────────────
+                if selected_ticker:
+                    run_analysis(selected_ticker)
+
+                st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:20px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: add .TO (RY.TO) &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
+
+            with tab2:
+                render_earnings_analyzer()
 
         return
 
@@ -1930,48 +1937,105 @@ def render_hud():
     # ── ZONE 7b: RISK / REWARD CALCULATOR ───────────────────
     st.markdown('<div class="section-header" style="margin-top:8px;">⚡ Risk / Reward Calculator</div>', unsafe_allow_html=True)
 
-    # Pre-fill defaults from Claude analysis + ATR
-    atr_val      = float(row['ATR'])
-    entry_def    = round((float(a.get('entry_low', close)) + float(a.get('entry_high', close))) / 2, 2)
-    if entry_def == 0: entry_def = round(close, 2)
-    stop_def     = round(entry_def - 1.5 * atr_val, 2)
-    # Use nearest support if it's tighter than ATR stop
-    s1 = float(a.get('support1', 0))
-    if s1 > 0 and s1 < entry_def and s1 > stop_def:
-        stop_def = round(s1 - 0.01, 2)
-    target_def   = round(float(a.get('resistance1', entry_def + 3 * atr_val)), 2)
-    if target_def <= entry_def: target_def = round(entry_def + 3 * atr_val, 2)
+    # All data available for pre-filling
+    atr_val  = float(row['ATR'])
+    verdict  = a.get('verdict', 'SWING TRADE')
+    s1       = float(a.get('support1', 0) or 0)
+    s2       = float(a.get('support2', 0) or 0)
+    r1       = float(a.get('resistance1', 0) or 0)
+    r2       = float(a.get('resistance2', 0) or 0)
+    ma200    = float(row.get('MA200', close))
+    entry_mid = round((float(a.get('entry_low', close)) + float(a.get('entry_high', close))) / 2, 2)
+    if entry_mid == 0: entry_mid = round(close, 2)
+
+    # ── Entry type presets ────────────────────────────────────
+    # Day:   tight stop (0.5 ATR), target (1.5 ATR)
+    # Swing: support-based stop (1.5 ATR fallback), nearest resistance target
+    # Invest: deep stop (200MA or 3 ATR), wide target (2nd resistance or 5 ATR)
+    def calc_presets(mode):
+        if mode == "Day Trade":
+            stp = round(entry_mid - 0.5 * atr_val, 2)
+            tgt = round(entry_mid + 1.5 * atr_val, 2)
+        elif mode == "Swing Trade":
+            stp = round(entry_mid - 1.5 * atr_val, 2)
+            if s1 > 0 and s1 < entry_mid and s1 > stp:
+                stp = round(s1 - 0.01, 2)
+            tgt = r1 if r1 > entry_mid else round(entry_mid + 3 * atr_val, 2)
+        else:  # Invest
+            stp = round(entry_mid - 3 * atr_val, 2)
+            deep = min(ma200, s2 if s2 > 0 else ma200)
+            if deep > 0 and deep < entry_mid and deep > stp:
+                stp = round(deep - 0.01, 2)
+            tgt = r2 if r2 > entry_mid else round(entry_mid + 6 * atr_val, 2)
+        return max(0.01, stp), max(entry_mid + 0.01, tgt)
+
+    # Session state for selected mode — default to AI verdict
+    verdict_to_mode = {
+        'DAY TRADE': 'Day Trade',
+        'SWING TRADE': 'Swing Trade',
+        'INVEST': 'Invest',
+        'MULTI-TIMEFRAME': 'Swing Trade',
+        'AVOID': 'Swing Trade',
+    }
+    default_mode = verdict_to_mode.get(verdict, 'Swing Trade')
+    if 'rr_mode' not in st.session_state:
+        st.session_state['rr_mode'] = default_mode
+
+    # ── Header panel with AI verdict + mode selector ──────────
+    vc_mode = VERDICT_COLORS.get(verdict, VERDICT_COLORS['SWING TRADE'])
+    ai_label_html = f'<span style="background:{vc_mode["bg"]};border:1px solid {vc_mode["border"]};border-radius:4px;padding:2px 8px;font-size:10px;color:{vc_mode["color"]};font-weight:700;letter-spacing:1px;">AI: {verdict}</span>'
 
     st.markdown(f'''
-    <div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:14px 16px 6px;">
-      <div style="font-size:11px;color:#5EEAD4;letter-spacing:1px;margin-bottom:10px;">
-        Pre-filled from AI analysis · Adjust any value to recalculate
+    <div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;
+                padding:12px 16px 8px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:11px;color:#5EEAD4;letter-spacing:1px;">
+          Pre-filled from AI analysis · Adjust any value to recalculate
+        </div>
+        {ai_label_html}
       </div>
-      <div style="font-size:10px;color:#4A6080;margin-bottom:4px;">
+      <div style="font-size:10px;color:#4A6080;">
         ⚠ For educational purposes only. Not financial advice. Always do your own research before placing any trade.
       </div>
     </div>''', unsafe_allow_html=True)
 
-    rr_c1, rr_c2, rr_c3, rr_c4 = st.columns(4)
+    # ── Mode selector buttons ─────────────────────────────────
+    btn1, btn2, btn3, _ = st.columns([1, 1, 1, 3])
+    modes = ["Day Trade", "Swing Trade", "Invest"]
+    mode_colors = {"Day Trade": "#FACC15", "Swing Trade": "#38BDF8", "Invest": "#00FF88"}
+    for col, mode in zip([btn1, btn2, btn3], modes):
+        with col:
+            is_active   = st.session_state['rr_mode'] == mode
+            is_ai_pick  = mode == default_mode
+            label       = f"{'▶ ' if is_active else ''}{mode}{'  ← AI' if is_ai_pick else ''}"
+            mc          = mode_colors[mode]
+            btn_style   = f"border:2px solid {mc};background:{'#0D2020' if is_active else '#111827'};color:{mc};border-radius:6px;padding:6px 0;font-size:11px;font-weight:700;width:100%;cursor:pointer;letter-spacing:0.5px;"
+            if st.button(label, key=f"rr_mode_{mode}", use_container_width=True):
+                st.session_state['rr_mode'] = mode
+                st.rerun()
+
+    selected_mode = st.session_state['rr_mode']
+    stop_preset, target_preset = calc_presets(selected_mode)
+
+    # ── Inputs ────────────────────────────────────────────────
+    rr_c1, rr_c2, rr_c3, rr_c4, rr_c5 = st.columns(5)
     with rr_c1:
-        account_size = st.number_input("Account Size ($)", min_value=100.0, max_value=10000000.0,
+        account_size = st.number_input("Account ($)", min_value=100.0, max_value=10000000.0,
                                         value=10000.0, step=1000.0, key="rr_account")
     with rr_c2:
-        risk_pct = st.number_input("Risk per Trade (%)", min_value=0.1, max_value=10.0,
+        risk_pct = st.number_input("Risk (%)", min_value=0.1, max_value=10.0,
                                     value=1.0, step=0.5, key="rr_risk_pct")
     with rr_c3:
         entry_price = st.number_input(f"Entry ({cur})", min_value=0.01,
-                                       value=float(entry_def), step=0.01, key="rr_entry",
+                                       value=float(entry_mid), step=0.01, key="rr_entry",
                                        format="%.2f")
     with rr_c4:
         stop_price = st.number_input(f"Stop Loss ({cur})", min_value=0.01,
-                                      value=float(stop_def), step=0.01, key="rr_stop",
+                                      value=float(stop_preset), step=0.01, key=f"rr_stop_{selected_mode}",
                                       format="%.2f")
-
-    rr_c5, rr_c6, rr_c7, rr_c8 = st.columns(4)
     with rr_c5:
         target_price = st.number_input(f"Target ({cur})", min_value=0.01,
-                                        value=float(target_def), step=0.01, key="rr_target",
+                                        value=float(target_preset), step=0.01, key=f"rr_target_{selected_mode}",
                                         format="%.2f")
 
     # ── Calculations ──────────────────────────────────────────
@@ -1985,40 +2049,136 @@ def render_hud():
     max_gain         = round(position_size * reward_per_share, 2)
     stop_pct         = round((risk_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
     target_pct       = round((reward_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
+    rr_col           = "#00FF88" if rr_ratio >= 2 else "#FACC15" if rr_ratio >= 1 else "#FF6B6B"
+    rr_label         = "Excellent" if rr_ratio >= 3 else "Good" if rr_ratio >= 2 else "Acceptable" if rr_ratio >= 1 else "Poor — avoid"
 
-    # Color the R:R ratio
-    rr_col = "#00FF88" if rr_ratio >= 2 else "#FACC15" if rr_ratio >= 1 else "#FF6B6B"
-    rr_label = "Excellent" if rr_ratio >= 3 else "Good" if rr_ratio >= 2 else "Acceptable" if rr_ratio >= 1 else "Poor — don't take"
-
-    with rr_c6:
-        st.markdown(f'''<div class="earn-bar" style="border-left-color:{rr_col};margin-top:4px;">
+    # ── Result cards ──────────────────────────────────────────
+    rc1, rc2, rc3 = st.columns(3)
+    with rc1:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:{rr_col};margin-top:6px;">
           <div class="earn-label">R:R Ratio</div>
-          <div class="earn-val" style="color:{rr_col};font-size:22px;">1 : {rr_ratio}</div>
-          <div style="font-size:10px;color:{rr_col};margin-top:2px;">{rr_label}</div>
+          <div class="earn-val" style="color:{rr_col};font-size:26px;letter-spacing:1px;">1 : {rr_ratio}</div>
+          <div style="font-size:11px;color:{rr_col};margin-top:3px;font-weight:700;">{rr_label}</div>
         </div>''', unsafe_allow_html=True)
-    with rr_c7:
-        st.markdown(f'''<div class="earn-bar" style="border-left-color:#00FF88;margin-top:4px;">
+    with rc2:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:#38BDF8;margin-top:6px;">
           <div class="earn-label">Position Size</div>
-          <div class="earn-val" style="color:#00FF88;">{position_size:,} shares</div>
-          <div style="font-size:10px;color:#64748B;margin-top:2px;">Value: {cur}{position_value:,.0f}</div>
+          <div class="earn-val" style="color:#38BDF8;font-size:22px;">{position_size:,} <span style="font-size:13px;">shares</span></div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px;">Value: {cur}{position_value:,.0f}</div>
         </div>''', unsafe_allow_html=True)
-    with rr_c8:
-        st.markdown(f'''<div class="earn-bar" style="border-left-color:#FF6B6B;margin-top:4px;">
-          <div class="earn-label">Max Loss / Max Gain</div>
-          <div class="earn-val" style="color:#FF6B6B;">−{cur}{max_loss:,.0f}</div>
-          <div style="font-size:10px;color:#00FF88;margin-top:2px;">+{cur}{max_gain:,.0f}</div>
+    with rc3:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:#818CF8;margin-top:6px;">
+          <div class="earn-label">Max Loss &nbsp;/&nbsp; Max Gain</div>
+          <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{max_loss:,.0f}</div>
+          <div style="font-size:16px;color:#00FF88;font-weight:700;font-family:monospace;margin-top:2px;">+{cur}{max_gain:,.0f}</div>
         </div>''', unsafe_allow_html=True)
 
-    # Summary bar
+    # ── Visual Trade Diagram ──────────────────────────────────
+    # Build SVG: horizontal price ladder — Stop | Entry | Target
+    # with red/green shaded zones and R:R shown large in centre
+    try:
+        all_prices = sorted([stop_price, entry_price, target_price])
+        price_min  = all_prices[0]
+        price_max  = all_prices[-1]
+        price_range = price_max - price_min if price_max != price_min else 1
+
+        SVG_W, SVG_H = 900, 160
+        PAD_L, PAD_R = 110, 110
+        BAR_Y, BAR_H = 72, 20
+        usable_w = SVG_W - PAD_L - PAD_R
+
+        def px(price):
+            return PAD_L + (price - price_min) / price_range * usable_w
+
+        stop_x   = px(stop_price)
+        entry_x  = px(entry_price)
+        target_x = px(target_price)
+
+        # Loss zone (stop → entry) and gain zone (entry → target)
+        loss_x   = min(stop_x, entry_x)
+        loss_w   = abs(entry_x - stop_x)
+        gain_x   = min(entry_x, target_x)
+        gain_w   = abs(target_x - entry_x)
+
+        svg = f'''<svg viewBox="0 0 {SVG_W} {SVG_H}" xmlns="http://www.w3.org/2000/svg"
+             style="width:100%;height:auto;background:#0E1828;border-radius:10px;
+                    border:1px solid #243348;display:block;margin-top:8px;">
+
+          <!-- Grid lines -->
+          <line x1="{PAD_L}" y1="20" x2="{PAD_L}" y2="{SVG_H-20}" stroke="#1A2232" stroke-width="1"/>
+          <line x1="{SVG_W-PAD_R}" y1="20" x2="{SVG_W-PAD_R}" y2="{SVG_H-20}" stroke="#1A2232" stroke-width="1"/>
+
+          <!-- Loss zone -->
+          <rect x="{loss_x:.1f}" y="{BAR_Y-24}" width="{loss_w:.1f}" height="{BAR_H+48}"
+                fill="#FF6B6B" fill-opacity="0.08" rx="4"/>
+          <rect x="{loss_x:.1f}" y="{BAR_Y}" width="{loss_w:.1f}" height="{BAR_H}"
+                fill="#FF6B6B" fill-opacity="0.25" rx="2"/>
+
+          <!-- Gain zone -->
+          <rect x="{gain_x:.1f}" y="{BAR_Y-24}" width="{gain_w:.1f}" height="{BAR_H+48}"
+                fill="#00FF88" fill-opacity="0.08" rx="4"/>
+          <rect x="{gain_x:.1f}" y="{BAR_Y}" width="{gain_w:.1f}" height="{BAR_H}"
+                fill="#00FF88" fill-opacity="0.25" rx="2"/>
+
+          <!-- R:R label in centre -->
+          <text x="{(entry_x + target_x)/2:.1f}" y="{BAR_Y - 32}" text-anchor="middle"
+                fill="{rr_col}" font-size="11" font-family="monospace" font-weight="700">
+            R:R  1:{rr_ratio}  {rr_label}
+          </text>
+
+          <!-- STOP line -->
+          <line x1="{stop_x:.1f}" y1="{BAR_Y-8}" x2="{stop_x:.1f}" y2="{BAR_Y+BAR_H+8}"
+                stroke="#FF6B6B" stroke-width="2" stroke-dasharray="4,3"/>
+          <text x="{stop_x:.1f}" y="{BAR_Y-16}" text-anchor="middle"
+                fill="#FF6B6B" font-size="10" font-family="monospace" font-weight="700">STOP</text>
+          <text x="{stop_x:.1f}" y="{BAR_Y+BAR_H+20}" text-anchor="middle"
+                fill="#FF6B6B" font-size="11" font-family="monospace">{cur}{stop_price:.2f}</text>
+          <text x="{stop_x:.1f}" y="{BAR_Y+BAR_H+34}" text-anchor="middle"
+                fill="#FF6B6B" font-size="10" font-family="monospace" opacity="0.7">−{stop_pct:.1f}%</text>
+
+          <!-- ENTRY line -->
+          <line x1="{entry_x:.1f}" y1="{BAR_Y-8}" x2="{entry_x:.1f}" y2="{BAR_Y+BAR_H+8}"
+                stroke="#FACC15" stroke-width="2.5"/>
+          <text x="{entry_x:.1f}" y="{BAR_Y-16}" text-anchor="middle"
+                fill="#FACC15" font-size="10" font-family="monospace" font-weight="700">ENTRY</text>
+          <text x="{entry_x:.1f}" y="{BAR_Y+BAR_H+20}" text-anchor="middle"
+                fill="#FACC15" font-size="12" font-family="monospace" font-weight="700">{cur}{entry_price:.2f}</text>
+
+          <!-- TARGET line -->
+          <line x1="{target_x:.1f}" y1="{BAR_Y-8}" x2="{target_x:.1f}" y2="{BAR_Y+BAR_H+8}"
+                stroke="#00FF88" stroke-width="2" stroke-dasharray="4,3"/>
+          <text x="{target_x:.1f}" y="{BAR_Y-16}" text-anchor="middle"
+                fill="#00FF88" font-size="10" font-family="monospace" font-weight="700">TARGET</text>
+          <text x="{target_x:.1f}" y="{BAR_Y+BAR_H+20}" text-anchor="middle"
+                fill="#00FF88" font-size="11" font-family="monospace">{cur}{target_price:.2f}</text>
+          <text x="{target_x:.1f}" y="{BAR_Y+BAR_H+34}" text-anchor="middle"
+                fill="#00FF88" font-size="10" font-family="monospace" opacity="0.7">+{target_pct:.1f}%</text>
+
+          <!-- Loss / Gain labels inside zones -->
+          <text x="{(stop_x + entry_x)/2:.1f}" y="{BAR_Y + BAR_H/2 + 4}" text-anchor="middle"
+                fill="#FF6B6B" font-size="11" font-family="monospace" font-weight="700">
+            −{cur}{risk_per_share:.2f}
+          </text>
+          <text x="{(entry_x + target_x)/2:.1f}" y="{BAR_Y + BAR_H/2 + 4}" text-anchor="middle"
+                fill="#00FF88" font-size="11" font-family="monospace" font-weight="700">
+            +{cur}{reward_per_share:.2f}
+          </text>
+        </svg>'''
+        st.markdown(svg, unsafe_allow_html=True)
+    except:
+        pass
+
+    # ── Summary strip ─────────────────────────────────────────
     st.markdown(f'''
     <div style="background:#111827;border:1px solid #243348;border-radius:8px;
-                padding:10px 16px;margin-top:8px;display:flex;gap:24px;flex-wrap:wrap;
-                font-size:12px;font-family:'JetBrains Mono',monospace;">
+                padding:8px 16px;margin-top:6px;display:flex;gap:20px;flex-wrap:wrap;
+                font-size:11px;font-family:'JetBrains Mono',monospace;align-items:center;">
+      <span style="color:#64748B;">Mode <span style="color:{mode_colors[selected_mode]};font-weight:700;">{selected_mode}</span></span>
       <span style="color:#64748B;">Entry <span style="color:#FACC15;">{cur}{entry_price:.2f}</span></span>
       <span style="color:#64748B;">Stop <span style="color:#FF6B6B;">{cur}{stop_price:.2f} (−{stop_pct:.1f}%)</span></span>
       <span style="color:#64748B;">Target <span style="color:#00FF88;">{cur}{target_price:.2f} (+{target_pct:.1f}%)</span></span>
-      <span style="color:#64748B;">Risk/share <span style="color:#FF6B6B;">{cur}{risk_per_share:.2f}</span></span>
-      <span style="color:#64748B;">Max risk <span style="color:#FF6B6B;">{cur}{dollar_risk:.0f} ({risk_pct:.1f}% of account)</span></span>
+      <span style="color:#64748B;">Max risk <span style="color:#FF6B6B;">{cur}{dollar_risk:.0f}</span></span>
+      <span style="color:#64748B;">Risking <span style="color:#94A3B8;">{risk_pct:.1f}% of account</span></span>
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 8: EARNINGS ─────────────────────────────────────
@@ -2230,6 +2390,217 @@ def render_hud():
             </div>''', unsafe_allow_html=True)
 
     st.markdown('<div class="hud-footer">NOT FINANCIAL ADVICE · AI-GENERATED · EDUCATIONAL PURPOSES ONLY</div>', unsafe_allow_html=True)
+
+
+
+
+# ── CEO Earnings Call Analyzer ────────────────────────────────
+def get_earnings_analysis(transcript, ticker=""):
+    """Send earnings call transcript to Claude for deep language analysis."""
+    prompt = (
+        "You are an expert financial analyst specializing in earnings call language analysis. "
+        "Analyze the following earnings call transcript for tone, confidence, hedging, and forward guidance signals.\n\n"
+        "Return ONLY raw JSON — no markdown, no backticks.\n\n"
+        "TRANSCRIPT:\n"
+        + transcript[:12000] +  # cap at ~12k chars to stay within token budget
+        "\n\nAnalyze for:\n"
+        "1. MANAGEMENT CONFIDENCE — word choice, certainty vs vagueness, use of passive voice\n"
+        "2. HEDGING LANGUAGE — phrases like 'subject to', 'we believe', 'may', 'could', 'if conditions permit'\n"
+        "3. GUIDANCE TONE — raised/maintained/lowered vs prior quarter, specific vs vague numbers\n"
+        "4. TOPIC AVOIDANCE — questions deflected, topics changed, unusually short answers\n"
+        "5. SENTIMENT SHIFT — compare early vs late in call, CEO vs CFO tone differences\n"
+        "6. KEY QUOTES — exact phrases that are most telling (bullish or bearish)\n\n"
+        "Return ONLY this JSON:\n"
+        '{"signal":"Bullish|Bearish|Neutral",'
+        '"confidence":"Low|Medium|High",'
+        '"tone_score":7,'
+        '"tone_score_desc":"one sentence explaining the score",'
+        '"guidance":"Raised|Maintained|Lowered|Not Given",'
+        '"guidance_detail":"one sentence on what specifically was raised/lowered/maintained",'
+        '"summary":"2-3 sentence plain English overall read of this call",'
+        '"key_findings":['
+        '{"quote":"exact words from transcript","signal":"bullish|bearish|neutral","finding":"one sentence — what this reveals about management mindset"},'
+        '{"quote":"...","signal":"...","finding":"..."},'
+        '{"quote":"...","signal":"...","finding":"..."},'
+        '{"quote":"...","signal":"...","finding":"..."},'
+        '{"quote":"...","signal":"...","finding":"..."}'
+        '],'
+        '"red_flags":["specific concern 1","specific concern 2"],'
+        '"positives":["specific strength 1","specific strength 2"],'
+        '"hedging_phrases":["phrase 1","phrase 2","phrase 3"],'
+        '"topic_avoidance":["topic 1 that was deflected or avoided"],'
+        '"vs_last_quarter":"one sentence comparing tone to what a typical prior-quarter call sounds like"}'
+    )
+    try:
+        client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+        msg = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2000,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        raw = msg.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        return json.loads(raw.strip())
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def render_earnings_analyzer():
+    """Full UI for the CEO Earnings Call Language Analyzer."""
+    st.markdown("""
+    <div style="text-align:center;margin-bottom:6px;">
+      <div style="font-size:12px;color:#4A6080;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">AI Tool</div>
+      <div style="font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:4px;">🎙️ Earnings Call Analyzer</div>
+      <div style="font-size:13px;color:#4A6080;">Paste any earnings call transcript → Claude reads management tone, confidence, and guidance signals</div>
+    </div>""", unsafe_allow_html=True)
+
+    col1, col2, col3 = st.columns([1, 4, 1])
+    with col2:
+        ticker_ec = st.text_input("Ticker (optional)", placeholder="NVDA",
+                                   key="ec_ticker", label_visibility="visible")
+        transcript = st.text_area(
+            "Paste Earnings Call Transcript",
+            placeholder="Paste the full transcript here — prepared remarks + Q&A...",
+            height=220, key="ec_transcript", label_visibility="visible"
+        )
+        st.markdown('<div style="font-size:10px;color:#4A6080;margin-top:-8px;margin-bottom:8px;">⚠ For educational purposes only. Not financial advice. Always conduct your own research.</div>', unsafe_allow_html=True)
+        analyze_btn = st.button("🔍 Analyze Transcript", type="primary",
+                                 use_container_width=True, key="ec_analyze")
+
+    if analyze_btn:
+        if not transcript or len(transcript.strip()) < 200:
+            st.error("Please paste a transcript of at least 200 characters.")
+            return
+
+        with st.spinner("🤖 Claude is reading the transcript... (10-15 sec)"):
+            result = get_earnings_analysis(transcript.strip(), ticker_ec.upper())
+
+        if "error" in result:
+            st.error(f"Analysis error: {result['error']}")
+            return
+
+        # ── Results ───────────────────────────────────────────
+        sig     = result.get("signal", "Neutral")
+        conf    = result.get("confidence", "Medium")
+        tone    = result.get("tone_score", 5)
+        guid    = result.get("guidance", "Not Given")
+        summary = result.get("summary", "")
+
+        sig_col  = "#00FF88" if sig == "Bullish" else "#FF6B6B" if sig == "Bearish" else "#FACC15"
+        tone_col = "#00FF88" if tone >= 7 else "#FACC15" if tone >= 4 else "#FF6B6B"
+        guid_col = "#00FF88" if guid == "Raised" else "#FF6B6B" if guid == "Lowered" else "#FACC15"
+
+        # Header row
+        h1, h2, h3, h4 = st.columns(4)
+        for hcol, lbl, val, col in [
+            (h1, "Overall Signal",    sig,  sig_col),
+            (h2, "Confidence",        conf, "#94A3B8"),
+            (h3, "Tone Score",        f"{tone}/10", tone_col),
+            (h4, "Guidance",          guid, guid_col),
+        ]:
+            with hcol:
+                st.markdown(f'''<div class="earn-bar" style="border-left-color:{col};">
+                  <div class="earn-label">{lbl}</div>
+                  <div class="earn-val" style="color:{col};font-size:18px;">{val}</div>
+                </div>''', unsafe_allow_html=True)
+
+        # Summary
+        st.markdown(f'''
+        <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
+                    border-radius:8px;padding:14px 18px;margin-top:8px;">
+          <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Summary</div>
+          <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{summary}</div>
+          <div style="font-size:12px;color:#64748B;margin-top:8px;">{result.get("vs_last_quarter","")}</div>
+        </div>''', unsafe_allow_html=True)
+
+        # Tone score bar
+        st.markdown(f'''
+        <div style="background:#1A2232;border:1px solid #243348;border-radius:8px;
+                    padding:12px 16px;margin-top:8px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:#E2E8F0;font-weight:600;">Management Tone</span>
+            <span style="font-size:12px;color:{tone_col};font-weight:700;">{tone}/10 — {result.get("tone_score_desc","")}</span>
+          </div>
+          <div style="position:relative;height:6px;background:#243348;border-radius:3px;">
+            <div style="position:absolute;left:0;top:0;width:100%;height:6px;border-radius:3px;
+                        background:linear-gradient(90deg,#FF6B6B,#FACC15,#00FF88);"></div>
+            <div style="position:absolute;left:{min(max(tone*10,2),98)}%;top:-4px;width:12px;height:12px;
+                        background:#F1F5F9;border-radius:50%;transform:translateX(-50%);
+                        border:2px solid #111827;"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#374151;">
+            <span>Defensive</span><span>Neutral</span><span>Confident</span>
+          </div>
+        </div>''', unsafe_allow_html=True)
+
+        # Key findings
+        findings = result.get("key_findings", [])
+        if findings:
+            st.markdown('<div class="section-header" style="margin-top:8px;">Key Findings — What Management Revealed</div>', unsafe_allow_html=True)
+            st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-top:none;border-radius:0 0 8px 8px;">', unsafe_allow_html=True)
+            for f in findings:
+                fc = "#00FF88" if f.get("signal")=="bullish" else "#FF6B6B" if f.get("signal")=="bearish" else "#FACC15"
+                icon = "▲" if f.get("signal")=="bullish" else "▼" if f.get("signal")=="bearish" else "↔"
+                st.markdown(f'''
+                <div style="padding:10px 16px;border-bottom:1px solid #111827;">
+                  <div style="font-size:12px;color:{fc};font-weight:700;margin-bottom:4px;">{icon} {f.get("finding","")}</div>
+                  <div style="font-size:12px;color:#94A3B8;font-style:italic;padding-left:8px;
+                              border-left:2px solid {fc};">"{f.get("quote","")}"</div>
+                </div>''', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Positives / Red flags / Hedging / Avoidance
+        pa1, pa2 = st.columns(2)
+        with pa1:
+            positives = result.get("positives", [])
+            st.markdown('<div class="section-header" style="margin-top:8px;">✅ Positives</div>', unsafe_allow_html=True)
+            html = '<div style="background:#1A2232;border:1px solid #243348;border-top:none;border-radius:0 0 8px 8px;">'
+            for p in positives:
+                html += f'<div style="padding:8px 14px;border-bottom:1px solid #111827;font-size:12px;color:#86EFAC;">+ {p}</div>'
+            if not positives:
+                html += '<div style="padding:10px 14px;font-size:12px;color:#4A6080;">None identified</div>'
+            st.markdown(html + '</div>', unsafe_allow_html=True)
+
+            hedging = result.get("hedging_phrases", [])
+            st.markdown('<div class="section-header" style="margin-top:8px;">🔶 Hedging Language Detected</div>', unsafe_allow_html=True)
+            html = '<div style="background:#1A2232;border:1px solid #243348;border-top:none;border-radius:0 0 8px 8px;">'
+            for h in hedging:
+                html += f'<div style="padding:8px 14px;border-bottom:1px solid #111827;font-size:12px;color:#FACC15;font-style:italic;">"{h}"</div>'
+            if not hedging:
+                html += '<div style="padding:10px 14px;font-size:12px;color:#4A6080;">No significant hedging detected</div>'
+            st.markdown(html + '</div>', unsafe_allow_html=True)
+
+        with pa2:
+            red_flags = result.get("red_flags", [])
+            st.markdown('<div class="section-header" style="margin-top:8px;">🚩 Red Flags</div>', unsafe_allow_html=True)
+            html = '<div style="background:#1A2232;border:1px solid #243348;border-top:none;border-radius:0 0 8px 8px;">'
+            for r in red_flags:
+                html += f'<div style="padding:8px 14px;border-bottom:1px solid #111827;font-size:12px;color:#FCA5A5;">− {r}</div>'
+            if not red_flags:
+                html += '<div style="padding:10px 14px;font-size:12px;color:#4A6080;">No red flags detected</div>'
+            st.markdown(html + '</div>', unsafe_allow_html=True)
+
+            avoidance = result.get("topic_avoidance", [])
+            st.markdown('<div class="section-header" style="margin-top:8px;">🔇 Topics Avoided / Deflected</div>', unsafe_allow_html=True)
+            html = '<div style="background:#1A2232;border:1px solid #243348;border-top:none;border-radius:0 0 8px 8px;">'
+            for av in avoidance:
+                html += f'<div style="padding:8px 14px;border-bottom:1px solid #111827;font-size:12px;color:#94A3B8;">↳ {av}</div>'
+            if not avoidance:
+                html += '<div style="padding:10px 14px;font-size:12px;color:#4A6080;">No obvious avoidance detected</div>'
+            st.markdown(html + '</div>', unsafe_allow_html=True)
+
+        # Guidance detail
+        st.markdown(f'''
+        <div style="background:#1A2232;border:1px solid #243348;border-left:3px solid {guid_col};
+                    border-radius:8px;padding:10px 16px;margin-top:8px;">
+          <div style="font-size:10px;color:#4A6080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Guidance Detail</div>
+          <div style="font-size:13px;color:#E2E8F0;">{result.get("guidance_detail","")}</div>
+        </div>''', unsafe_allow_html=True)
+
+        st.markdown('<div style="text-align:center;font-size:10px;color:#243348;padding:12px 0;margin-top:8px;">NOT FINANCIAL ADVICE · AI-GENERATED · EDUCATIONAL PURPOSES ONLY</div>', unsafe_allow_html=True)
 
 
 
