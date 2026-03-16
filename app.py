@@ -28,7 +28,19 @@ def _fmp_get(endpoint, api_key, params=""):
         return None
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key="", _v=8):
+def search_ticker_fmp(query, fmp_key=""):
+    """Search FMP for a ticker across all global exchanges."""
+    if not fmp_key or not query:
+        return []
+    results = _fmp_get(f"v3/search?query={query}&limit=15", fmp_key)
+    if not results or not isinstance(results, list):
+        return []
+    # Filter to stock-type only, sort by relevance
+    stocks = [r for r in results if r.get("type","") in ("stock","etf","")]
+    return stocks[:12]
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_ticker_data(ticker, fmp_key="", _v=9):
     """_v=8 is cache-buster. Increment to invalidate all cached data.
     fmp_key passed as arg (not read inside) so cache works correctly."""
     import time, requests
@@ -1246,32 +1258,68 @@ def main():
             st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:20px;">Type any stock symbol and press Analyze</div>', unsafe_allow_html=True)
 
             with st.form("ticker_form"):
-                ticker_in = st.text_input("", placeholder="NVDA", key="ticker_input", label_visibility="collapsed")
+                ticker_in = st.text_input("", placeholder="NVDA  /  NPK.TO  /  SHOP.TO  /  RY.L", key="ticker_input", label_visibility="collapsed")
                 submitted = st.form_submit_button("Analyze →")
 
             ticker_upper = ticker_in.strip().upper() if ticker_in else ""
 
             if submitted and ticker_upper:
-                if ticker_upper in MULTI_LISTED and len(MULTI_LISTED[ticker_upper]) > 1:
-                    st.session_state['show_multi'] = ticker_upper
+                fmp_key_search = st.secrets.get("FMP_API_KEY", "")
+                if fmp_key_search:
+                    # Use FMP to search and disambiguate across all global exchanges
+                    results = search_ticker_fmp(ticker_upper, fmp_key_search)
+                    # Exact symbol matches
+                    exact = [r for r in results if r.get("symbol","").upper() == ticker_upper]
+                    if len(exact) == 1:
+                        run_analysis(exact[0]["symbol"])
+                    elif len(exact) > 1:
+                        st.session_state['search_results'] = exact
+                        st.session_state['search_query']   = ticker_upper
+                        st.rerun()
+                    elif results:
+                        # No exact match — show top results
+                        st.session_state['search_results'] = results[:8]
+                        st.session_state['search_query']   = ticker_upper
+                        st.rerun()
+                    else:
+                        # FMP found nothing — try directly
+                        run_analysis(ticker_upper)
                 else:
-                    t = MULTI_LISTED.get(ticker_upper, [{'ticker': ticker_upper}])[0]['ticker']
-                    run_analysis(t)
+                    # No FMP — use hardcoded list + direct run
+                    if ticker_upper in MULTI_LISTED and len(MULTI_LISTED[ticker_upper]) > 1:
+                        st.session_state['search_results'] = [
+                            {"symbol": o["ticker"], "name": o["name"], "exchangeShortName": o["exchange"]}
+                            for o in MULTI_LISTED[ticker_upper]
+                        ]
+                        st.session_state['search_query'] = ticker_upper
+                        st.rerun()
+                    else:
+                        t = MULTI_LISTED.get(ticker_upper, [{"ticker": ticker_upper}])[0]["ticker"]
+                        run_analysis(t)
 
-            # Show disambiguation if needed
-            if 'show_multi' in st.session_state and st.session_state['show_multi'] == ticker_upper:
-                mu = st.session_state['show_multi']
-                st.markdown('<div style="background:#0F3030;border:1px solid #14B8A6;border-radius:8px;padding:8px 14px;margin-top:8px;font-size:11px;color:#5EEAD4;letter-spacing:1px;">MULTIPLE LISTINGS FOUND — SELECT ONE:</div>', unsafe_allow_html=True)
-                for opt in MULTI_LISTED[mu]:
-                    ca, cb, cc = st.columns([2, 3, 1])
+            # ── Global exchange search results ────────────────
+            if "search_results" in st.session_state and st.session_state.get("search_query","") == ticker_upper:
+                results = st.session_state["search_results"]
+                st.markdown('''<div style="background:#0F3030;border:1px solid #14B8A6;border-radius:8px;
+                    padding:8px 14px;margin-top:8px;font-size:11px;color:#5EEAD4;letter-spacing:1px;">
+                    SELECT THE CORRECT LISTING:</div>''', unsafe_allow_html=True)
+                for r in results:
+                    sym  = r.get("symbol","")
+                    name = r.get("name","")[:35]
+                    exch = r.get("exchangeShortName", r.get("exchange",""))
+                    curr = r.get("currency","")
+                    ca, cb, cc, cd = st.columns([1.5, 3, 1, 1])
                     with ca:
-                        st.markdown(f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{opt["ticker"]}</span>', unsafe_allow_html=True)
+                        st.markdown(f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{sym}</span>', unsafe_allow_html=True)
                     with cb:
-                        st.markdown(f'<span style="font-size:12px;color:#E2E8F0;">{opt["name"]}</span>', unsafe_allow_html=True)
+                        st.markdown(f'<span style="font-size:12px;color:#E2E8F0;">{name}</span>', unsafe_allow_html=True)
                     with cc:
-                        if st.button(opt["exchange"], key=f'btn_{opt["ticker"]}'):
-                            del st.session_state['show_multi']
-                            run_analysis(opt["ticker"])
+                        st.markdown(f'<span style="font-size:11px;color:#5EEAD4;">{exch}</span>', unsafe_allow_html=True)
+                    with cd:
+                        if st.button(curr or "Select", key=f"srch_{sym}"):
+                            del st.session_state["search_results"]
+                            del st.session_state["search_query"]
+                            run_analysis(sym)
 
             st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:16px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: add .TO (RY.TO) &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
         return
@@ -1303,7 +1351,7 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key, _v=8)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=9)
         df    = data['df']
         info  = data['info']
 
