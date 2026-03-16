@@ -801,7 +801,7 @@ INFO_LINKS = {
 }
 
 def info_icon(label):
-    url = INFO_LINKS.get(label, "https://www.investopedia.com/search#q=" + label.replace(" ","+"))
+    url = INFO_LINKS.get(label, "https://www.investopedia.com/search?q=" + label.replace(" ","+"))
     return f'<a href="{url}" target="_blank" class="info-link" title="Learn about {label} on Investopedia">ⓘ</a>'
 
 def sig_html(label, val, bull, neut=False):
@@ -1384,49 +1384,55 @@ def render_hud():
 
     with c2:
         st.markdown('<div class="section-header">Fundamentals & Growth</div>', unsafe_allow_html=True)
-        # Fundamentals — info dict + Claude AI fallbacks
-        pe     = info.get('trailingPE',   0) or 0
-        fwd_pe = info.get('forwardPE',    0) or 0
-        pb     = info.get('priceToBook',  a.get('pb_ratio',  0) or 0) or 0
-        peg    = info.get('pegRatio',     a.get('peg_ratio', 0) or 0) or 0
-        mc     = info.get('marketCap',    0) or 0
+        # ── Fundamentals — comprehensive field mapping ─────────
+        # yfinance changes field names across versions — try all known variants
 
-        # Growth rates — yfinance returns decimals (0.15 = 15%), Claude returns %
-        def _pct(yf_key, claude_key):
-            """Get growth rate as %, handling both decimal and % formats."""
-            v = info.get(yf_key, 0) or 0
-            if v == 0:
+        def _get(keys, default=0):
+            """Try multiple field name variants, return first non-zero/None."""
+            for k in (keys if isinstance(keys, list) else [keys]):
+                v = info.get(k)
+                if v is not None and v != 0 and v != '':
+                    return v
+            return default
+
+        def _pct(keys, claude_key, default=0):
+            """Get growth rate as %, handling decimal (0.15) or % (15.0) forms."""
+            v = _get(keys, None)
+            if v is None:
                 v = a.get(claude_key, 0) or 0
-                # Claude already returns as % so no conversion needed
-                return float(v)
-            # yfinance returns decimal — check magnitude
-            return float(v) * 100 if abs(v) <= 1 else float(v)
+                return float(v)  # Claude returns already as %
+            v = float(v)
+            return v * 100 if abs(v) <= 2 else v  # decimal → %
 
-        eps_g = _pct('earningsGrowth', 'eps_growth_yoy')
-        rev_g = _pct('revenueGrowth',  'rev_growth_yoy')
+        pe     = float(_get(['trailingPE', 'trailingEps', 'forwardPE'], 0) or 0)
+        # Re-fetch PE specifically
+        pe     = float(info.get('trailingPE') or info.get('trailingP/E') or 0)
+        fwd_pe = float(info.get('forwardPE')  or info.get('forwardP/E') or 0)
+        pb     = float(_get(['priceToBook', 'bookValue'], 0) or a.get('pb_ratio', 0) or 0)
+        peg    = float(_get(['pegRatio', 'trailingPegRatio'], 0) or a.get('peg_ratio', 0) or 0)
+        mc     = float(_get(['marketCap', 'enterpriseValue'], 0) or 0)
+        eps_g  = _pct(['earningsGrowth', 'earningsQuarterlyGrowth'], 'eps_growth_yoy')
+        rev_g  = _pct(['revenueGrowth',  'revenueQuarterlyGrowth'], 'rev_growth_yoy')
+        op_margin  = float(_get(['operatingMargins', 'operatingMargin'], 0) or 0) * (100 if abs(float(_get(['operatingMargins'], 0) or 0)) <= 1 else 1)
+        profit_m   = float(_get(['profitMargins', 'netMargin'], 0) or 0) * (100 if abs(float(_get(['profitMargins'], 0) or 0)) <= 1 else 1)
+        roe        = float(_get(['returnOnEquity', 'returnOnAssets'], 0) or 0) * (100 if abs(float(_get(['returnOnEquity'], 0) or 0)) <= 1 else 1)
+        debt_eq    = float(_get(['debtToEquity', 'totalDebt'], 0) or 0)
+        curr_ratio = float(_get(['currentRatio'], 0) or 0)
+        div_yield  = float(_get(['dividendYield', 'trailingAnnualDividendYield'], 0) or 0) * (100 if float(_get(['dividendYield'], 0) or 0) < 1 else 1)
+        short_pct  = float(_get(['shortPercentOfFloat', 'shortRatio'], 0) or 0) * (100 if float(_get(['shortPercentOfFloat'], 0) or 0) < 1 else 1)
+        float_sh   = float(_get(['floatShares', 'sharesOutstanding'], 0) or 0)
 
-        # Market cap fallback: shares * price
+        # Market cap fallback: shares × price
         if mc == 0:
-            shares = info.get('sharesOutstanding', 0) or 0
-            if shares == 0:
-                shares = info.get('impliedSharesOutstanding', 0) or 0
+            shares = float(_get(['sharesOutstanding','impliedSharesOutstanding'], 0) or 0)
             if shares > 0:
                 mc = shares * close
         ma20_pct = (close/float(row['MA20'])-1)*100
         ma50_pct = (close/float(row['MA50'])-1)*100
         ma200_pct= (close/float(row['MA200'])-1)*100
 
-        # Additional fundamentals from yfinance
-        div_yield  = (info.get('dividendYield', 0) or 0) * 100
-        fwd_pe     = info.get('forwardPE', 0) or 0
-        op_margin  = (info.get('operatingMargins', 0) or 0) * 100
-        profit_m   = (info.get('profitMargins', 0) or 0) * 100
-        rd_expense = info.get('researchAndDevelopment', info.get('totalRevenue', 0)) or 0
-        float_sh   = info.get('floatShares', 0) or 0
-        short_pct  = (info.get('shortPercentOfFloat', 0) or 0) * 100
-        roe        = (info.get('returnOnEquity', 0) or 0) * 100
-        debt_eq    = info.get('debtToEquity', 0) or 0
-        curr_ratio = info.get('currentRatio', 0) or 0
+        # Additional fundamentals already computed above via _get()
+        rd_expense = info.get('researchAndDevelopment', 0) or 0
 
         funds_html = '<div class="panel-body">'
         funds_html += data_row("Market Cap",       fmt_cap(mc) if mc else "—",                    "val-w",  True)
@@ -1696,7 +1702,7 @@ def render_hud():
             conf  = min(100, max(0, int(p.get('confidence', 0))))
             with cols[i]:
                 pat_name   = p.get("name","")
-                inv_url    = f"https://www.investopedia.com/search#q={pat_name.replace(' ','+')}"
+                inv_url    = f"https://www.investopedia.com/search?q={pat_name.replace(' ','+')}"
                 bias_label = "▲ Bullish" if ptype=="bullish" else "▼ Bearish" if ptype=="bearish" else "↔ Neutral"
                 target_html = f'<div class="pat-target" style="color:{pcol};">Target: {p.get("target_pct",0):+.1f}% → {cur}{p.get("target_price",0):.2f}</div>' if p.get('target_price') else ''
                 conf_reason  = p.get("confidence_reason", "")
@@ -1736,7 +1742,7 @@ def render_hud():
             ccol   = "#00FF88" if ctype=="bullish" else "#FF6B6B" if ctype=="bearish" else "#FACC15"
             ccls   = "candle-card-bull" if ctype=="bullish" else "candle-card-bear" if ctype=="bearish" else "candle-card-neut"
             clabel = "▲ Bullish" if ctype=="bullish" else "▼ Bearish" if ctype=="bearish" else "↔ Neutral"
-            inv_c  = f"https://www.investopedia.com/search#q={c.get('name','').replace(' ','+')}"
+            inv_c  = f"https://www.investopedia.com/search?q={c.get('name','').replace(' ','+')}"
             with cols[i]:
                 st.markdown(f'''
                 <div class="{ccls}">
