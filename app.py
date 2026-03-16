@@ -13,7 +13,9 @@ from datetime import datetime
 # Get free key at financialmodelingprep.com (250 calls/day free)
 
 def _fmp_get(endpoint, api_key, params=""):
-    """Make a single FMP API call. Returns parsed JSON or None."""
+    """Make a single FMP API call. Returns parsed JSON or None.
+    Detects FMP rate-limit responses (HTTP 200 with error body) and returns None.
+    """
     import requests
     try:
         if not api_key:
@@ -22,7 +24,12 @@ def _fmp_get(endpoint, api_key, params=""):
         r = requests.get(url, timeout=10)
         if r.status_code == 200:
             data = r.json()
-            return data if data else None
+            if not data:
+                return None
+            # FMP returns {"Error Message": "Limit Reach..."} or {"message": "..."} on rate limit / bad key
+            if isinstance(data, dict) and ("Error Message" in data or "message" in data):
+                return None
+            return data
         return None
     except:
         return None
@@ -51,7 +58,7 @@ def search_ticker_fmp(query, fmp_key=""):
     return result
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key="", _v=12):
+def fetch_ticker_data(ticker, fmp_key="", _v=13):
     """Hybrid: yfinance for price+fundamentals, FMP only for analyst/earnings/insider.
     Uses ~4 FMP calls per ticker instead of 11. Search is separate cached call."""
     import time, requests
@@ -360,62 +367,6 @@ VERDICT_COLORS = {
     "DAY TRADE":       {"bg": "#1A1000", "border": "#FACC15", "color": "#FACC15"},
     "AVOID":           {"bg": "#1E0A0A", "border": "#FF6B6B", "color": "#FF6B6B"},
     "MULTI-TIMEFRAME": {"bg": "#0A1E12", "border": "#00FF88", "color": "#00FF88"},
-}
-
-MULTI_LISTED = {
-    'BRK':  [{'ticker':'BRK-B','name':'Berkshire Hathaway Class B','exchange':'NYSE'},
-             {'ticker':'BRK-A','name':'Berkshire Hathaway Class A','exchange':'NYSE'}],
-    'RY':   [{'ticker':'RY',   'name':'Royal Bank of Canada (US)','exchange':'NYSE'},
-             {'ticker':'RY.TO','name':'Royal Bank of Canada (TSX)','exchange':'TSX'}],
-    'TD':   [{'ticker':'TD',   'name':'TD Bank (US)','exchange':'NYSE'},
-             {'ticker':'TD.TO','name':'TD Bank (TSX)','exchange':'TSX'}],
-    'SHOP': [{'ticker':'SHOP',   'name':'Shopify (NYSE)','exchange':'NYSE'},
-             {'ticker':'SHOP.TO','name':'Shopify (TSX)','exchange':'TSX'}],
-    'SU':   [{'ticker':'SU',   'name':'Suncor Energy (US)','exchange':'NYSE'},
-             {'ticker':'SU.TO','name':'Suncor Energy (TSX)','exchange':'TSX'}],
-    'ENB':  [{'ticker':'ENB',   'name':'Enbridge (US)','exchange':'NYSE'},
-             {'ticker':'ENB.TO','name':'Enbridge (TSX)','exchange':'TSX'}],
-    'CNR':  [{'ticker':'CNI',   'name':'Canadian National (US)','exchange':'NYSE'},
-             {'ticker':'CNR.TO','name':'Canadian National (TSX)','exchange':'TSX'}],
-    'AC':   [{'ticker':'AC.TO','name':'Air Canada (TSX)','exchange':'TSX'}],
-    'TSM':  [{'ticker':'TSM','name':'Taiwan Semiconductor (ADR)','exchange':'NYSE'}],
-    'TSMC': [{'ticker':'TSM','name':'Taiwan Semiconductor (ADR)','exchange':'NYSE'}],
-}
-
-INFO_LINKS = {
-    "20 MA":"https://www.investopedia.com/terms/m/movingaverage.asp",
-    "50 MA":"https://www.investopedia.com/terms/m/movingaverage.asp",
-    "200 MA":"https://www.investopedia.com/terms/m/movingaverage.asp",
-    "100 EMA":"https://www.investopedia.com/terms/e/ema.asp",
-    "RSI":"https://www.investopedia.com/terms/r/rsi.asp",
-    "RSI (14)":"https://www.investopedia.com/terms/r/rsi.asp",
-    "MACD":"https://www.investopedia.com/terms/m/macd.asp",
-    "MACD Hist":"https://www.investopedia.com/terms/m/macd.asp",
-    "OBV":"https://www.investopedia.com/terms/o/onbalancevolume.asp",
-    "Volume":"https://www.investopedia.com/terms/v/volume.asp",
-    "ATR":"https://www.investopedia.com/terms/a/atr.asp",
-    "ATR (14)":"https://www.investopedia.com/terms/a/atr.asp",
-    "ATR%":"https://www.investopedia.com/terms/a/atr.asp",
-    "VWAP":"https://www.investopedia.com/terms/v/vwap.asp",
-    "38.2% Fib":"https://www.investopedia.com/terms/f/fibonaccilevels.asp",
-    "50.0% Fib":"https://www.investopedia.com/terms/f/fibonaccilevels.asp",
-    "61.8% Fib":"https://www.investopedia.com/terms/f/fibonaccilevels.asp",
-    "52W Range":"https://www.investopedia.com/terms/1/52-week-range.asp",
-    "Market Cap":"https://www.investopedia.com/terms/m/marketcapitalization.asp",
-    "P/E (Trailing)":"https://www.investopedia.com/terms/p/price-earningsratio.asp",
-    "P/E (Forward)":"https://www.investopedia.com/terms/p/price-earningsratio.asp",
-    "P/B Ratio":"https://www.investopedia.com/terms/p/price-to-bookratio.asp",
-    "PEG Ratio":"https://www.investopedia.com/terms/p/pegratio.asp",
-    "EPS Growth YoY":"https://www.investopedia.com/terms/e/eps.asp",
-    "Rev Growth YoY":"https://www.investopedia.com/terms/r/revenuerecognition.asp",
-    "Operating Margin":"https://www.investopedia.com/terms/o/operatingmargin.asp",
-    "Profit Margin":"https://www.investopedia.com/terms/p/profitmargin.asp",
-    "Return on Equity":"https://www.investopedia.com/terms/r/returnonequity.asp",
-    "Debt / Equity":"https://www.investopedia.com/terms/d/debtequityratio.asp",
-    "Current Ratio":"https://www.investopedia.com/terms/c/currentratio.asp",
-    "Dividend Yield":"https://www.investopedia.com/terms/d/dividendyield.asp",
-    "Short % Float":"https://www.investopedia.com/terms/s/shortinterest.asp",
-    "Float Shares":"https://www.investopedia.com/terms/f/floating-stock.asp",
 }
 
 # ── CSS ───────────────────────────────────────────────────────
@@ -1218,7 +1169,7 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key, _v=12)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=13)
         df    = data['df']
         info  = data['info']
 
@@ -1273,63 +1224,81 @@ def run_analysis(ticker):
             st.error(f"Claude API error: {analysis['error']}")
             return
 
-        # ── 6. Analyst ratings — try all known yfinance sources ─
-        prog.info("⏳ Fetching analyst & earnings data...")
-
-        # Source 1: info dict (most reliable across versions)
-        target_mean = float(info.get('targetMeanPrice',  info.get('targetPrice', 0)) or 0)
-        target_low  = float(info.get('targetLowPrice',   0) or 0)
-        target_high = float(info.get('targetHighPrice',  0) or 0)
-        num_ana     = int(info.get('numberOfAnalystOpinions', info.get('numAnalystOpinions', 0)) or 0)
-        rec_mean    = float(info.get('recommendationMean', 0) or 0)
-        rec_key     = str(info.get('recommendationKey', '') or '')
-
-        # Map rec_mean to key if key missing (1=Strong Buy, 2=Buy, 3=Hold, 4=Sell, 5=Strong Sell)
-        if not rec_key and rec_mean:
-            if rec_mean <= 1.5:   rec_key = 'strong-buy'
-            elif rec_mean <= 2.5: rec_key = 'buy'
-            elif rec_mean <= 3.5: rec_key = 'hold'
-            elif rec_mean <= 4.5: rec_key = 'sell'
-            else:                 rec_key = 'strong-sell'
-
-        # Source 2: recommendations_summary for buy/hold/sell counts
+        # ── 6. Analyst ratings ──────────────────────────────────
+        # Uses data already fetched in fetch_ticker_data — no extra FMP calls
+        prog.info("⏳ Processing analyst & earnings data...")
+        target_mean = target_low = target_high = 0.0
+        num_ana = 0
+        rec_mean = 0.0
+        rec_key = ''
         buy_cnt = hold_cnt = sell_cnt = 0
+
+        # Source 1: data['analyst_targets'] — from FMP price-target-consensus in cache
         try:
-            rec = data.get('rec_summary')
-            if rec is None or (hasattr(rec,'empty') and rec.empty):
-                rec = yf.Ticker(ticker.replace('BRK.B','BRK-B')).recommendations_summary
-            if rec is not None and not rec.empty:
-                r = rec.iloc[0]
-                buy_cnt  = int((r.get('strongBuy',  r.get('strong_buy',  0)) or 0) +
-                               (r.get('buy',        0) or 0))
-                hold_cnt = int(r.get('hold', 0) or 0)
-                sell_cnt = int((r.get('strongSell', r.get('strong_sell', 0)) or 0) +
-                               (r.get('sell',       0) or 0))
-                total = buy_cnt + hold_cnt + sell_cnt
-                if total > 0: num_ana = max(num_ana, total)
+            at = data.get('analyst_targets') or {}
+            if at and isinstance(at, dict):
+                target_mean = float(at.get('mean') or 0)
+                target_high = float(at.get('high') or 0)
+                target_low  = float(at.get('low')  or 0)
         except: pass
 
-        # Source 3: analyst_price_targets from info (populated in cache) or direct
+        # Source 2: data['rec_summary'] — from FMP analyst-recommendations in cache
+        try:
+            rs = data.get('rec_summary')
+            if rs is not None and not (hasattr(rs,'empty') and rs.empty):
+                r = rs.iloc[0]
+                buy_cnt  = int((r.get('strongBuy',  0) or 0) + (r.get('buy',  0) or 0))
+                hold_cnt = int(r.get('hold', 0) or 0)
+                sell_cnt = int((r.get('strongSell', 0) or 0) + (r.get('sell', 0) or 0))
+                num_ana  = buy_cnt + hold_cnt + sell_cnt
+        except: pass
+
+        # Source 3: info dict — populated by FMP profile call in fetch_ticker_data
         if target_mean == 0:
-            target_mean = float(info.get('targetMeanPrice',  0) or 0)
-            target_low  = float(info.get('targetLowPrice',   0) or 0)
-            target_high = float(info.get('targetHighPrice',  0) or 0)
+            target_mean = float(info.get('targetMeanPrice') or info.get('targetPrice') or 0)
+            target_low  = float(info.get('targetLowPrice')  or 0)
+            target_high = float(info.get('targetHighPrice') or 0)
+        if num_ana == 0:
+            num_ana = int(info.get('numberOfAnalystOpinions') or info.get('numAnalystOpinions') or 0)
+
+        # Source 4: yfinance fallback (only if FMP returned nothing)
         if target_mean == 0:
             try:
-                apt = data.get('analyst_targets') or {}
+                _yt = yf.Ticker(ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A'))
+                apt = _yt.analyst_price_targets
                 if apt and isinstance(apt, dict):
-                    target_mean = float(apt.get('mean', apt.get('current', 0)) or 0)
-                    target_low  = float(apt.get('low',  0) or 0)
-                    target_high = float(apt.get('high', 0) or 0)
+                    target_mean = float(apt.get('mean') or apt.get('current') or 0)
+                    target_low  = float(apt.get('low')  or 0)
+                    target_high = float(apt.get('high') or 0)
             except: pass
-        if target_mean == 0:
+        if buy_cnt == 0:
             try:
-                _apt = yf.Ticker(ticker.replace('BRK.B','BRK-B')).analyst_price_targets
-                if _apt and isinstance(_apt, dict):
-                    target_mean = float(_apt.get('mean', _apt.get('current', 0)) or 0)
-                    target_low  = float(_apt.get('low',  0) or 0)
-                    target_high = float(_apt.get('high', 0) or 0)
+                _yt = yf.Ticker(ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A'))
+                yrs = _yt.recommendations_summary
+                if yrs is not None and not yrs.empty:
+                    r = yrs.iloc[0]
+                    buy_cnt  = int((r.get('strongBuy',  r.get('strong_buy',  0)) or 0) + (r.get('buy', 0) or 0))
+                    hold_cnt = int(r.get('hold', 0) or 0)
+                    sell_cnt = int((r.get('strongSell', r.get('strong_sell', 0)) or 0) + (r.get('sell', 0) or 0))
+                    num_ana  = max(num_ana, buy_cnt + hold_cnt + sell_cnt)
             except: pass
+
+        # Build rec_key from counts or rec_mean
+        rec_mean = float(info.get('recommendationMean') or 0)
+        rec_key  = str(info.get('recommendationKey') or '')
+        if not rec_key:
+            if rec_mean:
+                if rec_mean <= 1.5:   rec_key = 'strong-buy'
+                elif rec_mean <= 2.5: rec_key = 'buy'
+                elif rec_mean <= 3.5: rec_key = 'hold'
+                elif rec_mean <= 4.5: rec_key = 'sell'
+                else:                 rec_key = 'strong-sell'
+            elif buy_cnt + hold_cnt + sell_cnt > 0:
+                total = buy_cnt + hold_cnt + sell_cnt
+                buy_pct = buy_cnt / total
+                if buy_pct >= 0.6:   rec_key = 'buy'
+                elif buy_pct >= 0.4: rec_key = 'hold'
+                else:                rec_key = 'sell'
 
         if target_mean > 0 or buy_cnt > 0 or num_ana > 0:
             analyst_data = {
@@ -1339,36 +1308,40 @@ def run_analysis(ticker):
                 'rec_mean': rec_mean, 'rec_key': rec_key or 'N/A',
             }
 
-        # ── 7. Earnings history — multiple sources ────────────
+        # ── 7. Earnings history ──────────────────────────────────
+        # FMP earn_hist is most reliable (clean columns, already 4 rows)
+        # Fall back to yfinance endpoints if FMP empty
         eh = data.get('earn_hist')
         if eh is None or (hasattr(eh,'empty') and eh.empty):
-            eh = data.get('earn_dates')
-        if eh is None or (hasattr(eh,'empty') and eh.empty):
             try:
-                _rt = yf.Ticker(ticker.replace('BRK.B','BRK-B'))
+                _rt = yf.Ticker(ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A'))
                 eh  = _rt.earnings_history
             except: pass
         if eh is None or (hasattr(eh,'empty') and eh.empty):
             try:
-                _rt  = yf.Ticker(ticker.replace('BRK.B','BRK-B'))
-                _ed  = _rt.earnings_dates
+                _rt = yf.Ticker(ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A'))
+                _ed = _rt.earnings_dates
                 if _ed is not None and not _ed.empty:
-                    eh = _ed
+                    # earnings_dates has past AND future rows — filter to past only
+                    _ed = _ed[_ed.index <= pd.Timestamp.now()]
+                    if not _ed.empty:
+                        eh = _ed
             except: pass
         try:
             if eh is not None and not eh.empty:
-                # Detect column naming convention
-                cols = list(eh.columns) if hasattr(eh, 'columns') else []
-                for _, er in eh.tail(4).iterrows():
-                    # Try all known field names
-                    est  = float(er.get('EPS Estimate',    er.get('epsEstimate',   er.get('estimate', 0))) or 0)
-                    act  = float(er.get('Reported EPS',    er.get('epsActual',     er.get('actual',   0))) or 0)
-                    surp_raw = er.get('Surprise(%)', er.get('surprisePercent', er.get('surprise', None)))
+                for _, er in eh.head(4).iterrows():
+                    # Handle both FMP column names (epsEstimate/epsActual/period)
+                    # and yfinance column names (EPS Estimate/Reported EPS/Surprise(%))
+                    est = float(er.get('epsEstimate',  er.get('EPS Estimate',  er.get('estimate', 0))) or 0)
+                    act = float(er.get('epsActual',    er.get('Reported EPS',  er.get('actual',   0))) or 0)
+                    surp_raw = er.get('surprisePercent', er.get('Surprise(%)', er.get('surprise', None)))
                     if surp_raw is not None:
-                        surp = float(surp_raw or 0) * (1 if abs(float(surp_raw or 0)) > 1 else 100)
+                        sv = float(surp_raw or 0)
+                        # FMP returns decimal (0.052 = 5.2%), yfinance returns percent (5.2)
+                        surp = sv * 100 if abs(sv) <= 2 else sv
                     else:
                         surp = ((act - est) / abs(est) * 100) if est != 0 else 0
-                    qtr  = str(er.get('period', er.get('Date', er.name if hasattr(er, 'name') else '')))[:10]
+                    qtr = str(er.get('period', er.get('Date', er.name if hasattr(er, 'name') else '')))[:10]
                     if act != 0 or est != 0:
                         earnings_hist.append({'quarter': qtr, 'estimate': est,
                                               'actual': act, 'surprise': surp, 'beat': surp > 0})
@@ -1399,8 +1372,12 @@ def run_analysis(ticker):
                     role   = str(ri.get('Position',    ri.get('filerRelation', '')) or '')
                     date_i = str(ri.get('Date',        ri.get('startDate', '')) or '')
                     combined = (text + trans).lower()
-                    is_buy = ('purchase' in combined or 'buy' in combined or
-                              'acquisition' in combined or shares > 0)
+                    # Check sell keywords first — sells also have positive share counts
+                    is_sell = any(w in combined for w in ('sale', 'sell', 'dispose', 'disposed'))
+                    is_buy  = (not is_sell and
+                               any(w in combined for w in ('purchase', 'buy', 'acquisition', 'grant', 'award', 'exercise')))
+                    if not is_buy and not is_sell:
+                        is_buy = shares > 0  # last resort fallback
                     if name.strip():
                         insider_data.append({
                             'name': name[:22], 'role': role[:22],
@@ -1522,13 +1499,6 @@ def run_analysis(ticker):
         st.session_state.vol_data      = vol_data
         st.session_state.earn_date_str = earn_date_str
         st.session_state.days_to_earn  = days_to_earn
-        # Save to session cache so same ticker is instant next time
-        cache_snapshot = {k: st.session_state[k] for k in [
-            'analysis','df','info','ticker','signals','score','fibs','row','prev',
-            'market_ctx','analyst_data','earnings_hist','insider_data','news_items',
-            'vol_data','earn_date_str','days_to_earn'
-        ] if k in st.session_state}
-        st.session_state[f"_ticker_cache_{ticker.upper()}"] = cache_snapshot
         st.rerun()
 
     except Exception as e:
