@@ -28,8 +28,8 @@ def _fmp_get(endpoint, api_key, params=""):
         return None
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key=""):
-    """Fetch all data — FMP if key available, yfinance as fallback.
+def fetch_ticker_data(ticker, fmp_key="", _v=8):
+    """_v=8 is cache-buster. Increment to invalidate all cached data.
     fmp_key passed as arg (not read inside) so cache works correctly."""
     import time, requests
     yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
@@ -209,7 +209,9 @@ def fetch_ticker_data(ticker, fmp_key=""):
                                     'Net Income', 'NetIncome') if inc.shape[1]>1 else 0
                 eps = net_inc / shares if shares else 0
                 if eps != 0:
-                    info.setdefault('trailingPE', round(price / abs(eps), 2))
+                    calc_pe = round(price / abs(eps), 2)
+                    if 1 < calc_pe < 500:  # sanity: skip if currency mismatch (ADRs)
+                        info.setdefault('trailingPE', calc_pe)
                     info.setdefault('trailingEps', round(eps, 4))
                 if net_inc_prev != 0:
                     info.setdefault('earningsGrowth', (net_inc - net_inc_prev) / abs(net_inc_prev))
@@ -417,6 +419,33 @@ def fetch_ticker_data(ticker, fmp_key=""):
             cal_yf  = raw_yf.calendar
             if cal_yf is not None:
                 calendar = cal_yf if isinstance(cal_yf, dict) else (cal_yf.to_dict() if hasattr(cal_yf,"to_dict") else None)
+        except: pass
+
+    # ── RECOMMENDATIONS SUMMARY ───────────────────────────────
+    if rec_summary is None or (hasattr(rec_summary,'empty') and rec_summary.empty):
+        try:
+            rec_summary = yf.Ticker(yf_ticker).recommendations_summary
+        except: pass
+
+    # ── INSIDER TRANSACTIONS ──────────────────────────────────
+    if insider is None or (hasattr(insider,'empty') and insider.empty):
+        try:
+            insider = yf.Ticker(yf_ticker).insider_transactions
+        except: pass
+    if insider is None or (hasattr(insider,'empty') and insider.empty):
+        try:
+            insider = yf.Ticker(yf_ticker).insider_purchases
+        except: pass
+
+    # ── ANALYST PRICE TARGETS ─────────────────────────────────
+    if not analyst_targets:
+        try:
+            _apt = yf.Ticker(yf_ticker).analyst_price_targets
+            if _apt and isinstance(_apt, dict):
+                analyst_targets = _apt
+                info.setdefault('targetMeanPrice',  float(_apt.get('mean',    0) or 0))
+                info.setdefault('targetLowPrice',   float(_apt.get('low',     0) or 0))
+                info.setdefault('targetHighPrice',  float(_apt.get('high',    0) or 0))
         except: pass
 
     # ── IV ────────────────────────────────────────────────────
@@ -1274,7 +1303,7 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=8)
         df    = data['df']
         info  = data['info']
 
@@ -1656,6 +1685,7 @@ def render_hud():
       <div style="text-align:right;">
         <div class="price-display">{cur}{close:.2f}</div>
         <div style="text-align:right;margin-top:6px;">{chg_badge}</div>
+        <div style="margin-top:5px;">{"<span style='background:#0A3020;border:1px solid #00FF88;border-radius:4px;padding:2px 8px;font-size:10px;color:#00FF88;letter-spacing:1px;'>&#x26A1; FMP</span>" if st.secrets.get("FMP_API_KEY","") else "<span style='background:#2A1500;border:1px solid #FACC15;border-radius:4px;padding:2px 8px;font-size:10px;color:#FACC15;letter-spacing:1px;'>&#x26A0; yfinance — add FMP key</span>"}</div>
       </div>
     </div>''', unsafe_allow_html=True)
 
@@ -1696,7 +1726,7 @@ def render_hud():
       VOL&nbsp;<span>{fmt_vol(vol)}</span>&nbsp;&nbsp;
       AVG&nbsp;<span>{row['VolTrend']:.2f}x</span>&nbsp;&nbsp;
       ATR&nbsp;<span>{cur}{float(row["ATR"]):.2f}&nbsp;({atr_pct*100:.1f}%)</span>&nbsp;&nbsp;
-      <span style="float:right;color:#5EEAD4;">{analyzed}</span>
+      <span style="float:right;">{data_src_html} &nbsp;<span style="color:#5EEAD4;">{analyzed}</span></span>
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 3: VERDICT + SCORE + AI SUMMARY ────────────────
@@ -1749,10 +1779,6 @@ def render_hud():
         s = signals[k]
         with cols[i]:
             st.markdown(sig_html(s['label'], s['val'], s['bull'], s.get('neut', False)), unsafe_allow_html=True)
-
-    # ── DEBUG: show raw info keys (temporary) ───────────────
-    with st.expander("🔍 DEBUG — raw info keys (remove before launch)", expanded=False):
-        st.write({k: v for k, v in info.items() if v is not None and v != 0 and v != '' and not isinstance(v, (list, dict))})
 
     # ── ZONE 5: KEY LEVELS + FUNDAMENTALS ───────────────────
     vwap    = float(a.get('vwap', close))
