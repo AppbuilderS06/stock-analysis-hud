@@ -123,13 +123,16 @@ def fetch_ticker_data(ticker, fmp_key=""):
         # fast_info — always works, gives price + market cap + 52W
         try:
             fi = raw_yf.fast_info
+            # Correct attribute names for yfinance fast_info
             fast_map = {
-                'market_cap':           'marketCap',
-                'fifty_two_week_high':  'fiftyTwoWeekHigh',
-                'fifty_two_week_low':   'fiftyTwoWeekLow',
-                'last_price':           'regularMarketPrice',
-                'shares':               'sharesOutstanding',
+                'market_cap':              'marketCap',
+                'year_high':               'fiftyTwoWeekHigh',
+                'year_low':                'fiftyTwoWeekLow',
+                'last_price':              'regularMarketPrice',
+                'shares':                  'sharesOutstanding',
                 'three_month_average_volume': 'averageVolume',
+                'fifty_day_average':       'fiftyDayAverage',
+                'two_hundred_day_average': 'twoHundredDayAverage',
             }
             for attr, key in fast_map.items():
                 try:
@@ -180,6 +183,74 @@ def fetch_ticker_data(ticker, fmp_key=""):
                     info.setdefault('debtToEquity',   total_debt / abs(equity))
                 if curr_liab != 0:
                     info.setdefault('currentRatio',   curr_assets / abs(curr_liab))
+        except: pass
+
+        # ── Derived ratios from financial statements ─────────
+        try:
+            price  = float(info.get('regularMarketPrice', 0) or 0)
+            shares = float(info.get('sharesOutstanding', 0) or 1)
+            inc    = raw_yf.income_stmt
+            bs2    = raw_yf.balance_sheet
+
+            def _row(df, *names):
+                """Get first matching row value, trying all name variants."""
+                for n in names:
+                    for idx in df.index:
+                        if n.lower() in str(idx).lower():
+                            try:
+                                v = float(df.loc[idx].iloc[0] or 0)
+                                if v != 0: return v
+                            except: pass
+                return 0
+
+            if inc is not None and not inc.empty and price > 0:
+                net_inc      = _row(inc, 'Net Income', 'NetIncome', 'net income')
+                net_inc_prev = _row(inc.iloc[:, 1:2] if inc.shape[1]>1 else inc,
+                                    'Net Income', 'NetIncome') if inc.shape[1]>1 else 0
+                eps = net_inc / shares if shares else 0
+                if eps != 0:
+                    info.setdefault('trailingPE', round(price / abs(eps), 2))
+                    info.setdefault('trailingEps', round(eps, 4))
+                if net_inc_prev != 0:
+                    info.setdefault('earningsGrowth', (net_inc - net_inc_prev) / abs(net_inc_prev))
+
+            if bs2 is not None and not bs2.empty:
+                equity = _row(bs2, 'Stockholders Equity', 'Total Equity', 'stockholders equity', 'Common Stock Equity')
+                net_inc2 = _row(inc, 'Net Income') if inc is not None and not inc.empty else 0
+                bvps = equity / shares if shares else 0
+                if bvps != 0 and price > 0:
+                    info.setdefault('priceToBook', round(price / abs(bvps), 2))
+                if equity != 0 and net_inc2 != 0:
+                    info.setdefault('returnOnEquity', net_inc2 / abs(equity))
+        except: pass
+
+        # dividend yield
+        try:
+            divs = raw_yf.dividends
+            if divs is not None and not divs.empty:
+                annual_div = float(divs.tail(4).sum())
+                price      = info.get('regularMarketPrice', 0) or 0
+                if price > 0 and annual_div > 0:
+                    info.setdefault('dividendYield', annual_div / price)
+        except: pass
+
+        # analyst price targets
+        try:
+            apt = raw_yf.analyst_price_targets
+            if apt and isinstance(apt, dict):
+                info.setdefault('targetMeanPrice',  apt.get('mean',    apt.get('current', 0)))
+                info.setdefault('targetLowPrice',   apt.get('low',  0))
+                info.setdefault('targetHighPrice',  apt.get('high', 0))
+        except: pass
+
+        # earnings per share from financials
+        try:
+            fin = raw_yf.financials
+            if fin is not None and not fin.empty:
+                cols = fin.columns.tolist()
+                eps_row = fin.loc['Diluted EPS'] if 'Diluted EPS' in fin.index else None
+                if eps_row is not None:
+                    info.setdefault('trailingEps', float(eps_row.iloc[0]))
         except: pass
 
         # recommendations — analyst consensus
@@ -1281,6 +1352,8 @@ def run_analysis(ticker):
         buy_cnt = hold_cnt = sell_cnt = 0
         try:
             rec = data.get('rec_summary')
+            if rec is None or (hasattr(rec,'empty') and rec.empty):
+                rec = yf.Ticker(ticker.replace('BRK.B','BRK-B')).recommendations_summary
             if rec is not None and not rec.empty:
                 r = rec.iloc[0]
                 buy_cnt  = int((r.get('strongBuy',  r.get('strong_buy',  0)) or 0) +
@@ -1288,19 +1361,31 @@ def run_analysis(ticker):
                 hold_cnt = int(r.get('hold', 0) or 0)
                 sell_cnt = int((r.get('strongSell', r.get('strong_sell', 0)) or 0) +
                                (r.get('sell',       0) or 0))
-        except:
-            pass
+                total = buy_cnt + hold_cnt + sell_cnt
+                if total > 0: num_ana = max(num_ana, total)
+        except: pass
 
-        # Source 3: analyst_price_targets (newer yfinance)
+        # Source 3: analyst_price_targets from info (populated in cache) or direct
+        if target_mean == 0:
+            target_mean = float(info.get('targetMeanPrice',  0) or 0)
+            target_low  = float(info.get('targetLowPrice',   0) or 0)
+            target_high = float(info.get('targetHighPrice',  0) or 0)
         if target_mean == 0:
             try:
-                apt = data.get('analyst_targets')
+                apt = data.get('analyst_targets') or {}
                 if apt and isinstance(apt, dict):
                     target_mean = float(apt.get('mean', apt.get('current', 0)) or 0)
                     target_low  = float(apt.get('low',  0) or 0)
                     target_high = float(apt.get('high', 0) or 0)
-            except:
-                pass
+            except: pass
+        if target_mean == 0:
+            try:
+                _apt = yf.Ticker(ticker.replace('BRK.B','BRK-B')).analyst_price_targets
+                if _apt and isinstance(_apt, dict):
+                    target_mean = float(_apt.get('mean', _apt.get('current', 0)) or 0)
+                    target_low  = float(_apt.get('low',  0) or 0)
+                    target_high = float(_apt.get('high', 0) or 0)
+            except: pass
 
         if target_mean > 0 or buy_cnt > 0 or num_ana > 0:
             analyst_data = {
@@ -1310,25 +1395,22 @@ def run_analysis(ticker):
                 'rec_mean': rec_mean, 'rec_key': rec_key or 'N/A',
             }
 
-        # ── 7. Earnings history — try multiple sources ───────────
-        eh = None
-        try:
-            eh = data.get('earn_hist')
-        except:
-            pass
-        if eh is None or (hasattr(eh, 'empty') and eh.empty):
+        # ── 7. Earnings history — multiple sources ────────────
+        eh = data.get('earn_hist')
+        if eh is None or (hasattr(eh,'empty') and eh.empty):
+            eh = data.get('earn_dates')
+        if eh is None or (hasattr(eh,'empty') and eh.empty):
             try:
-                eh = None  # no raw available in cached mode
-            except:
-                pass
-        if eh is None or (hasattr(eh, 'empty') and eh.empty):
+                _rt = yf.Ticker(ticker.replace('BRK.B','BRK-B'))
+                eh  = _rt.earnings_history
+            except: pass
+        if eh is None or (hasattr(eh,'empty') and eh.empty):
             try:
-                # Newer yfinance: earnings_dates has actual vs estimate
-                ed = data.get('earn_dates')
-                if ed is not None and not ed.empty:
-                    eh = ed
-            except:
-                pass
+                _rt  = yf.Ticker(ticker.replace('BRK.B','BRK-B'))
+                _ed  = _rt.earnings_dates
+                if _ed is not None and not _ed.empty:
+                    eh = _ed
+            except: pass
         try:
             if eh is not None and not eh.empty:
                 # Detect column naming convention
@@ -1349,14 +1431,19 @@ def run_analysis(ticker):
         except:
             pass
 
-        # ── 8. Insider trading ─────────────────────────────────
+        # ── 8. Insider trading — multiple sources ─────────────
         try:
             ins = data.get('insider')
-            if ins is None or ins.empty:
+            if ins is None or (hasattr(ins,'empty') and ins.empty):
                 try:
-                    ins = None  # no raw available
-                except:
-                    ins = None
+                    _rt2 = yf.Ticker(ticker.replace('BRK.B','BRK-B'))
+                    ins  = _rt2.insider_transactions
+                except: pass
+            if ins is None or (hasattr(ins,'empty') and ins.empty):
+                try:
+                    _rt2 = yf.Ticker(ticker.replace('BRK.B','BRK-B'))
+                    ins  = _rt2.insider_purchases
+                except: pass
             if ins is not None and not ins.empty:
                 for _, ri in ins.head(5).iterrows():
                     # yfinance field names vary by version — try all known variants
