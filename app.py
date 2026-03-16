@@ -15,8 +15,31 @@ def fetch_ticker_data(ticker):
     yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
     raw = yf.Ticker(yf_ticker)
     df  = raw.history(period="2y")
-    try:    info = raw.info or {}
-    except: info = {}
+    # Try multiple methods to get fundamentals
+    info = {}
+    try:
+        info = raw.info or {}
+    except: pass
+    # Fallback: fast_info for key metrics if info is sparse
+    if not info.get('marketCap'):
+        try:
+            fi = raw.fast_info
+            for attr, key in [
+                ('market_cap',         'marketCap'),
+                ('fifty_two_week_high','fiftyTwoWeekHigh'),
+                ('fifty_two_week_low', 'fiftyTwoWeekLow'),
+                ('last_price',         'regularMarketPrice'),
+            ]:
+                val = getattr(fi, attr, None)
+                if val is not None and key not in info:
+                    info[key] = val
+        except: pass
+    # Fallback: get_info() method (some versions)
+    if not info.get('marketCap'):
+        try:
+            info2 = raw.get_info() or {}
+            info.update({k:v for k,v in info2.items() if k not in info})
+        except: pass
     # Calendar — convert DataFrame to dict so it can be pickled
     calendar = None
     try:
@@ -1361,12 +1384,17 @@ def render_hud():
 
     with c2:
         st.markdown('<div class="section-header">Fundamentals & Growth</div>', unsafe_allow_html=True)
-        pe  = info.get('trailingPE', 0) or 0
-        pb  = info.get('priceToBook', a.get('pb_ratio', 0)) or 0
-        peg = info.get('pegRatio', a.get('peg_ratio', 0)) or 0
-        eps_g = (info.get('earningsGrowth', 0) or 0) * 100
-        rev_g = (info.get('revenueGrowth', 0) or 0) * 100
-        mc  = info.get('marketCap', 0) or 0
+        # Fundamentals — info dict with Claude analysis as fallback
+        pe    = info.get('trailingPE',      0) or 0
+        fwd_pe= info.get('forwardPE',       0) or 0
+        pb    = info.get('priceToBook',     a.get('pb_ratio',  0)) or 0
+        peg   = info.get('pegRatio',        a.get('peg_ratio', 0)) or 0
+        eps_g = (info.get('earningsGrowth', a.get('eps_growth_yoy', 0) or 0) or 0) * (1 if abs(info.get('earningsGrowth', 0) or 0) <= 1 else 0.01)
+        rev_g = (info.get('revenueGrowth',  a.get('rev_growth_yoy', 0) or 0) or 0) * (1 if abs(info.get('revenueGrowth',  0) or 0) <= 1 else 0.01)
+        mc    = info.get('marketCap', 0) or 0
+        # Recalculate growth as % if already in % form
+        eps_g = eps_g * 100 if eps_g != 0 and abs(eps_g) < 1 else eps_g
+        rev_g = rev_g * 100 if rev_g != 0 and abs(rev_g) < 1 else rev_g
         ma20_pct = (close/float(row['MA20'])-1)*100
         ma50_pct = (close/float(row['MA50'])-1)*100
         ma200_pct= (close/float(row['MA200'])-1)*100
