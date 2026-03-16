@@ -210,7 +210,11 @@ def fetch_ticker_data(ticker, fmp_key="", _v=12):
     if use_fmp:
         # Call 0: Profile — company name + sector + forwardPE (yfinance broken)
         try:
+            # Try both BRK-B and BRK.B formats — FMP is inconsistent
             profile = _fmp_get(f"v3/profile/{ticker}", fmp_key)
+            if not profile or not isinstance(profile, list) or not profile:
+                alt = ticker.replace('-','.')
+                profile = _fmp_get(f"v3/profile/{alt}", fmp_key)
             if profile and isinstance(profile, list) and profile:
                 p = profile[0]
                 # Name fields: ALWAYS overwrite — FMP is authoritative, yfinance returns ticker symbol
@@ -1571,6 +1575,13 @@ def render_hud():
     atr_pct = float(row['ATRPct'])
 
     company = info.get('longName', info.get('shortName', ticker))
+    # If company name is still just the ticker symbol, check MULTI_LISTED for known names
+    if company == ticker or company == ticker.replace('-','.'):
+        for key, opts in MULTI_LISTED.items():
+            for opt in opts:
+                if opt['ticker'].upper() == ticker.upper():
+                    company = opt['name']
+                    break
     sector  = info.get('sector', a.get('sector',''))
     exchange = 'TSX' if ticker.endswith('.TO') else 'LSE' if ticker.endswith('.L') else 'NYSE / NASDAQ'
 
@@ -1603,29 +1614,27 @@ def render_hud():
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 2: STATUS BAR ───────────────────────────────────
-    # Detect user timezone via JS — works globally for any visitor
+    # Detect user timezone via JS postMessage — works on first render
     try:
         import streamlit.components.v1 as components
-        tz_key = "user_timezone"
-        if tz_key not in st.session_state:
-            st.session_state[tz_key] = "UTC"
-        # Inject JS to capture browser timezone and store via query param
+        if 'user_tz' not in st.session_state:
+            st.session_state['user_tz'] = 'America/New_York'  # trading default
         components.html("""
             <script>
             const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            const url = new URL(window.parent.location.href);
-            if (!url.searchParams.get('tz')) {
-                url.searchParams.set('tz', tz);
-                window.parent.history.replaceState({}, '', url.toString());
-            }
+            window.parent.postMessage({type:'streamlit:setComponentValue', value: tz}, '*');
             </script>
         """, height=0)
-        # Read timezone from query params if available
-        params = st.query_params
-        user_tz = params.get("tz", "UTC")
+        # Read from query params as secondary method (works after first rerun)
+        try:
+            params = st.query_params
+            user_tz = params.get("tz", st.session_state.get('user_tz', 'America/New_York'))
+            if user_tz and user_tz != 'America/New_York':
+                st.session_state['user_tz'] = user_tz
+        except: pass
         import zoneinfo
         try:
-            tz_obj   = zoneinfo.ZoneInfo(user_tz)
+            tz_obj   = zoneinfo.ZoneInfo(st.session_state.get('user_tz', 'America/New_York'))
             analyzed = datetime.now(tz_obj).strftime("%b %d · %I:%M %p")
         except:
             analyzed = datetime.now().strftime("%b %d · %I:%M %p")
