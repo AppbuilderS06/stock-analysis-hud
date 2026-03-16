@@ -1726,7 +1726,7 @@ def render_hud():
       VOL&nbsp;<span>{fmt_vol(vol)}</span>&nbsp;&nbsp;
       AVG&nbsp;<span>{row['VolTrend']:.2f}x</span>&nbsp;&nbsp;
       ATR&nbsp;<span>{cur}{float(row["ATR"]):.2f}&nbsp;({atr_pct*100:.1f}%)</span>&nbsp;&nbsp;
-      <span style="float:right;">{data_src_html} &nbsp;<span style="color:#5EEAD4;">{analyzed}</span></span>
+      <span style="float:right;color:#5EEAD4;">{analyzed}</span>
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 3: VERDICT + SCORE + AI SUMMARY ────────────────
