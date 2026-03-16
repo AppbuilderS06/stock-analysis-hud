@@ -35,12 +35,19 @@ def search_ticker_fmp(query, fmp_key=""):
     results = _fmp_get(f"v3/search?query={query}&limit=15", fmp_key)
     if not results or not isinstance(results, list):
         return []
-    # Filter to stock-type only, sort by relevance
-    stocks = [r for r in results if r.get("type","") in ("stock","etf","")]
-    return stocks[:12]
+    # Accept all types — don't over-filter
+    stocks = [r for r in results if r.get("symbol","")]
+    # Sort: exact symbol match first, then major exchanges, then rest
+    major = {"NYSE","NASDAQ","TSX","LSE","EURONEXT","XETRA","ASX","HKG","NSE","AMEX","BATS"}
+    def sort_key(r):
+        is_exact = 0 if r.get("symbol","").upper() == query.upper() else 1
+        is_major = 0 if r.get("exchangeShortName","") in major else 1
+        return (is_exact, is_major)
+    stocks.sort(key=sort_key)
+    return stocks[:12] if stocks else []
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key="", _v=10):
+def fetch_ticker_data(ticker, fmp_key="", _v=11):
     """Hybrid: yfinance for price+fundamentals, FMP only for analyst/earnings/insider.
     Uses ~4 FMP calls per ticker instead of 11. Search is separate cached call."""
     import time, requests
@@ -1139,13 +1146,9 @@ def main():
                     # ── PRIORITY 2: FMP live search for everything else
                     results = search_ticker_fmp(ticker_upper, fmp_key_lp)
                     if results:
-                        # Filter to major exchanges to avoid obscure OTC matches
-                        major = [r for r in results if r.get("exchangeShortName","") in
-                                 ("NYSE","NASDAQ","TSX","LSE","EURONEXT","XETRA","ASX","HKG","NSE")]
-                        display = major if major else results
-
-                        exact   = [r for r in display if r.get("symbol","").upper() == ticker_upper]
-                        partial = [r for r in display if r.get("symbol","").upper() != ticker_upper]
+                        # search_ticker_fmp already sorts: exact match first, major exchanges second
+                        exact   = [r for r in results if r.get("symbol","").upper() == ticker_upper]
+                        display = results  # show all, sorted
 
                         # Auto-pick on Analyze/Enter: exact match first, else first result
                         if should_analyze:
@@ -1154,9 +1157,9 @@ def main():
 
                         # Show dropdown
                         st.markdown('<div style="background:#0D1B2A;border:1px solid #14B8A6;border-radius:8px;margin-top:4px;padding:4px 0;">', unsafe_allow_html=True)
-                        for r in (exact + partial)[:10]:
+                        for r in display[:10]:
                             sym  = r.get("symbol","")
-                            name = r.get("name","")[:38]
+                            name = r.get("name","")[:40]
                             exch = r.get("exchangeShortName","")
                             curr = r.get("currency","USD")
                             if not sym: continue
@@ -1214,7 +1217,7 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key, _v=10)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=11)
         df    = data['df']
         info  = data['info']
 
@@ -1533,7 +1536,9 @@ def run_analysis(ticker):
         if "429" in err_str or "Too Many Requests" in err_str or "rate" in err_str.lower():
             st.error("⏳ Yahoo Finance rate limit hit. Please wait 30 seconds and try again. This is a Yahoo-side limit, not a bug.")
         else:
+            import traceback
             st.error(f"Error: {err_str}")
+            st.code(traceback.format_exc())
 
 
 def render_hud():
