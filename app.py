@@ -12,11 +12,10 @@ from datetime import datetime
 # FMP API key stored in Streamlit secrets as FMP_API_KEY
 # Get free key at financialmodelingprep.com (250 calls/day free)
 
-def _fmp_get(endpoint, params=""):
+def _fmp_get(endpoint, api_key, params=""):
     """Make a single FMP API call. Returns parsed JSON or None."""
     import requests
     try:
-        api_key = st.secrets.get("FMP_API_KEY", "")
         if not api_key:
             return None
         url = f"https://financialmodelingprep.com/api/{endpoint}?apikey={api_key}{params}"
@@ -29,18 +28,18 @@ def _fmp_get(endpoint, params=""):
         return None
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker):
-    """Fetch all data — FMP if key available, yfinance as fallback."""
+def fetch_ticker_data(ticker, fmp_key=""):
+    """Fetch all data — FMP if key available, yfinance as fallback.
+    fmp_key passed as arg (not read inside) so cache works correctly."""
     import time, requests
     yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
-    fmp_key   = st.secrets.get("FMP_API_KEY", "")
     use_fmp   = bool(fmp_key)
 
     # ── PRICE HISTORY ─────────────────────────────────────────
     df = None
     if use_fmp:
         try:
-            hist = _fmp_get(f"v3/historical-price-full/{ticker}", "&from=2022-01-01")
+            hist = _fmp_get(f"v3/historical-price-full/{ticker}", fmp_key, "&from=2022-01-01")
             if hist and "historical" in hist:
                 import pandas as pd
                 rows = hist["historical"]
@@ -74,8 +73,8 @@ def fetch_ticker_data(ticker):
     info = {}
     if use_fmp:
         try:
-            profile = _fmp_get(f"v3/profile/{ticker}")
-            ratios  = _fmp_get(f"v3/ratios-ttm/{ticker}")
+            profile = _fmp_get(f"v3/profile/{ticker}", fmp_key)
+            ratios  = _fmp_get(f"v3/ratios-ttm/{ticker}", fmp_key)
             if profile and isinstance(profile, list) and len(profile) > 0:
                 p = profile[0]
                 info = {
@@ -116,12 +115,34 @@ def fetch_ticker_data(ticker):
         except:
             pass
 
-    # Fallback to yfinance for info
+    # Always fetch yfinance info — fill in any gaps FMP didn't cover
+    try:
+        raw_yf  = yf.Ticker(yf_ticker)
+        yf_info = raw_yf.info or {}
+        # Update: yfinance fills gaps, FMP values take priority
+        if use_fmp:
+            # FMP is primary — only add keys yfinance has that FMP doesn't
+            for k, v in yf_info.items():
+                if v and k not in info:
+                    info[k] = v
+        else:
+            # No FMP — use yfinance as sole source
+            info = yf_info or {}
+    except:
+        pass
+    # fast_info as last resort for key metrics
     if not info.get("marketCap"):
         try:
-            raw_yf = yf.Ticker(yf_ticker)
-            yf_info = raw_yf.info or {}
-            info.update({k:v for k,v in yf_info.items() if k not in info or not info[k]})
+            fi = raw_yf.fast_info
+            for attr, key in [
+                ('market_cap',          'marketCap'),
+                ('fifty_two_week_high', 'fiftyTwoWeekHigh'),
+                ('fifty_two_week_low',  'fiftyTwoWeekLow'),
+                ('last_price',          'regularMarketPrice'),
+            ]:
+                v = getattr(fi, attr, None)
+                if v is not None:
+                    info[key] = v
         except:
             pass
 
@@ -130,7 +151,7 @@ def fetch_ticker_data(ticker):
     if use_fmp:
         try:
             import pandas as pd
-            surp = _fmp_get(f"v3/earnings-surprises/{ticker}")
+            surp = _fmp_get(f"v3/earnings-surprises/{ticker}", fmp_key)
             if surp and isinstance(surp, list):
                 rows = []
                 for e in surp[:4]:
@@ -157,9 +178,9 @@ def fetch_ticker_data(ticker):
     if use_fmp:
         try:
             import pandas as pd
-            est = _fmp_get(f"v3/analyst-stock-recommendations/{ticker}")
-            pt  = _fmp_get(f"v4/analyst-stock-recommendations/{ticker}")
-            tp  = _fmp_get(f"v3/price-target-consensus/{ticker}")
+            est = _fmp_get(f"v3/analyst-stock-recommendations/{ticker}", fmp_key)
+            pt  = _fmp_get(f"v4/analyst-stock-recommendations/{ticker}", fmp_key)
+            tp  = _fmp_get(f"v3/price-target-consensus/{ticker}", fmp_key)
             if tp and isinstance(tp, list) and tp:
                 t = tp[0]
                 analyst_targets = {
@@ -187,7 +208,7 @@ def fetch_ticker_data(ticker):
     if use_fmp:
         try:
             import pandas as pd
-            ins = _fmp_get(f"v4/insider-trading?symbol={ticker}&page=0", "")
+            ins = _fmp_get(f"v4/insider-trading?symbol={ticker}&page=0", fmp_key)
             if ins and isinstance(ins, list):
                 rows = []
                 for i in ins[:5]:
@@ -208,7 +229,7 @@ def fetch_ticker_data(ticker):
     news = []
     if use_fmp:
         try:
-            articles = _fmp_get(f"v3/stock_news?tickers={ticker}&limit=5", "")
+            articles = _fmp_get(f"v3/stock_news?tickers={ticker}&limit=5", fmp_key)
             if articles and isinstance(articles, list):
                 for a in articles[:5]:
                     t = str(a.get("title",""))
@@ -243,7 +264,7 @@ def fetch_ticker_data(ticker):
             from datetime import datetime, timedelta
             today = datetime.now().strftime("%Y-%m-%d")
             fut   = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
-            cal = _fmp_get(f"v3/earning_calendar?from={today}&to={fut}", "")
+            cal = _fmp_get(f"v3/earning_calendar?from={today}&to={fut}", fmp_key)
             if cal and isinstance(cal, list):
                 matches = [e for e in cal if e.get("symbol","").upper() == ticker.upper()]
                 if matches:
@@ -1173,14 +1194,9 @@ def main():
 def run_analysis(ticker):
     prog = st.empty()
     # Session-level cache: if same ticker already in session, reuse data instantly
+    # Session cache disabled for now — was serving stale data
+    # Will re-enable once data quality is stable
     cache_key = f"_ticker_cache_{ticker.upper()}"
-    if cache_key in st.session_state:
-        cached = st.session_state[cache_key]
-        # Restore all session state from cache
-        for k, v in cached.items():
-            st.session_state[k] = v
-        st.rerun()
-        return
     # All variables initialized BEFORE any try block
     analyst_data  = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,
                      'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
@@ -1197,7 +1213,8 @@ def run_analysis(ticker):
     try:
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
-        data  = fetch_ticker_data(ticker)
+        fmp_key = st.secrets.get("FMP_API_KEY", "")
+        data  = fetch_ticker_data(ticker, fmp_key)
         df    = data['df']
         info  = data['info']
 
