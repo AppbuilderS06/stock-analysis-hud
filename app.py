@@ -51,7 +51,7 @@ def search_ticker_fmp(query, fmp_key=""):
     return result
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key="", _v=11):
+def fetch_ticker_data(ticker, fmp_key="", _v=12):
     """Hybrid: yfinance for price+fundamentals, FMP only for analyst/earnings/insider.
     Uses ~4 FMP calls per ticker instead of 11. Search is separate cached call."""
     import time, requests
@@ -1211,7 +1211,7 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key, _v=11)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=12)
         df    = data['df']
         info  = data['info']
 
