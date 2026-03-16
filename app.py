@@ -1864,19 +1864,23 @@ def render_hud():
         bb_rows += f'<div class="vol-row"><span class="vol-lbl">Middle (20MA)</span><span style="color:#94A3B8;font-weight:700;font-family:monospace;">{cur}{bb_mid:.2f}</span></div>'
         bb_rows += f'<div class="vol-row"><span class="vol-lbl">Lower Band</span><span style="color:#00FF88;font-weight:700;font-family:monospace;">{cur}{bb_lower:.2f}</span></div>'
         bb_rows += f'<div class="vol-row"><span class="vol-lbl">BB Width</span><span style="color:#A78BFA;font-weight:700;font-family:monospace;">{vol_data.get("bb_width",0):.1f}%</span></div>'
-        # BB position bar
+        # BB position bar — identical structure to 52W range bar
         bb_rows += (
-            f'<div class="vol-row" style="flex-direction:column;gap:4px;">' +
-            f'<span class="vol-lbl">Price position in band</span>' +
-            f'<div style="display:flex;align-items:center;gap:8px;margin-top:4px;">' +
-            f'<span style="font-size:10px;color:#00FF88;">Oversold</span>' +
-            f'<div style="flex:1;position:relative;height:6px;background:linear-gradient(90deg,#00FF88,#FACC15,#FF6B6B);border-radius:3px;">' +
-            f'<div style="position:absolute;left:{min(max(bb_pct,2),98):.0f}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>' +
-            f'</div>' +
-            f'<span style="font-size:10px;color:#FF6B6B;">Overbought</span>' +
-            f'</div>' +
-            f'<div style="text-align:center;font-size:11px;color:{bb_col};font-weight:700;">{bb_pct:.0f}% — {"Oversold" if bb_pct < 20 else "Overbought" if bb_pct > 80 else "Neutral"}</div>' +
-            f'</div>'
+            '<div class="vol-row" style="flex-direction:column;gap:6px;">'
+            '<div style="display:flex;justify-content:space-between;width:100%;font-size:13px;">'
+            f'<span class="vol-lbl">Price in Band</span>'
+            f'<span style="color:{bb_col};font-weight:700;font-family:monospace;">{bb_pct:.0f}% — {"Oversold" if bb_pct < 20 else "Overbought" if bb_pct > 80 else "Neutral"}</span>'
+            '</div>'
+            '<div style="display:flex;align-items:center;gap:8px;width:100%;">'
+            f'<span style="font-size:11px;color:#00FF88;">{cur}{bb_lower:.0f}</span>'
+            '<div style="flex:1;position:relative;height:6px;background:#243348;border-radius:3px;">'
+            '<div style="position:absolute;left:0;top:0;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#00FF88,#FACC15,#FF6B6B);"></div>'
+            f'<div style="position:absolute;left:{min(max(int(bb_pct),2),98)}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>'
+            '</div>'
+            f'<span style="font-size:11px;color:#FF6B6B;">{cur}{bb_upper:.0f}</span>'
+            '</div>'
+            f'<div style="text-align:center;font-size:11px;color:#94A3B8;">{cur}{cur_close:.2f} · Mid {cur}{bb_mid:.2f} · Width {vol_data.get("bb_width",0):.1f}%</div>'
+            '</div>'
         )
         st.markdown(bb_rows + '</div>', unsafe_allow_html=True)
     with vc3:
