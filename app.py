@@ -8,13 +8,297 @@ import anthropic
 import json
 from datetime import datetime
 
-# ── Cached data fetch (15 min TTL — prevents Yahoo rate limiting) ───
-@st.cache_data(ttl=900, show_spinner=False)
+# ── Data layer: FMP primary, yfinance fallback ───────────────
+# FMP API key stored in Streamlit secrets as FMP_API_KEY
+# Get free key at financialmodelingprep.com (250 calls/day free)
+
+def _fmp_get(endpoint, params=""):
+    """Make a single FMP API call. Returns parsed JSON or None."""
+    import requests
+    try:
+        api_key = st.secrets.get("FMP_API_KEY", "")
+        if not api_key:
+            return None
+        url = f"https://financialmodelingprep.com/api/{endpoint}?apikey={api_key}{params}"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200:
+            data = r.json()
+            return data if data else None
+        return None
+    except:
+        return None
+
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_ticker_data(ticker):
-    """Fetch all yfinance data — only serializable types (no yf.Ticker object)."""
+    """Fetch all data — FMP if key available, yfinance as fallback."""
+    import time, requests
     yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
-    raw = yf.Ticker(yf_ticker)
-    df  = raw.history(period="2y")
+    fmp_key   = st.secrets.get("FMP_API_KEY", "")
+    use_fmp   = bool(fmp_key)
+
+    # ── PRICE HISTORY ─────────────────────────────────────────
+    df = None
+    if use_fmp:
+        try:
+            hist = _fmp_get(f"v3/historical-price-full/{ticker}", "&from=2022-01-01")
+            if hist and "historical" in hist:
+                import pandas as pd
+                rows = hist["historical"]
+                df = pd.DataFrame(rows)
+                df["Date"] = pd.to_datetime(df["date"])
+                df = df.set_index("Date").sort_index()
+                df = df.rename(columns={
+                    "open":"Open","high":"High","low":"Low",
+                    "close":"Close","volume":"Volume",
+                    "adjClose":"Adj Close"
+                })
+                df = df[["Open","High","Low","Close","Volume"]]
+        except:
+            df = None
+
+    # Fallback to yfinance for price
+    if df is None or df.empty:
+        for attempt in range(3):
+            try:
+                raw = yf.Ticker(yf_ticker)
+                df  = raw.history(period="2y")
+                if not df.empty:
+                    break
+            except:
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+        if df is None:
+            df = pd.DataFrame()
+
+    # ── FUNDAMENTALS / INFO ───────────────────────────────────
+    info = {}
+    if use_fmp:
+        try:
+            profile = _fmp_get(f"v3/profile/{ticker}")
+            ratios  = _fmp_get(f"v3/ratios-ttm/{ticker}")
+            if profile and isinstance(profile, list) and len(profile) > 0:
+                p = profile[0]
+                info = {
+                    "longName":               p.get("companyName",""),
+                    "shortName":              p.get("companyName",""),
+                    "sector":                 p.get("sector",""),
+                    "industry":               p.get("industry",""),
+                    "marketCap":              p.get("mktCap", 0),
+                    "regularMarketPrice":     p.get("price", 0),
+                    "fiftyTwoWeekHigh":       p.get("range","").split("-")[-1].strip() if p.get("range") else 0,
+                    "fiftyTwoWeekLow":        p.get("range","").split("-")[0].strip() if p.get("range") else 0,
+                    "dividendYield":          (p.get("lastDiv", 0) or 0) / (p.get("price", 1) or 1),
+                    "beta":                   p.get("beta", 0),
+                    "currency":               p.get("currency","USD"),
+                    "exchange":               p.get("exchangeShortName",""),
+                    "description":            p.get("description",""),
+                }
+                try:
+                    info["fiftyTwoWeekHigh"] = float(info["fiftyTwoWeekHigh"])
+                    info["fiftyTwoWeekLow"]  = float(info["fiftyTwoWeekLow"])
+                except:
+                    pass
+            if ratios and isinstance(ratios, list) and len(ratios) > 0:
+                r = ratios[0]
+                info.update({
+                    "trailingPE":           r.get("peRatioTTM", 0),
+                    "forwardPE":            r.get("priceEarningsToGrowthRatioTTM", 0),
+                    "priceToBook":          r.get("priceToBookRatioTTM", 0),
+                    "pegRatio":             r.get("priceEarningsToGrowthRatioTTM", 0),
+                    "operatingMargins":     r.get("operatingProfitMarginTTM", 0),
+                    "profitMargins":        r.get("netProfitMarginTTM", 0),
+                    "returnOnEquity":       r.get("returnOnEquityTTM", 0),
+                    "debtToEquity":         r.get("debtEquityRatioTTM", 0),
+                    "currentRatio":         r.get("currentRatioTTM", 0),
+                    "revenueGrowth":        r.get("revenueGrowthTTM", 0),
+                    "earningsGrowth":       r.get("netIncomeGrowthTTM", 0),
+                })
+        except:
+            pass
+
+    # Fallback to yfinance for info
+    if not info.get("marketCap"):
+        try:
+            raw_yf = yf.Ticker(yf_ticker)
+            yf_info = raw_yf.info or {}
+            info.update({k:v for k,v in yf_info.items() if k not in info or not info[k]})
+        except:
+            pass
+
+    # ── EARNINGS HISTORY ──────────────────────────────────────
+    earn_hist = None
+    if use_fmp:
+        try:
+            import pandas as pd
+            surp = _fmp_get(f"v3/earnings-surprises/{ticker}")
+            if surp and isinstance(surp, list):
+                rows = []
+                for e in surp[:4]:
+                    rows.append({
+                        "period":           e.get("date",""),
+                        "epsEstimate":      e.get("estimatedEps", 0),
+                        "epsActual":        e.get("actualEps", 0),
+                        "surprisePercent":  (e.get("actualEps",0) - e.get("estimatedEps",0)) / abs(e.get("estimatedEps",1) or 1),
+                    })
+                earn_hist = pd.DataFrame(rows)
+        except:
+            earn_hist = None
+
+    # Fallback
+    if earn_hist is None:
+        try:
+            earn_hist = yf.Ticker(yf_ticker).earnings_history
+        except:
+            pass
+
+    # ── ANALYST RATINGS ───────────────────────────────────────
+    analyst_targets = None
+    rec_summary     = None
+    if use_fmp:
+        try:
+            import pandas as pd
+            est = _fmp_get(f"v3/analyst-stock-recommendations/{ticker}")
+            pt  = _fmp_get(f"v4/analyst-stock-recommendations/{ticker}")
+            tp  = _fmp_get(f"v3/price-target-consensus/{ticker}")
+            if tp and isinstance(tp, list) and tp:
+                t = tp[0]
+                analyst_targets = {
+                    "mean":  t.get("targetConsensus", 0),
+                    "high":  t.get("targetHigh", 0),
+                    "low":   t.get("targetLow", 0),
+                }
+                info["targetMeanPrice"]  = analyst_targets["mean"]
+                info["targetHighPrice"]  = analyst_targets["high"]
+                info["targetLowPrice"]   = analyst_targets["low"]
+            if est and isinstance(est, list) and est:
+                e = est[0]
+                buy  = int(e.get("strongBuy",0)) + int(e.get("buy",0))
+                hold = int(e.get("hold",0))
+                sell = int(e.get("sell",0)) + int(e.get("strongSell",0))
+                import pandas as pd
+                rec_summary = pd.DataFrame([{"strongBuy":e.get("strongBuy",0),"buy":e.get("buy",0),
+                    "hold":hold,"sell":e.get("sell",0),"strongSell":e.get("strongSell",0)}])
+                info["numberOfAnalystOpinions"] = buy + hold + sell
+        except:
+            pass
+
+    # ── INSIDER TRANSACTIONS ──────────────────────────────────
+    insider = None
+    if use_fmp:
+        try:
+            import pandas as pd
+            ins = _fmp_get(f"v4/insider-trading?symbol={ticker}&page=0", "")
+            if ins and isinstance(ins, list):
+                rows = []
+                for i in ins[:5]:
+                    rows.append({
+                        "Insider":      i.get("reportingName",""),
+                        "Position":     i.get("typeOfOwner",""),
+                        "Transaction":  i.get("transactionType",""),
+                        "Shares":       i.get("securitiesTransacted", 0),
+                        "Value":        (i.get("securitiesTransacted",0) or 0) * (i.get("price",0) or 0),
+                        "Date":         i.get("transactionDate",""),
+                    })
+                if rows:
+                    insider = pd.DataFrame(rows)
+        except:
+            pass
+
+    # ── NEWS ──────────────────────────────────────────────────
+    news = []
+    if use_fmp:
+        try:
+            articles = _fmp_get(f"v3/stock_news?tickers={ticker}&limit=5", "")
+            if articles and isinstance(articles, list):
+                for a in articles[:5]:
+                    t = str(a.get("title",""))
+                    if t:
+                        news.append({
+                            "title":     t,
+                            "publisher": str(a.get("site","")),
+                            "link":      str(a.get("url","")),
+                        })
+        except:
+            pass
+
+    # Fallback for news
+    if not news:
+        try:
+            raw_yf = yf.Ticker(yf_ticker)
+            for item in (raw_yf.news or [])[:5]:
+                try:
+                    t = str(item.get("title","") or item.get("content",{}).get("title",""))
+                    p = str(item.get("publisher",""))
+                    l = str(item.get("link",""))
+                    if t: news.append({"title":t,"publisher":p,"link":l})
+                except: pass
+        except: pass
+
+    # ── EARNINGS DATE ─────────────────────────────────────────
+    earn_dates = None
+    calendar   = None
+    if use_fmp:
+        try:
+            import pandas as pd
+            from datetime import datetime, timedelta
+            today = datetime.now().strftime("%Y-%m-%d")
+            fut   = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
+            cal = _fmp_get(f"v3/earning_calendar?from={today}&to={fut}", "")
+            if cal and isinstance(cal, list):
+                matches = [e for e in cal if e.get("symbol","").upper() == ticker.upper()]
+                if matches:
+                    ned = matches[0].get("date","")
+                    calendar = {"Earnings Date": ned}
+                    info["earningsDate"] = ned
+        except:
+            pass
+
+    # Fallback calendar
+    if not calendar:
+        try:
+            raw_yf  = yf.Ticker(yf_ticker)
+            cal_yf  = raw_yf.calendar
+            if cal_yf is not None:
+                calendar = cal_yf if isinstance(cal_yf, dict) else (cal_yf.to_dict() if hasattr(cal_yf,"to_dict") else None)
+        except: pass
+
+    # ── IV ────────────────────────────────────────────────────
+    iv = 0.0
+    try:
+        raw_yf = yf.Ticker(yf_ticker)
+        opts   = raw_yf.options
+        if opts:
+            chain  = raw_yf.option_chain(opts[0])
+            cp     = float(df["Close"].iloc[-1]) if not df.empty else 0
+            atm    = chain.calls.iloc[(chain.calls["strike"]-cp).abs().argsort()[:1]]
+            iv     = float(atm["impliedVolatility"].values[0]) * 100
+    except: pass
+
+    return {"df":df,"info":info,"calendar":calendar,"rec_summary":rec_summary,
+            "earn_hist":earn_hist,"earn_dates":earn_dates,"insider":insider,
+            "analyst_targets":analyst_targets,"news":news,"iv":iv}
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def fetch_ticker_data(ticker):
+    """Fetch all yfinance data with retry logic — only serializable types."""
+    import time
+    yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
+
+    # Retry up to 3 times with exponential backoff on rate limit
+    df = None
+    for attempt in range(3):
+        try:
+            raw = yf.Ticker(yf_ticker)
+            df  = raw.history(period="2y")
+            if not df.empty:
+                break
+        except Exception as e:
+            if attempt < 2:
+                time.sleep(2 ** attempt)  # 1s, 2s, 4s
+            else:
+                raise
+    if df is None:
+        df = yf.Ticker(yf_ticker).history(period="2y")
     # Try multiple methods to get fundamentals
     info = {}
     try:
@@ -49,10 +333,12 @@ def fetch_ticker_data(ticker):
     except: pass
     try:    rec_summary = raw.recommendations_summary
     except: rec_summary = None
+    time.sleep(0.3)
     try:    earn_hist   = raw.earnings_history
     except: earn_hist   = None
     try:    earn_dates  = raw.earnings_dates
     except: earn_dates  = None
+    time.sleep(0.3)
     try:    insider     = raw.insider_transactions
     except: insider     = None
     try:    analyst_targets = raw.analyst_price_targets
@@ -82,7 +368,7 @@ def fetch_ticker_data(ticker):
             'earn_hist':earn_hist,'earn_dates':earn_dates,'insider':insider,
             'analyst_targets':analyst_targets,'news':news,'iv':iv}
 
-@st.cache_data(ttl=900, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def fetch_market_context():
     """Cache SPY/QQQ/DIA for 15 minutes — shared across all users."""
     try:
@@ -886,6 +1172,15 @@ def main():
 
 def run_analysis(ticker):
     prog = st.empty()
+    # Session-level cache: if same ticker already in session, reuse data instantly
+    cache_key = f"_ticker_cache_{ticker.upper()}"
+    if cache_key in st.session_state:
+        cached = st.session_state[cache_key]
+        # Restore all session state from cache
+        for k, v in cached.items():
+            st.session_state[k] = v
+        st.rerun()
+        return
     # All variables initialized BEFORE any try block
     analyst_data  = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,
                      'target_high':0,'num_analysts':0,'rec_mean':0,'rec_key':'N/A'}
@@ -1190,11 +1485,22 @@ def run_analysis(ticker):
         st.session_state.vol_data      = vol_data
         st.session_state.earn_date_str = earn_date_str
         st.session_state.days_to_earn  = days_to_earn
+        # Save to session cache so same ticker is instant next time
+        cache_snapshot = {k: st.session_state[k] for k in [
+            'analysis','df','info','ticker','signals','score','fibs','row','prev',
+            'market_ctx','analyst_data','earnings_hist','insider_data','news_items',
+            'vol_data','earn_date_str','days_to_earn'
+        ] if k in st.session_state}
+        st.session_state[f"_ticker_cache_{ticker.upper()}"] = cache_snapshot
         st.rerun()
 
     except Exception as e:
         prog.empty()
-        st.error(f"Error: {str(e)}")
+        err_str = str(e)
+        if "429" in err_str or "Too Many Requests" in err_str or "rate" in err_str.lower():
+            st.error("⏳ Yahoo Finance rate limit hit. Please wait 30 seconds and try again. This is a Yahoo-side limit, not a bug.")
+        else:
+            st.error(f"Error: {err_str}")
 
 
 def render_hud():
