@@ -1118,46 +1118,27 @@ def main():
             selected_ticker = None
 
             if ticker_upper:
-                # ── PRIORITY 1: Known multi-listed tickers (BRK, RY, SHOP etc.)
-                # Always show disambiguation regardless of FMP
-                if ticker_upper in MULTI_LISTED:
-                    opts = MULTI_LISTED[ticker_upper]
-                    if len(opts) == 1:
-                        # Single known mapping — auto-analyze on Analyze/Enter
-                        if should_analyze:
-                            selected_ticker = opts[0]["ticker"]
-                    else:
-                        # Multiple listings — show picker (and auto-pick first on Enter/Analyze)
-                        if should_analyze:
-                            selected_ticker = opts[0]["ticker"]
-                        st.markdown('<div style="background:#0F3030;border:1px solid #14B8A6;border-radius:8px;padding:4px 0;margin-top:4px;">', unsafe_allow_html=True)
-                        for opt in opts:
-                            ca, cb, cc = st.columns([1.5, 3.5, 1.2])
-                            with ca:
-                                st.markdown(f'<div style="font-family:monospace;font-weight:800;color:#00FF88;font-size:13px;padding:6px 8px;">{opt["ticker"]}</div>', unsafe_allow_html=True)
-                            with cb:
-                                st.markdown(f'<div style="font-size:11px;color:#CBD5E1;padding:6px 0;">{opt["name"]}<br><span style="color:#5EEAD4;font-size:10px;">{opt["exchange"]} · {opt["currency"]}</span></div>', unsafe_allow_html=True)
-                            with cc:
-                                if st.button("▶", key=f'ml_{opt["ticker"]}', help=f'Analyze {opt["ticker"]}'):
-                                    selected_ticker = opt["ticker"]
-                        st.markdown("</div>", unsafe_allow_html=True)
-
-                elif fmp_key_lp:
-                    # ── PRIORITY 2: FMP live search for everything else
+                if fmp_key_lp:
+                    # ── FMP live search — runs on every keystroke (cached 60 min) ──
                     results = search_ticker_fmp(ticker_upper, fmp_key_lp)
+
                     if results:
-                        # search_ticker_fmp already sorts: exact match first, major exchanges second
-                        exact   = [r for r in results if r.get("symbol","").upper() == ticker_upper]
-                        display = results  # show all, sorted
+                        # ── RULE: if only 1 result → auto-run on Enter/Analyze
+                        #          if 2+ results   → ALWAYS show dropdown, never auto-pick
+                        if len(results) == 1:
+                            if should_analyze:
+                                selected_ticker = results[0]["symbol"]
 
-                        # Auto-pick on Analyze/Enter: exact match first, else first result
-                        if should_analyze:
-                            best = exact[0] if exact else display[0]
-                            selected_ticker = best["symbol"]
-
-                        # Show dropdown
-                        st.markdown('<div style="background:#0D1B2A;border:1px solid #14B8A6;border-radius:8px;margin-top:4px;padding:4px 0;">', unsafe_allow_html=True)
-                        for r in display[:10]:
+                        # Always show the dropdown so user can see what's available
+                        # and pick a specific exchange / share class
+                        st.markdown(
+                            '<div style="background:#0D1B2A;border:1px solid #14B8A6;'
+                            'border-radius:8px;margin-top:6px;padding:4px 0;">'
+                            '<div style="padding:6px 14px;font-size:10px;color:#5EEAD4;'
+                            'letter-spacing:1.5px;border-bottom:1px solid #14B8A622;">'
+                            'SELECT EXCHANGE / SHARE CLASS</div>',
+                            unsafe_allow_html=True)
+                        for r in results[:10]:
                             sym  = r.get("symbol","")
                             name = r.get("name","")[:40]
                             exch = r.get("exchangeShortName","")
@@ -1165,21 +1146,45 @@ def main():
                             if not sym: continue
                             ca, cb, cc = st.columns([1.5, 3.5, 1.2])
                             with ca:
-                                st.markdown(f'<div style="font-family:monospace;font-weight:800;color:#00FF88;font-size:13px;padding:6px 8px;">{sym}</div>', unsafe_allow_html=True)
+                                st.markdown(
+                                    f'<div style="font-family:monospace;font-weight:800;'
+                                    f'color:#00FF88;font-size:13px;padding:6px 8px;">{sym}</div>',
+                                    unsafe_allow_html=True)
                             with cb:
-                                st.markdown(f'<div style="font-size:11px;color:#CBD5E1;padding:6px 0;">{name}<br><span style="color:#5EEAD4;font-size:10px;">{exch} · {curr}</span></div>', unsafe_allow_html=True)
+                                st.markdown(
+                                    f'<div style="font-size:11px;color:#CBD5E1;padding:6px 0;">'
+                                    f'{name}<br><span style="color:#5EEAD4;font-size:10px;">'
+                                    f'{exch} · {curr}</span></div>',
+                                    unsafe_allow_html=True)
                             with cc:
-                                if st.button("▶", key=f"sel_{sym}_{exch}", help=f"Analyze {sym} on {exch}"):
+                                if st.button("▶", key=f"sel_{sym}_{exch}",
+                                             help=f"Analyze {sym} on {exch}"):
                                     selected_ticker = sym
                         st.markdown("</div>", unsafe_allow_html=True)
 
                     elif should_analyze:
-                        # No FMP results — try ticker directly
+                        # No FMP results at all — try the ticker directly
                         selected_ticker = ticker_upper
 
                 else:
-                    # ── No FMP key — direct analyze
-                    if should_analyze:
+                    # ── No FMP key — use hardcoded MULTI_LISTED or direct ──
+                    if ticker_upper in MULTI_LISTED:
+                        opts = MULTI_LISTED[ticker_upper]
+                        if len(opts) == 1 and should_analyze:
+                            selected_ticker = opts[0]["ticker"]
+                        else:
+                            st.markdown('<div style="background:#0D1B2A;border:1px solid #14B8A6;border-radius:8px;margin-top:6px;padding:4px 0;"><div style="padding:6px 14px;font-size:10px;color:#5EEAD4;letter-spacing:1.5px;border-bottom:1px solid #14B8A622;">SELECT EXCHANGE / SHARE CLASS</div>', unsafe_allow_html=True)
+                            for opt in opts:
+                                ca, cb, cc = st.columns([1.5, 3.5, 1.2])
+                                with ca:
+                                    st.markdown(f'<div style="font-family:monospace;font-weight:800;color:#00FF88;font-size:13px;padding:6px 8px;">{opt["ticker"]}</div>', unsafe_allow_html=True)
+                                with cb:
+                                    st.markdown(f'<div style="font-size:11px;color:#CBD5E1;padding:6px 0;">{opt["name"]}<br><span style="color:#5EEAD4;font-size:10px;">{opt["exchange"]} · {opt["currency"]}</span></div>', unsafe_allow_html=True)
+                                with cc:
+                                    if st.button("▶", key=f'ml_{opt["ticker"]}', help=f'Analyze {opt["ticker"]}'):
+                                        selected_ticker = opt["ticker"]
+                            st.markdown("</div>", unsafe_allow_html=True)
+                    elif should_analyze:
                         selected_ticker = ticker_upper
 
             # ── Run analysis on selection ─────────────────────
