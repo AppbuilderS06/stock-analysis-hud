@@ -1927,6 +1927,100 @@ def render_hud():
     with c3:
         st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">Invest</div><div class="tf-note">{a.get("invest_note","")}</div></div>', unsafe_allow_html=True)
 
+    # ── ZONE 7b: RISK / REWARD CALCULATOR ───────────────────
+    st.markdown('<div class="section-header" style="margin-top:8px;">⚡ Risk / Reward Calculator</div>', unsafe_allow_html=True)
+
+    # Pre-fill defaults from Claude analysis + ATR
+    atr_val      = float(row['ATR'])
+    entry_def    = round((float(a.get('entry_low', close)) + float(a.get('entry_high', close))) / 2, 2)
+    if entry_def == 0: entry_def = round(close, 2)
+    stop_def     = round(entry_def - 1.5 * atr_val, 2)
+    # Use nearest support if it's tighter than ATR stop
+    s1 = float(a.get('support1', 0))
+    if s1 > 0 and s1 < entry_def and s1 > stop_def:
+        stop_def = round(s1 - 0.01, 2)
+    target_def   = round(float(a.get('resistance1', entry_def + 3 * atr_val)), 2)
+    if target_def <= entry_def: target_def = round(entry_def + 3 * atr_val, 2)
+
+    st.markdown(f'''
+    <div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:14px 16px 6px;">
+      <div style="font-size:11px;color:#5EEAD4;letter-spacing:1px;margin-bottom:10px;">
+        Pre-filled from AI analysis · Adjust any value to recalculate
+      </div>
+      <div style="font-size:10px;color:#4A6080;margin-bottom:4px;">
+        ⚠ For educational purposes only. Not financial advice. Always do your own research before placing any trade.
+      </div>
+    </div>''', unsafe_allow_html=True)
+
+    rr_c1, rr_c2, rr_c3, rr_c4 = st.columns(4)
+    with rr_c1:
+        account_size = st.number_input("Account Size ($)", min_value=100.0, max_value=10000000.0,
+                                        value=10000.0, step=1000.0, key="rr_account")
+    with rr_c2:
+        risk_pct = st.number_input("Risk per Trade (%)", min_value=0.1, max_value=10.0,
+                                    value=1.0, step=0.5, key="rr_risk_pct")
+    with rr_c3:
+        entry_price = st.number_input(f"Entry ({cur})", min_value=0.01,
+                                       value=float(entry_def), step=0.01, key="rr_entry",
+                                       format="%.2f")
+    with rr_c4:
+        stop_price = st.number_input(f"Stop Loss ({cur})", min_value=0.01,
+                                      value=float(stop_def), step=0.01, key="rr_stop",
+                                      format="%.2f")
+
+    rr_c5, rr_c6, rr_c7, rr_c8 = st.columns(4)
+    with rr_c5:
+        target_price = st.number_input(f"Target ({cur})", min_value=0.01,
+                                        value=float(target_def), step=0.01, key="rr_target",
+                                        format="%.2f")
+
+    # ── Calculations ──────────────────────────────────────────
+    risk_per_share   = round(abs(entry_price - stop_price), 2)
+    reward_per_share = round(abs(target_price - entry_price), 2)
+    rr_ratio         = round(reward_per_share / risk_per_share, 2) if risk_per_share > 0 else 0
+    dollar_risk      = round(account_size * (risk_pct / 100), 2)
+    position_size    = int(dollar_risk / risk_per_share) if risk_per_share > 0 else 0
+    position_value   = round(position_size * entry_price, 2)
+    max_loss         = round(position_size * risk_per_share, 2)
+    max_gain         = round(position_size * reward_per_share, 2)
+    stop_pct         = round((risk_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
+    target_pct       = round((reward_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
+
+    # Color the R:R ratio
+    rr_col = "#00FF88" if rr_ratio >= 2 else "#FACC15" if rr_ratio >= 1 else "#FF6B6B"
+    rr_label = "Excellent" if rr_ratio >= 3 else "Good" if rr_ratio >= 2 else "Acceptable" if rr_ratio >= 1 else "Poor — don't take"
+
+    with rr_c6:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:{rr_col};margin-top:4px;">
+          <div class="earn-label">R:R Ratio</div>
+          <div class="earn-val" style="color:{rr_col};font-size:22px;">1 : {rr_ratio}</div>
+          <div style="font-size:10px;color:{rr_col};margin-top:2px;">{rr_label}</div>
+        </div>''', unsafe_allow_html=True)
+    with rr_c7:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:#00FF88;margin-top:4px;">
+          <div class="earn-label">Position Size</div>
+          <div class="earn-val" style="color:#00FF88;">{position_size:,} shares</div>
+          <div style="font-size:10px;color:#64748B;margin-top:2px;">Value: {cur}{position_value:,.0f}</div>
+        </div>''', unsafe_allow_html=True)
+    with rr_c8:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:#FF6B6B;margin-top:4px;">
+          <div class="earn-label">Max Loss / Max Gain</div>
+          <div class="earn-val" style="color:#FF6B6B;">−{cur}{max_loss:,.0f}</div>
+          <div style="font-size:10px;color:#00FF88;margin-top:2px;">+{cur}{max_gain:,.0f}</div>
+        </div>''', unsafe_allow_html=True)
+
+    # Summary bar
+    st.markdown(f'''
+    <div style="background:#111827;border:1px solid #243348;border-radius:8px;
+                padding:10px 16px;margin-top:8px;display:flex;gap:24px;flex-wrap:wrap;
+                font-size:12px;font-family:'JetBrains Mono',monospace;">
+      <span style="color:#64748B;">Entry <span style="color:#FACC15;">{cur}{entry_price:.2f}</span></span>
+      <span style="color:#64748B;">Stop <span style="color:#FF6B6B;">{cur}{stop_price:.2f} (−{stop_pct:.1f}%)</span></span>
+      <span style="color:#64748B;">Target <span style="color:#00FF88;">{cur}{target_price:.2f} (+{target_pct:.1f}%)</span></span>
+      <span style="color:#64748B;">Risk/share <span style="color:#FF6B6B;">{cur}{risk_per_share:.2f}</span></span>
+      <span style="color:#64748B;">Max risk <span style="color:#FF6B6B;">{cur}{dollar_risk:.0f} ({risk_pct:.1f}% of account)</span></span>
+    </div>''', unsafe_allow_html=True)
+
     # ── ZONE 8: EARNINGS ─────────────────────────────────────
     # Earnings from session state
     beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
