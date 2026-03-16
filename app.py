@@ -1384,17 +1384,34 @@ def render_hud():
 
     with c2:
         st.markdown('<div class="section-header">Fundamentals & Growth</div>', unsafe_allow_html=True)
-        # Fundamentals — info dict with Claude analysis as fallback
-        pe    = info.get('trailingPE',      0) or 0
-        fwd_pe= info.get('forwardPE',       0) or 0
-        pb    = info.get('priceToBook',     a.get('pb_ratio',  0)) or 0
-        peg   = info.get('pegRatio',        a.get('peg_ratio', 0)) or 0
-        eps_g = (info.get('earningsGrowth', a.get('eps_growth_yoy', 0) or 0) or 0) * (1 if abs(info.get('earningsGrowth', 0) or 0) <= 1 else 0.01)
-        rev_g = (info.get('revenueGrowth',  a.get('rev_growth_yoy', 0) or 0) or 0) * (1 if abs(info.get('revenueGrowth',  0) or 0) <= 1 else 0.01)
-        mc    = info.get('marketCap', 0) or 0
-        # Recalculate growth as % if already in % form
-        eps_g = eps_g * 100 if eps_g != 0 and abs(eps_g) < 1 else eps_g
-        rev_g = rev_g * 100 if rev_g != 0 and abs(rev_g) < 1 else rev_g
+        # Fundamentals — info dict + Claude AI fallbacks
+        pe     = info.get('trailingPE',   0) or 0
+        fwd_pe = info.get('forwardPE',    0) or 0
+        pb     = info.get('priceToBook',  a.get('pb_ratio',  0) or 0) or 0
+        peg    = info.get('pegRatio',     a.get('peg_ratio', 0) or 0) or 0
+        mc     = info.get('marketCap',    0) or 0
+
+        # Growth rates — yfinance returns decimals (0.15 = 15%), Claude returns %
+        def _pct(yf_key, claude_key):
+            """Get growth rate as %, handling both decimal and % formats."""
+            v = info.get(yf_key, 0) or 0
+            if v == 0:
+                v = a.get(claude_key, 0) or 0
+                # Claude already returns as % so no conversion needed
+                return float(v)
+            # yfinance returns decimal — check magnitude
+            return float(v) * 100 if abs(v) <= 1 else float(v)
+
+        eps_g = _pct('earningsGrowth', 'eps_growth_yoy')
+        rev_g = _pct('revenueGrowth',  'rev_growth_yoy')
+
+        # Market cap fallback: shares * price
+        if mc == 0:
+            shares = info.get('sharesOutstanding', 0) or 0
+            if shares == 0:
+                shares = info.get('impliedSharesOutstanding', 0) or 0
+            if shares > 0:
+                mc = shares * close
         ma20_pct = (close/float(row['MA20'])-1)*100
         ma50_pct = (close/float(row['MA50'])-1)*100
         ma200_pct= (close/float(row['MA200'])-1)*100
@@ -1412,21 +1429,21 @@ def render_hud():
         curr_ratio = info.get('currentRatio', 0) or 0
 
         funds_html = '<div class="panel-body">'
-        funds_html += data_row("Market Cap",       fmt_cap(mc) if mc else "N/A",                   "val-w",  True)
-        funds_html += data_row("P/E (Trailing)",   f"{pe:.1f}" if pe else "N/A",                   "val-r" if pe > 40 else "val-y" if pe > 20 else "val-g", True)
-        funds_html += data_row("P/E (Forward)",    f"{fwd_pe:.1f}" if fwd_pe else "N/A",           "val-r" if fwd_pe > 35 else "val-y" if fwd_pe > 18 else "val-g", True)
-        funds_html += data_row("P/B Ratio",        f"{pb:.1f}" if pb else "N/A",                   "val-r" if pb > 5 else "val-g", True)
-        funds_html += data_row("PEG Ratio",        f"{peg:.2f}" if peg else "N/A",                 "val-r" if peg > 3 else "val-y" if peg > 1.5 else "val-g", True)
-        funds_html += data_row("EPS Growth YoY",   f"{eps_g:+.1f}%" if eps_g else "N/A",           "val-g" if eps_g > 0 else "val-r", True)
-        funds_html += data_row("Rev Growth YoY",   f"{rev_g:+.1f}%" if rev_g else "N/A",           "val-g" if rev_g > 0 else "val-r", True)
-        funds_html += data_row("Operating Margin", f"{op_margin:.1f}%" if op_margin else "N/A",    "val-g" if op_margin > 15 else "val-y" if op_margin > 0 else "val-r", True)
-        funds_html += data_row("Profit Margin",    f"{profit_m:.1f}%" if profit_m else "N/A",      "val-g" if profit_m > 10 else "val-y" if profit_m > 0 else "val-r", True)
-        funds_html += data_row("Return on Equity", f"{roe:.1f}%" if roe else "N/A",                "val-g" if roe > 15 else "val-y" if roe > 0 else "val-r", True)
-        funds_html += data_row("Debt / Equity",    f"{debt_eq:.2f}" if debt_eq else "N/A",         "val-r" if debt_eq > 2 else "val-y" if debt_eq > 1 else "val-g", True)
-        funds_html += data_row("Current Ratio",    f"{curr_ratio:.2f}" if curr_ratio else "N/A",   "val-g" if curr_ratio > 1.5 else "val-y" if curr_ratio > 1 else "val-r", True)
+        funds_html += data_row("Market Cap",       fmt_cap(mc) if mc else "—",                    "val-w",  True)
+        funds_html += data_row("P/E (Trailing)",   f"{pe:.1f}" if pe else "—",                   "val-r" if pe > 40 else "val-y" if pe > 20 else "val-g" if pe else "val-m", True)
+        funds_html += data_row("P/E (Forward)",    f"{fwd_pe:.1f}" if fwd_pe else "—",           "val-r" if fwd_pe > 35 else "val-y" if fwd_pe > 18 else "val-g" if fwd_pe else "val-m", True)
+        funds_html += data_row("P/B Ratio",        f"{pb:.1f}" if pb else "—",                   "val-r" if pb > 5 else "val-g" if pb else "val-m", True)
+        funds_html += data_row("PEG Ratio",        f"{peg:.2f}" if peg else "—",                 "val-r" if peg > 3 else "val-y" if peg > 1.5 else "val-g" if peg else "val-m", True)
+        funds_html += data_row("EPS Growth YoY",   f"{eps_g:+.1f}%" if eps_g else "—",           "val-g" if eps_g > 0 else "val-r", True)
+        funds_html += data_row("Rev Growth YoY",   f"{rev_g:+.1f}%" if rev_g else "—",           "val-g" if rev_g > 0 else "val-r", True)
+        funds_html += data_row("Operating Margin", f"{op_margin:.1f}%" if op_margin else "—",    "val-g" if op_margin > 15 else "val-y" if op_margin > 0 else "val-r", True)
+        funds_html += data_row("Profit Margin",    f"{profit_m:.1f}%" if profit_m else "—",      "val-g" if profit_m > 10 else "val-y" if profit_m > 0 else "val-r", True)
+        funds_html += data_row("Return on Equity", f"{roe:.1f}%" if roe else "—",                "val-g" if roe > 15 else "val-y" if roe > 0 else "val-r", True)
+        funds_html += data_row("Debt / Equity",    f"{debt_eq:.2f}" if debt_eq else "—",         "val-r" if debt_eq > 2 else "val-y" if debt_eq > 1 else "val-g", True)
+        funds_html += data_row("Current Ratio",    f"{curr_ratio:.2f}" if curr_ratio else "—",   "val-g" if curr_ratio > 1.5 else "val-y" if curr_ratio > 1 else "val-r", True)
         funds_html += data_row("Dividend Yield",   f"{div_yield:.2f}%" if div_yield else "None",   "val-g" if div_yield > 2 else "val-m", True)
-        funds_html += data_row("Short % Float",    f"{short_pct:.1f}%" if short_pct else "N/A",    "val-r" if short_pct > 20 else "val-y" if short_pct > 10 else "val-g", True)
-        funds_html += data_row("Float Shares",     fmt_cap(float_sh).replace("$","") if float_sh else "N/A", "val-m", True)
+        funds_html += data_row("Short % Float",    f"{short_pct:.1f}%" if short_pct else "—",    "val-r" if short_pct > 20 else "val-y" if short_pct > 10 else "val-g", True)
+        funds_html += data_row("Float Shares",     fmt_cap(float_sh).replace("$","") if float_sh else "—", "val-m", True)
         funds_html += '</div>' 
         st.markdown(funds_html, unsafe_allow_html=True)
 
