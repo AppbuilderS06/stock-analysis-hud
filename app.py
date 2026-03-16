@@ -1969,6 +1969,16 @@ def render_hud():
             tgt = r2 if r2 > entry_mid else round(entry_mid + 6 * atr_val, 2)
         return max(0.01, stp), max(entry_mid + 0.01, tgt)
 
+    # Map AI verdict to default mode
+    verdict_to_mode = {
+        'DAY TRADE':       'Day Trade',
+        'SWING TRADE':     'Swing Trade',
+        'INVEST':          'Invest',
+        'MULTI-TIMEFRAME': 'Swing Trade',
+        'AVOID':           'Swing Trade',
+    }
+    default_mode = verdict_to_mode.get(verdict, 'Swing Trade')
+
     # Session state for selected mode — reset if ticker changed
     if st.session_state.get('_rr_ticker') != ticker:
         st.session_state['rr_mode']    = default_mode
