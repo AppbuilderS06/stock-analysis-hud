@@ -1564,7 +1564,7 @@ def render_hud():
 
     # Back button
     if st.button("← New ticker"):
-        for k in ['analysis','df','info','ticker','signals','score','fibs','row','prev','_prev_ticker_val']:
+        for k in ['analysis','df','info','ticker','signals','score','fibs','row','prev','_prev_ticker_val','rr_mode','_rr_ticker']:
             if k in st.session_state: del st.session_state[k]
         st.rerun()
 
@@ -1969,16 +1969,11 @@ def render_hud():
             tgt = r2 if r2 > entry_mid else round(entry_mid + 6 * atr_val, 2)
         return max(0.01, stp), max(entry_mid + 0.01, tgt)
 
-    # Session state for selected mode — default to AI verdict
-    verdict_to_mode = {
-        'DAY TRADE': 'Day Trade',
-        'SWING TRADE': 'Swing Trade',
-        'INVEST': 'Invest',
-        'MULTI-TIMEFRAME': 'Swing Trade',
-        'AVOID': 'Swing Trade',
-    }
-    default_mode = verdict_to_mode.get(verdict, 'Swing Trade')
-    if 'rr_mode' not in st.session_state:
+    # Session state for selected mode — reset if ticker changed
+    if st.session_state.get('_rr_ticker') != ticker:
+        st.session_state['rr_mode']    = default_mode
+        st.session_state['_rr_ticker'] = ticker
+    elif 'rr_mode' not in st.session_state:
         st.session_state['rr_mode'] = default_mode
 
     # ── Header panel with AI verdict + mode selector ──────────
@@ -1999,25 +1994,40 @@ def render_hud():
       </div>
     </div>''', unsafe_allow_html=True)
 
-    # ── Mode selector buttons ─────────────────────────────────
-    btn1, btn2, btn3, _ = st.columns([1, 1, 1, 3])
-    modes = ["Day Trade", "Swing Trade", "Invest"]
-    mode_colors = {"Day Trade": "#FACC15", "Swing Trade": "#38BDF8", "Invest": "#00FF88"}
-    for col, mode in zip([btn1, btn2, btn3], modes):
+    # ── Mode selector — inject CSS to style active button ─────
+    selected_mode = st.session_state['rr_mode']
+    mode_colors   = {"Day Trade": "#FACC15", "Swing Trade": "#38BDF8", "Invest": "#00FF88"}
+
+    # Inject CSS to style each mode button by its label
+    st.markdown("""
+    <style>
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        background: #111827 !important;
+        border: 1px solid #243348 !important;
+        color: #64748B !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+    }
+    </style>""", unsafe_allow_html=True)
+
+    btn1, btn2, btn3, _ = st.columns([1.2, 1.2, 1.2, 2.4])
+    for col, mode in zip([btn1, btn2, btn3], ["Day Trade", "Swing Trade", "Invest"]):
         with col:
-            is_active   = st.session_state['rr_mode'] == mode
-            is_ai_pick  = mode == default_mode
-            label       = f"{'▶ ' if is_active else ''}{mode}{'  ← AI' if is_ai_pick else ''}"
-            mc          = mode_colors[mode]
-            btn_style   = f"border:2px solid {mc};background:{'#0D2020' if is_active else '#111827'};color:{mc};border-radius:6px;padding:6px 0;font-size:11px;font-weight:700;width:100%;cursor:pointer;letter-spacing:0.5px;"
+            is_active  = selected_mode == mode
+            is_ai_pick = mode == default_mode
+            mc         = mode_colors[mode]
+            label      = f"{'▶ ' if is_active else ''}{mode}{'  ← AI' if is_ai_pick else ''}"
+            # Active button gets colored border via inline CSS hack on surrounding div
+            if is_active:
+                st.markdown(f'<div style="border:2px solid {mc};border-radius:8px;margin-bottom:2px;">', unsafe_allow_html=True)
             if st.button(label, key=f"rr_mode_{mode}", use_container_width=True):
                 st.session_state['rr_mode'] = mode
                 st.rerun()
-
-    selected_mode = st.session_state['rr_mode']
-    stop_preset, target_preset = calc_presets(selected_mode)
+            if is_active:
+                st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Inputs ────────────────────────────────────────────────
+    stop_preset, target_preset = calc_presets(selected_mode)
     rr_c1, rr_c2, rr_c3, rr_c4, rr_c5 = st.columns(5)
     with rr_c1:
         account_size = st.number_input("Account ($)", min_value=100.0, max_value=10000000.0,
@@ -2164,7 +2174,13 @@ def render_hud():
             +{cur}{reward_per_share:.2f}
           </text>
         </svg>'''
-        st.markdown(svg, unsafe_allow_html=True)
+        import streamlit.components.v1 as components
+        components.html(f"""
+        <div style="background:#0E1828;border-radius:10px;border:1px solid #243348;
+                    padding:4px;margin-top:8px;">
+            {svg}
+        </div>
+        """, height=180)
     except:
         pass
 
@@ -2467,6 +2483,33 @@ def render_earnings_analyzer():
             height=220, key="ec_transcript", label_visibility="visible"
         )
         st.markdown('<div style="font-size:10px;color:#4A6080;margin-top:-8px;margin-bottom:8px;">⚠ For educational purposes only. Not financial advice. Always conduct your own research.</div>', unsafe_allow_html=True)
+
+        st.markdown('''
+        <div style="background:#0D1B2A;border:1px solid #14B8A633;border-radius:8px;
+                    padding:10px 14px;margin-bottom:10px;font-size:11px;">
+          <div style="color:#5EEAD4;font-weight:700;letter-spacing:1px;margin-bottom:6px;">
+            📄 WHERE TO FIND EARNINGS CALL TRANSCRIPTS
+          </div>
+          <div style="display:flex;gap:24px;flex-wrap:wrap;line-height:1.8;">
+            <div>
+              <div style="color:#64748B;font-size:10px;letter-spacing:1px;margin-bottom:2px;">FREE</div>
+              <a href="https://finance.yahoo.com" target="_blank" style="color:#38BDF8;text-decoration:none;">Yahoo Finance</a>
+              <span style="color:#374151;"> · </span>
+              <a href="https://ir.companyname.com" target="_blank" style="color:#38BDF8;text-decoration:none;">Company IR website</a>
+              <span style="color:#374151;"> · </span>
+              <a href="https://www.fool.com/earnings-call-transcripts/" target="_blank" style="color:#38BDF8;text-decoration:none;">Motley Fool</a>
+            </div>
+            <div>
+              <div style="color:#64748B;font-size:10px;letter-spacing:1px;margin-bottom:2px;">PAID (best coverage)</div>
+              <a href="https://seekingalpha.com/earnings/earnings-call-transcripts" target="_blank" style="color:#FACC15;text-decoration:none;">Seeking Alpha</a>
+              <span style="color:#374151;"> · </span>
+              <a href="https://www.bloomberg.com" target="_blank" style="color:#FACC15;text-decoration:none;">Bloomberg Terminal</a>
+            </div>
+          </div>
+          <div style="color:#374151;font-size:10px;margin-top:6px;">
+            Tip: Search "[TICKER] earnings call transcript Q4 2024" on Google — Motley Fool often has free versions within 24h of the call.
+          </div>
+        </div>''', unsafe_allow_html=True)
         analyze_btn = st.button("🔍 Analyze Transcript", type="primary",
                                  use_container_width=True, key="ec_analyze")
 
