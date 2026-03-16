@@ -115,36 +115,101 @@ def fetch_ticker_data(ticker, fmp_key=""):
         except:
             pass
 
-    # Always fetch yfinance info — fill in any gaps FMP didn't cover
+    # ── yfinance multi-endpoint fallback ─────────────────────
+    # raw.info is broken on Yahoo — use separate endpoints instead
     try:
-        raw_yf  = yf.Ticker(yf_ticker)
-        yf_info = raw_yf.info or {}
-        # Update: yfinance fills gaps, FMP values take priority
-        if use_fmp:
-            # FMP is primary — only add keys yfinance has that FMP doesn't
-            for k, v in yf_info.items():
-                if v and k not in info:
-                    info[k] = v
-        else:
-            # No FMP — use yfinance as sole source
-            info = yf_info or {}
-    except:
-        pass
-    # fast_info as last resort for key metrics
-    if not info.get("marketCap"):
+        raw_yf = yf.Ticker(yf_ticker)
+
+        # fast_info — always works, gives price + market cap + 52W
         try:
             fi = raw_yf.fast_info
-            for attr, key in [
-                ('market_cap',          'marketCap'),
-                ('fifty_two_week_high', 'fiftyTwoWeekHigh'),
-                ('fifty_two_week_low',  'fiftyTwoWeekLow'),
-                ('last_price',          'regularMarketPrice'),
-            ]:
-                v = getattr(fi, attr, None)
-                if v is not None:
-                    info[key] = v
-        except:
-            pass
+            fast_map = {
+                'market_cap':           'marketCap',
+                'fifty_two_week_high':  'fiftyTwoWeekHigh',
+                'fifty_two_week_low':   'fiftyTwoWeekLow',
+                'last_price':           'regularMarketPrice',
+                'shares':               'sharesOutstanding',
+                'three_month_average_volume': 'averageVolume',
+            }
+            for attr, key in fast_map.items():
+                try:
+                    v = getattr(fi, attr, None)
+                    if v is not None and v != 0:
+                        info.setdefault(key, v)
+                except: pass
+        except: pass
+
+        # income_stmt — revenue, margins (different Yahoo endpoint)
+        try:
+            inc = raw_yf.income_stmt
+            if inc is not None and not inc.empty:
+                cols = inc.columns.tolist()
+                if len(cols) >= 2:
+                    cur = inc[cols[0]]
+                    prv = inc[cols[1]]
+                    def _safe(df, row):
+                        try: return float(df.get(row, 0) or 0)
+                        except: return 0
+                    rev      = _safe(cur, 'Total Revenue')
+                    rev_prev = _safe(prv, 'Total Revenue')
+                    net      = _safe(cur, 'Net Income')
+                    op_inc   = _safe(cur, 'Operating Income')
+                    gross    = _safe(cur, 'Gross Profit')
+                    if rev > 0:
+                        info.setdefault('operatingMargins', op_inc / rev)
+                        info.setdefault('profitMargins',    net / rev)
+                        info.setdefault('grossMargins',     gross / rev)
+                    if rev > 0 and rev_prev > 0:
+                        info.setdefault('revenueGrowth', (rev - rev_prev) / abs(rev_prev))
+        except: pass
+
+        # balance_sheet — debt, equity, current ratio
+        try:
+            bs = raw_yf.balance_sheet
+            if bs is not None and not bs.empty:
+                cols = bs.columns.tolist()
+                cur = bs[cols[0]]
+                def _bsafe(row):
+                    try: return float(cur.get(row, 0) or 0)
+                    except: return 0
+                total_debt   = _bsafe('Total Debt') or _bsafe('Long Term Debt')
+                equity       = _bsafe('Stockholders Equity') or _bsafe('Total Equity Gross Minority Interest')
+                curr_assets  = _bsafe('Current Assets')
+                curr_liab    = _bsafe('Current Liabilities')
+                if equity != 0:
+                    info.setdefault('debtToEquity',   total_debt / abs(equity))
+                if curr_liab != 0:
+                    info.setdefault('currentRatio',   curr_assets / abs(curr_liab))
+        except: pass
+
+        # recommendations — analyst consensus
+        try:
+            recs = raw_yf.recommendations
+            if recs is not None and not recs.empty:
+                latest = recs.iloc[-1] if len(recs) > 0 else None
+                if latest is not None:
+                    info.setdefault('recommendationKey', str(latest.get('To Grade', '')).lower())
+        except: pass
+
+        # calendar — earnings date
+        try:
+            cal = raw_yf.calendar
+            if cal is not None:
+                if isinstance(cal, dict) and 'Earnings Date' in cal:
+                    info.setdefault('earningsDate', cal['Earnings Date'])
+                elif hasattr(cal, 'columns') and 'Earnings Date' in cal.columns:
+                    info.setdefault('earningsDate', cal['Earnings Date'].iloc[0])
+        except: pass
+
+        # get_info() as last resort (newer yfinance)
+        try:
+            gi = raw_yf.get_info() or {}
+            for k, v in gi.items():
+                if v and k not in info:
+                    info[k] = v
+        except: pass
+
+    except: pass
 
     # ── EARNINGS HISTORY ──────────────────────────────────────
     earn_hist = None
@@ -1058,6 +1123,20 @@ def range_bar_html(low, high, current, cur):
 
 # ── Main App ──────────────────────────────────────────────────
 def main():
+    # ── Sidebar: cache controls ──────────────────────────────
+    with st.sidebar:
+        st.markdown("### ⚙️ Controls")
+        if st.button("🔄 Clear Cache & Refresh", use_container_width=True):
+            st.cache_data.clear()
+            for k in list(st.session_state.keys()):
+                del st.session_state[k]
+            st.success("Cache cleared!")
+            st.rerun()
+        st.markdown("---")
+        st.markdown("*Cache TTL: 60 min*")
+        fmp_active = bool(st.secrets.get("FMP_API_KEY",""))
+        st.markdown(f"Data: {'🟢 FMP' if fmp_active else '🟡 yfinance'}")
+
     if 'analysis' not in st.session_state:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
