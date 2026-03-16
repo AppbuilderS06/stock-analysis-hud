@@ -27,24 +27,28 @@ def _fmp_get(endpoint, api_key, params=""):
     except:
         return None
 
-@st.cache_data(ttl=3600, show_spinner=False)
 def search_ticker_fmp(query, fmp_key=""):
-    """Search FMP for a ticker across all global exchanges."""
+    """Search FMP. Uses session-state cache — never caches empty results."""
     if not fmp_key or not query:
         return []
+    cache_key = f"_fmp_search_{query.upper()}"
+    cached = st.session_state.get(cache_key)
+    if cached:  # only truthy (non-empty) results get cached
+        return cached
     results = _fmp_get(f"v3/search?query={query}&limit=15", fmp_key)
     if not results or not isinstance(results, list):
         return []
-    # Accept all types — don't over-filter
     stocks = [r for r in results if r.get("symbol","")]
-    # Sort: exact symbol match first, then major exchanges, then rest
     major = {"NYSE","NASDAQ","TSX","LSE","EURONEXT","XETRA","ASX","HKG","NSE","AMEX","BATS"}
     def sort_key(r):
         is_exact = 0 if r.get("symbol","").upper() == query.upper() else 1
         is_major = 0 if r.get("exchangeShortName","") in major else 1
         return (is_exact, is_major)
     stocks.sort(key=sort_key)
-    return stocks[:12] if stocks else []
+    result = stocks[:12]
+    if result:  # only cache non-empty
+        st.session_state[cache_key] = result
+    return result
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_ticker_data(ticker, fmp_key="", _v=11):
@@ -1119,60 +1123,54 @@ def main():
 
             if ticker_upper:
                 if fmp_key_lp:
-                    # FMP live search — runs on every keystroke (cached 60 min)
                     results = search_ticker_fmp(ticker_upper, fmp_key_lp)
 
                     if results:
-                        # ALWAYS show dropdown — user must click ▶ to confirm
-                        # This prevents wrong exchange auto-selection (e.g. NPK NYSE vs NPK.TO)
+                        # Show every result — user must click ▶ to run analysis
                         st.markdown(
                             '<div style="background:#0D1B2A;border:1px solid #14B8A6;'
-                            'border-radius:8px;margin-top:6px;padding:4px 0;">'
+                            'border-radius:8px;margin-top:6px;overflow:hidden;">'
                             '<div style="padding:5px 14px;font-size:10px;color:#5EEAD4;'
-                            'letter-spacing:1.5px;border-bottom:1px solid #14B8A622;">'
-                            '▼ SELECT TO ANALYZE</div>',
+                            'letter-spacing:1.5px;background:#071420;">'
+                            '▼ SELECT EXCHANGE / SHARE CLASS</div>',
                             unsafe_allow_html=True)
                         for r in results[:10]:
                             sym  = r.get("symbol","")
-                            name = r.get("name","")[:40]
+                            name = r.get("name","")[:42]
                             exch = r.get("exchangeShortName","")
                             curr = r.get("currency","USD")
                             if not sym: continue
-                            ca, cb, cc = st.columns([1.5, 3.5, 1.2])
-                            with ca:
+                            # Each row: ticker | name+exchange | button
+                            # No nested columns — single row layout avoids Streamlit nesting bug
+                            row_left, row_right = st.columns([5, 1])
+                            with row_left:
                                 st.markdown(
-                                    f'<div style="font-family:monospace;font-weight:800;'
-                                    f'color:#00FF88;font-size:13px;padding:6px 8px;">{sym}</div>',
+                                    f'<div style="padding:7px 14px;border-bottom:1px solid #111827;">'
+                                    f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{sym}</span>'
+                                    f'&nbsp;&nbsp;<span style="font-size:12px;color:#CBD5E1;">{name}</span>'
+                                    f'&nbsp;&nbsp;<span style="font-size:11px;color:#5EEAD4;">{exch} · {curr}</span>'
+                                    f'</div>',
                                     unsafe_allow_html=True)
-                            with cb:
-                                st.markdown(
-                                    f'<div style="font-size:11px;color:#CBD5E1;padding:6px 0;">'
-                                    f'{name}<br><span style="color:#5EEAD4;font-size:10px;">'
-                                    f'{exch} · {curr}</span></div>',
-                                    unsafe_allow_html=True)
-                            with cc:
-                                if st.button("▶", key=f"sel_{sym}_{exch}",
-                                             help=f"Analyze {sym} on {exch}"):
+                            with row_right:
+                                if st.button("▶ Analyze", key=f"sel_{sym}_{exch}"):
                                     selected_ticker = sym
                         st.markdown("</div>", unsafe_allow_html=True)
 
                     elif should_analyze:
-                        # Nothing found in FMP — try the raw ticker anyway
-                        selected_ticker = ticker_upper
+                        # FMP returned nothing — show error, do NOT auto-run
+                        st.error(f'No results found for "{ticker_upper}". Try the full ticker (e.g. NPK.TO for TSX, NPK for NYSE).')
 
                 else:
                     # No FMP key — use hardcoded MULTI_LISTED or direct
                     if ticker_upper in MULTI_LISTED:
                         opts = MULTI_LISTED[ticker_upper]
-                        st.markdown('<div style="background:#0D1B2A;border:1px solid #14B8A6;border-radius:8px;margin-top:6px;padding:4px 0;"><div style="padding:5px 14px;font-size:10px;color:#5EEAD4;letter-spacing:1.5px;border-bottom:1px solid #14B8A622;">▼ SELECT TO ANALYZE</div>', unsafe_allow_html=True)
+                        st.markdown('<div style="background:#0D1B2A;border:1px solid #14B8A6;border-radius:8px;margin-top:6px;overflow:hidden;"><div style="padding:5px 14px;font-size:10px;color:#5EEAD4;letter-spacing:1.5px;background:#071420;">▼ SELECT EXCHANGE / SHARE CLASS</div>', unsafe_allow_html=True)
                         for opt in opts:
-                            ca, cb, cc = st.columns([1.5, 3.5, 1.2])
-                            with ca:
-                                st.markdown(f'<div style="font-family:monospace;font-weight:800;color:#00FF88;font-size:13px;padding:6px 8px;">{opt["ticker"]}</div>', unsafe_allow_html=True)
-                            with cb:
-                                st.markdown(f'<div style="font-size:11px;color:#CBD5E1;padding:6px 0;">{opt["name"]}<br><span style="color:#5EEAD4;font-size:10px;">{opt["exchange"]} · {opt["currency"]}</span></div>', unsafe_allow_html=True)
-                            with cc:
-                                if st.button("▶", key=f'ml_{opt["ticker"]}'):
+                            row_left, row_right = st.columns([5, 1])
+                            with row_left:
+                                st.markdown(f'<div style="padding:7px 14px;border-bottom:1px solid #111827;"><span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{opt["ticker"]}</span>&nbsp;&nbsp;<span style="font-size:12px;color:#CBD5E1;">{opt["name"]}</span>&nbsp;&nbsp;<span style="font-size:11px;color:#5EEAD4;">{opt["exchange"]} · {opt["currency"]}</span></div>', unsafe_allow_html=True)
+                            with row_right:
+                                if st.button("▶ Analyze", key=f'ml_{opt["ticker"]}'):
                                     selected_ticker = opt["ticker"]
                         st.markdown("</div>", unsafe_allow_html=True)
                     elif should_analyze:
