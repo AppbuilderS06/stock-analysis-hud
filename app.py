@@ -1108,9 +1108,10 @@ def main():
                         exact   = [r for r in results if r.get("symbol","").upper() == ticker_upper]
                         partial = [r for r in results if r.get("symbol","").upper() != ticker_upper]
 
-                        # Auto-run only if there is exactly ONE result total
-                        if analyze_clicked and len(results) == 1:
-                            selected_ticker = results[0]["symbol"]
+                        # Auto-run on Analyze: prefer exact match, otherwise first result
+                        if analyze_clicked:
+                            best = exact[0] if exact else results[0]
+                            selected_ticker = best["symbol"]
 
                         # Show dropdown whenever there are results
                         st.markdown(
@@ -1702,23 +1703,26 @@ def render_hud():
         levels_html += data_row(a.get('support2_label','Support 2'),    f"{cur}{a.get('support2',0):.2f}",    "val-g")
         levels_html += data_row(a.get('resistance2_label','Resistance 2'), f"{cur}{a.get('resistance2',0):.2f}", "val-r")
         levels_html += range_bar_html(l52, h52, close, cur)
-        # RSI bar — same gradient style
+        # RSI bar — 52W range style
         rsi_val = float(row['RSI'])
         rsi_col = "#FF6B6B" if rsi_val > 70 else "#00FF88" if rsi_val < 30 else "#FACC15"
         rsi_lbl = "Overbought" if rsi_val > 70 else "Oversold" if rsi_val < 30 else "Neutral"
+        rsi_pct = int(rsi_val)  # RSI is already 0–100
         levels_html += f'''
         <div class="data-row" style="flex-direction:column;gap:6px;">
           <div style="display:flex;justify-content:space-between;width:100%;font-size:13px;">
-            <span class="data-lbl">{info_icon("RSI (14)")}RSI (14)</span>
+            <span class="data-lbl">RSI (14){info_icon("RSI (14)")}</span>
             <span style="color:{rsi_col};font-weight:700;font-family:monospace;">{rsi_val:.1f} — {rsi_lbl}</span>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:10px;color:#00FF88;">Oversold 30</span>
-            <div style="flex:1;position:relative;height:6px;background:linear-gradient(90deg,#00FF88 0%,#00FF88 30%,#FACC15 30%,#FACC15 70%,#FF6B6B 70%,#FF6B6B 100%);border-radius:3px;">
-              <div style="position:absolute;left:{min(max(rsi_val,2),98):.0f}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <span style="font-size:11px;color:#00FF88;">0</span>
+            <div style="flex:1;position:relative;height:6px;background:#243348;border-radius:3px;">
+              <div style="position:absolute;left:0;top:0;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#00FF88 0%,#00FF88 28%,#FACC15 42%,#FACC15 58%,#FF6B6B 72%,#FF6B6B 100%);"></div>
+              <div style="position:absolute;left:{min(max(rsi_pct,2),98)}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>
             </div>
-            <span style="font-size:10px;color:#FF6B6B;">Overbought 70</span>
+            <span style="font-size:11px;color:#FF6B6B;">100</span>
           </div>
+          <div style="text-align:center;font-size:11px;color:#94A3B8;">RSI {rsi_val:.1f} · Oversold &lt;30 · Overbought &gt;70</div>
         </div>'''
 
         levels_html += '</div>'
@@ -1831,18 +1835,22 @@ def render_hud():
         bb_rows += f'<div class="vol-row"><span class="vol-lbl">Middle (20MA)</span><span style="color:#94A3B8;font-weight:700;font-family:monospace;">{cur}{bb_mid:.2f}</span></div>'
         bb_rows += f'<div class="vol-row"><span class="vol-lbl">Lower Band</span><span style="color:#00FF88;font-weight:700;font-family:monospace;">{cur}{bb_lower:.2f}</span></div>'
         bb_rows += f'<div class="vol-row"><span class="vol-lbl">BB Width</span><span style="color:#A78BFA;font-weight:700;font-family:monospace;">{vol_data.get("bb_width",0):.1f}%</span></div>'
-        # BB position bar
+        # BB position bar — 52W range style
         bb_rows += (
-            f'<div class="vol-row" style="flex-direction:column;gap:4px;">' +
-            f'<span class="vol-lbl">Price position in band</span>' +
-            f'<div style="display:flex;align-items:center;gap:8px;margin-top:4px;">' +
-            f'<span style="font-size:10px;color:#00FF88;">Oversold</span>' +
-            f'<div style="flex:1;position:relative;height:6px;background:linear-gradient(90deg,#00FF88,#FACC15,#FF6B6B);border-radius:3px;">' +
+            f'<div class="vol-row" style="flex-direction:column;gap:6px;">' +
+            f'<div style="display:flex;justify-content:space-between;width:100%;font-size:13px;">' +
+            f'<span class="vol-lbl">Price in Band</span>' +
+            f'<span style="color:{bb_col};font-weight:700;font-family:monospace;">{bb_pct:.0f}% — {"Oversold" if bb_pct < 20 else "Overbought" if bb_pct > 80 else "Neutral"}</span>' +
+            f'</div>' +
+            f'<div style="display:flex;align-items:center;gap:8px;width:100%;">' +
+            f'<span style="font-size:11px;color:#00FF88;">{cur}{bb_lower:.0f}</span>' +
+            f'<div style="flex:1;position:relative;height:6px;background:#243348;border-radius:3px;">' +
+            f'<div style="position:absolute;left:0;top:0;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#00FF88,#FACC15,#FF6B6B);"></div>' +
             f'<div style="position:absolute;left:{min(max(bb_pct,2),98):.0f}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>' +
             f'</div>' +
-            f'<span style="font-size:10px;color:#FF6B6B;">Overbought</span>' +
+            f'<span style="font-size:11px;color:#FF6B6B;">{cur}{bb_upper:.0f}</span>' +
             f'</div>' +
-            f'<div style="text-align:center;font-size:11px;color:{bb_col};font-weight:700;">{bb_pct:.0f}% — {"Oversold" if bb_pct < 20 else "Overbought" if bb_pct > 80 else "Neutral"}</div>' +
+            f'<div style="text-align:center;font-size:11px;color:#94A3B8;">{cur}{cur_close:.2f} · Mid {cur}{bb_mid:.2f} · Width {vol_data.get("bb_width",0):.1f}%</div>' +
             f'</div>'
         )
         st.markdown(bb_rows + '</div>', unsafe_allow_html=True)
