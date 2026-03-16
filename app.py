@@ -1541,7 +1541,22 @@ def render_hud():
     prev_c   = float(prev['Close'])
     chg      = close - prev_c
     chg_pct  = (chg / prev_c) * 100 if prev_c else 0
-    cur      = "CA$" if ticker.endswith(".TO") else "$"
+    # Currency symbol + ISO code based on ticker suffix
+    if ticker.endswith('.TO') or ticker.endswith('.CN'):
+        cur      = "CA$"
+        cur_code = "CAD"
+    elif ticker.endswith('.L'):
+        cur      = "£"
+        cur_code = "GBP"
+    elif ticker.endswith('.PA') or ticker.endswith('.DE') or ticker.endswith('.AS'):
+        cur      = "€"
+        cur_code = "EUR"
+    elif ticker.endswith('.HK'):
+        cur      = "HK$"
+        cur_code = "HKD"
+    else:
+        cur      = "$"
+        cur_code = "USD"
     sign     = "+" if chg >= 0 else ""
     vc       = VERDICT_COLORS.get(a.get('verdict','SWING TRADE'), VERDICT_COLORS['SWING TRADE'])
     score_col= "#00FF88" if score >= 7 else "#FACC15" if score >= 4 else "#FF6B6B"
@@ -1989,15 +2004,30 @@ def render_hud():
     # ── Header panel with AI verdict + mode selector ──────────
     vc_mode = VERDICT_COLORS.get(verdict, VERDICT_COLORS['SWING TRADE'])
     ai_label_html = f'<span style="background:{vc_mode["bg"]};border:1px solid {vc_mode["border"]};border-radius:4px;padding:2px 8px;font-size:10px;color:{vc_mode["color"]};font-weight:700;letter-spacing:1px;">AI: {verdict}</span>'
+    cur_badge = f'<span style="background:#1C2A3A;border:1px solid #38BDF8;border-radius:4px;padding:2px 8px;font-size:10px;color:#38BDF8;font-weight:700;letter-spacing:1px;margin-left:6px;">💱 {cur_code}</span>'
 
     st.markdown(f'''
     <div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;
-                padding:12px 16px 8px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div style="font-size:11px;color:#5EEAD4;letter-spacing:1px;">
+                padding:12px 16px 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:6px;">
           Pre-filled from AI analysis · Adjust any value to recalculate
         </div>
-        {ai_label_html}
+        <div>{ai_label_html}{cur_badge}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="background:#111827;border-radius:6px;padding:8px 12px;">
+          <div style="font-size:10px;color:#FACC15;font-weight:700;letter-spacing:1px;margin-bottom:3px;">① MAX RISK</div>
+          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">The most you're willing to lose on this trade. The calculator sizes your position so a stop-loss hit = exactly this amount lost.</div>
+        </div>
+        <div style="background:#111827;border-radius:6px;padding:8px 12px;">
+          <div style="font-size:10px;color:#38BDF8;font-weight:700;letter-spacing:1px;margin-bottom:3px;">② ENTRY → STOP → TARGET</div>
+          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">Entry = price you buy at. Stop Loss = price you sell if wrong (cuts your loss). Target = price you sell if right (takes your profit).</div>
+        </div>
+        <div style="background:#111827;border-radius:6px;padding:8px 12px;">
+          <div style="font-size:10px;color:#00FF88;font-weight:700;letter-spacing:1px;margin-bottom:3px;">③ R:R RATIO</div>
+          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">Risk/Reward. 1:2 means you risk $1 to make $2. Pros look for at least 1:2. Below 1:1 means the trade is not worth taking.</div>
+        </div>
       </div>
       <div style="font-size:10px;color:#4A6080;">
         ⚠ For educational purposes only. Not financial advice. Always do your own research before placing any trade.
@@ -2038,35 +2068,37 @@ def render_hud():
 
     # ── Inputs ────────────────────────────────────────────────
     stop_preset, target_preset = calc_presets(selected_mode)
-    rr_c1, rr_c2, rr_c3, rr_c4, rr_c5 = st.columns(5)
+
+    # 4 inputs — no portfolio size needed
+    rr_c1, rr_c2, rr_c3, rr_c4 = st.columns(4)
     with rr_c1:
-        account_size = st.number_input("Account ($)", min_value=100.0, max_value=10000000.0,
-                                        value=10000.0, step=1000.0, key="rr_account")
+        max_risk = st.number_input(f"Max Risk ({cur})", min_value=1.0, max_value=1000000.0,
+                                    value=500.0, step=100.0, key="rr_max_risk",
+                                    help="Max dollar amount you're willing to lose on this trade")
     with rr_c2:
-        risk_pct = st.number_input("Risk (%)", min_value=0.1, max_value=10.0,
-                                    value=1.0, step=0.5, key="rr_risk_pct")
-    with rr_c3:
         entry_price = st.number_input(f"Entry ({cur})", min_value=0.01,
                                        value=float(entry_mid), step=0.01, key="rr_entry",
                                        format="%.2f")
-    with rr_c4:
+    with rr_c3:
         stop_price = st.number_input(f"Stop Loss ({cur})", min_value=0.01,
                                       value=float(stop_preset), step=0.01, key=f"rr_stop_{selected_mode}",
                                       format="%.2f")
-    with rr_c5:
+    with rr_c4:
         target_price = st.number_input(f"Target ({cur})", min_value=0.01,
                                         value=float(target_preset), step=0.01, key=f"rr_target_{selected_mode}",
                                         format="%.2f")
 
     # ── Calculations ──────────────────────────────────────────
+    # Max Risk model: user picks max $ they'll lose → size position accordingly
+    # Shares = Max Risk ÷ Risk per Share
+    # Position value = Shares × Entry (what you actually need to buy)
     risk_per_share   = round(abs(entry_price - stop_price), 2)
     reward_per_share = round(abs(target_price - entry_price), 2)
     rr_ratio         = round(reward_per_share / risk_per_share, 2) if risk_per_share > 0 else 0
-    dollar_risk      = round(account_size * (risk_pct / 100), 2)
-    position_size    = int(dollar_risk / risk_per_share) if risk_per_share > 0 else 0
+    position_size    = int(max_risk / risk_per_share) if risk_per_share > 0 else 0
     position_value   = round(position_size * entry_price, 2)
-    max_loss         = round(position_size * risk_per_share, 2)
-    max_gain         = round(position_size * reward_per_share, 2)
+    actual_loss      = round(position_size * risk_per_share, 2)
+    actual_gain      = round(position_size * reward_per_share, 2)
     stop_pct         = round((risk_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
     target_pct       = round((reward_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
     rr_col           = "#00FF88" if rr_ratio >= 2 else "#FACC15" if rr_ratio >= 1 else "#FF6B6B"
@@ -2076,21 +2108,23 @@ def render_hud():
     rc1, rc2, rc3 = st.columns(3)
     with rc1:
         st.markdown(f'''<div class="earn-bar" style="border-left-color:{rr_col};margin-top:6px;">
-          <div class="earn-label">R:R Ratio</div>
+          <div class="earn-label">R:R Ratio — Risk vs Reward</div>
           <div class="earn-val" style="color:{rr_col};font-size:26px;letter-spacing:1px;">1 : {rr_ratio}</div>
           <div style="font-size:11px;color:{rr_col};margin-top:3px;font-weight:700;">{rr_label}</div>
+          <div style="font-size:10px;color:#4A6080;margin-top:4px;">For every {cur}1 risked → potential {cur}{rr_ratio} gain</div>
         </div>''', unsafe_allow_html=True)
     with rc2:
         st.markdown(f'''<div class="earn-bar" style="border-left-color:#38BDF8;margin-top:6px;">
-          <div class="earn-label">Position Size</div>
+          <div class="earn-label">Shares to Buy</div>
           <div class="earn-val" style="color:#38BDF8;font-size:22px;">{position_size:,} <span style="font-size:13px;">shares</span></div>
-          <div style="font-size:11px;color:#64748B;margin-top:3px;">Value: {cur}{position_value:,.0f}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px;">Costs {cur}{position_value:,.0f} to open this position</div>
+          <div style="font-size:10px;color:#4A6080;margin-top:2px;">{position_size:,} × {cur}{entry_price:.2f} entry price</div>
         </div>''', unsafe_allow_html=True)
     with rc3:
         st.markdown(f'''<div class="earn-bar" style="border-left-color:#818CF8;margin-top:6px;">
-          <div class="earn-label">Max Loss &nbsp;/&nbsp; Max Gain</div>
-          <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{max_loss:,.0f}</div>
-          <div style="font-size:16px;color:#00FF88;font-weight:700;font-family:monospace;margin-top:2px;">+{cur}{max_gain:,.0f}</div>
+          <div class="earn-label">Worst Case &nbsp;/&nbsp; Best Case</div>
+          <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{actual_loss:,.0f} <span style="font-size:10px;color:#FF6B6B88;">if stop hit</span></div>
+          <div style="font-size:16px;color:#00FF88;font-weight:700;font-family:monospace;margin-top:4px;">+{cur}{actual_gain:,.0f} <span style="font-size:10px;color:#00FF8888;">if target hit</span></div>
         </div>''', unsafe_allow_html=True)
 
     # ── Visual Trade Diagram ──────────────────────────────────
@@ -2203,8 +2237,8 @@ def render_hud():
       <span style="color:#64748B;">Entry <span style="color:#FACC15;">{cur}{entry_price:.2f}</span></span>
       <span style="color:#64748B;">Stop <span style="color:#FF6B6B;">{cur}{stop_price:.2f} (−{stop_pct:.1f}%)</span></span>
       <span style="color:#64748B;">Target <span style="color:#00FF88;">{cur}{target_price:.2f} (+{target_pct:.1f}%)</span></span>
-      <span style="color:#64748B;">Max risk <span style="color:#FF6B6B;">{cur}{dollar_risk:.0f}</span></span>
-      <span style="color:#64748B;">Risking <span style="color:#94A3B8;">{risk_pct:.1f}% of account</span></span>
+      <span style="color:#64748B;">Max risk <span style="color:#FF6B6B;">{cur}{max_risk:,.0f}</span></span>
+      <span style="color:#64748B;">Costs to open <span style="color:#94A3B8;">{cur}{position_value:,.0f}</span></span>
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 8: EARNINGS ─────────────────────────────────────
