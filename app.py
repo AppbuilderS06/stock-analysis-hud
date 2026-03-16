@@ -1118,62 +1118,65 @@ def main():
             enter_pressed = (ticker_upper != '' and ticker_upper == prev_val and not analyze_clicked)
             should_analyze = analyze_clicked or enter_pressed
 
-            # ── Live dropdown — appears as user types ──────────
+            # ── Live dropdown ─────────────────────────────────
             selected_ticker = None
 
-            if ticker_upper:
-                if fmp_key_lp:
-                    results = search_ticker_fmp(ticker_upper, fmp_key_lp)
-
-                    if results:
-                        # Show every result — user must click ▶ to run analysis
+            def show_dropdown(rows):
+                """Render a dropdown list. rows = list of dicts with sym/name/exch/curr/key."""
+                st.markdown(
+                    '<div style="background:#0D1B2A;border:1px solid #14B8A6;'
+                    'border-radius:8px;margin-top:6px;overflow:hidden;">'
+                    '<div style="padding:5px 14px;font-size:10px;color:#5EEAD4;'
+                    'letter-spacing:1.5px;background:#071420;">'
+                    '▼ SELECT EXCHANGE / SHARE CLASS</div>',
+                    unsafe_allow_html=True)
+                for row in rows:
+                    rl, rr = st.columns([5, 1])
+                    with rl:
                         st.markdown(
-                            '<div style="background:#0D1B2A;border:1px solid #14B8A6;'
-                            'border-radius:8px;margin-top:6px;overflow:hidden;">'
-                            '<div style="padding:5px 14px;font-size:10px;color:#5EEAD4;'
-                            'letter-spacing:1.5px;background:#071420;">'
-                            '▼ SELECT EXCHANGE / SHARE CLASS</div>',
-                            unsafe_allow_html=True)
-                        for r in results[:10]:
-                            sym  = r.get("symbol","")
-                            name = r.get("name","")[:42]
-                            exch = r.get("exchangeShortName","")
-                            curr = r.get("currency","USD")
-                            if not sym: continue
-                            # Each row: ticker | name+exchange | button
-                            # No nested columns — single row layout avoids Streamlit nesting bug
-                            row_left, row_right = st.columns([5, 1])
-                            with row_left:
-                                st.markdown(
-                                    f'<div style="padding:7px 14px;border-bottom:1px solid #111827;">'
-                                    f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{sym}</span>'
-                                    f'&nbsp;&nbsp;<span style="font-size:12px;color:#CBD5E1;">{name}</span>'
-                                    f'&nbsp;&nbsp;<span style="font-size:11px;color:#5EEAD4;">{exch} · {curr}</span>'
-                                    f'</div>',
-                                    unsafe_allow_html=True)
-                            with row_right:
-                                if st.button("▶ Analyze", key=f"sel_{sym}_{exch}"):
-                                    selected_ticker = sym
-                        st.markdown("</div>", unsafe_allow_html=True)
+                            f'<div style="padding:7px 14px;border-bottom:1px solid #111827;">'
+                            f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{row["sym"]}</span>'
+                            f'&nbsp;&nbsp;<span style="font-size:12px;color:#CBD5E1;">{row["name"]}</span>'
+                            f'&nbsp;&nbsp;<span style="font-size:11px;color:#5EEAD4;">{row["exch"]} · {row["curr"]}</span>'
+                            f'</div>', unsafe_allow_html=True)
+                    with rr:
+                        if st.button("▶ Analyze", key=row["key"]):
+                            return row["sym"]
+                st.markdown("</div>", unsafe_allow_html=True)
+                return None
 
+            if ticker_upper:
+                # ── STEP 1: hardcoded MULTI_LISTED — always checked first ──
+                # Handles BRK→BRK-A/BRK-B, RY→NYSE/TSX, SHOP→NYSE/TSX etc.
+                if ticker_upper in MULTI_LISTED:
+                    rows = [{"sym": o["ticker"], "name": o["name"],
+                             "exch": o["exchange"], "curr": o["currency"],
+                             "key": f'ml_{o["ticker"]}'}
+                            for o in MULTI_LISTED[ticker_upper]]
+                    result = show_dropdown(rows)
+                    if result:
+                        selected_ticker = result
+
+                # ── STEP 2: FMP live search for everything else ──
+                elif fmp_key_lp:
+                    results = search_ticker_fmp(ticker_upper, fmp_key_lp)
+                    if results:
+                        rows = [{"sym":  r.get("symbol",""),
+                                 "name": r.get("name","")[:42],
+                                 "exch": r.get("exchangeShortName",""),
+                                 "curr": r.get("currency","USD"),
+                                 "key":  f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
+                                for r in results[:10] if r.get("symbol","")]
+                        result = show_dropdown(rows)
+                        if result:
+                            selected_ticker = result
                     elif should_analyze:
-                        # FMP returned nothing — show error, do NOT auto-run
-                        st.error(f'No results found for "{ticker_upper}". Try the full ticker (e.g. NPK.TO for TSX, NPK for NYSE).')
+                        # FMP has nothing → try the ticker directly (e.g. NPK.TO typed in full)
+                        selected_ticker = ticker_upper
 
+                # ── STEP 3: No FMP key → direct run ──
                 else:
-                    # No FMP key — use hardcoded MULTI_LISTED or direct
-                    if ticker_upper in MULTI_LISTED:
-                        opts = MULTI_LISTED[ticker_upper]
-                        st.markdown('<div style="background:#0D1B2A;border:1px solid #14B8A6;border-radius:8px;margin-top:6px;overflow:hidden;"><div style="padding:5px 14px;font-size:10px;color:#5EEAD4;letter-spacing:1.5px;background:#071420;">▼ SELECT EXCHANGE / SHARE CLASS</div>', unsafe_allow_html=True)
-                        for opt in opts:
-                            row_left, row_right = st.columns([5, 1])
-                            with row_left:
-                                st.markdown(f'<div style="padding:7px 14px;border-bottom:1px solid #111827;"><span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{opt["ticker"]}</span>&nbsp;&nbsp;<span style="font-size:12px;color:#CBD5E1;">{opt["name"]}</span>&nbsp;&nbsp;<span style="font-size:11px;color:#5EEAD4;">{opt["exchange"]} · {opt["currency"]}</span></div>', unsafe_allow_html=True)
-                            with row_right:
-                                if st.button("▶ Analyze", key=f'ml_{opt["ticker"]}'):
-                                    selected_ticker = opt["ticker"]
-                        st.markdown("</div>", unsafe_allow_html=True)
-                    elif should_analyze:
+                    if should_analyze:
                         selected_ticker = ticker_upper
 
             # ── Run analysis on selection ─────────────────────
