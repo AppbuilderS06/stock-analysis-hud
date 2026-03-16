@@ -1614,27 +1614,28 @@ def render_hud():
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 2: STATUS BAR ───────────────────────────────────
-    # Detect user timezone via JS postMessage — works on first render
+    # Detect user timezone accurately for any visitor worldwide.
+    # Flow: JS reads browser tz → sets ?tz= query param → page reloads once → Python reads it.
+    # After that one reload the param is always present and accurate.
+    import zoneinfo, streamlit.components.v1 as components
     try:
-        import streamlit.components.v1 as components
-        if 'user_tz' not in st.session_state:
-            st.session_state['user_tz'] = 'America/New_York'  # trading default
-        components.html("""
-            <script>
-            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            window.parent.postMessage({type:'streamlit:setComponentValue', value: tz}, '*');
-            </script>
-        """, height=0)
-        # Read from query params as secondary method (works after first rerun)
+        params  = st.query_params
+        user_tz = params.get("tz", "")
+        if not user_tz:
+            # No tz param yet — inject JS that sets it and reloads the page once
+            components.html("""
+                <script>
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const url = new URL(window.parent.location.href);
+                if (!url.searchParams.get('tz')) {
+                    url.searchParams.set('tz', tz);
+                    window.parent.location.replace(url.toString());
+                }
+                </script>
+            """, height=0)
+            user_tz = "UTC"  # shown only for the split second before reload
         try:
-            params = st.query_params
-            user_tz = params.get("tz", st.session_state.get('user_tz', 'America/New_York'))
-            if user_tz and user_tz != 'America/New_York':
-                st.session_state['user_tz'] = user_tz
-        except: pass
-        import zoneinfo
-        try:
-            tz_obj   = zoneinfo.ZoneInfo(st.session_state.get('user_tz', 'America/New_York'))
+            tz_obj   = zoneinfo.ZoneInfo(user_tz)
             analyzed = datetime.now(tz_obj).strftime("%b %d · %I:%M %p")
         except:
             analyzed = datetime.now().strftime("%b %d · %I:%M %p")
