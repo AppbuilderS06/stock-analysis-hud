@@ -40,172 +40,52 @@ def search_ticker_fmp(query, fmp_key=""):
     return stocks[:12]
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key="", _v=9):
-    """_v=8 is cache-buster. Increment to invalidate all cached data.
-    fmp_key passed as arg (not read inside) so cache works correctly."""
+def fetch_ticker_data(ticker, fmp_key="", _v=10):
+    """Hybrid: yfinance for price+fundamentals, FMP only for analyst/earnings/insider.
+    Uses ~4 FMP calls per ticker instead of 11. Search is separate cached call."""
     import time, requests
     yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
     use_fmp   = bool(fmp_key)
 
-    # ── PRICE HISTORY ─────────────────────────────────────────
+    # ── PRICE HISTORY — yfinance (free, unlimited) ────────────
     df = None
-    if use_fmp:
+    for attempt in range(3):
         try:
-            hist = _fmp_get(f"v3/historical-price-full/{ticker}", fmp_key, "&from=2022-01-01")
-            if hist and "historical" in hist:
-                import pandas as pd
-                rows = hist["historical"]
-                df = pd.DataFrame(rows)
-                df["Date"] = pd.to_datetime(df["date"])
-                df = df.set_index("Date").sort_index()
-                df = df.rename(columns={
-                    "open":"Open","high":"High","low":"Low",
-                    "close":"Close","volume":"Volume",
-                    "adjClose":"Adj Close"
-                })
-                df = df[["Open","High","Low","Close","Volume"]]
+            raw = yf.Ticker(yf_ticker)
+            df  = raw.history(period="2y")
+            if not df.empty: break
         except:
-            df = None
+            if attempt < 2: time.sleep(2 ** attempt)
+    if df is None: df = pd.DataFrame()
 
-    # Fallback to yfinance for price
-    if df is None or df.empty:
-        for attempt in range(3):
-            try:
-                raw = yf.Ticker(yf_ticker)
-                df  = raw.history(period="2y")
-                if not df.empty:
-                    break
-            except:
-                if attempt < 2:
-                    time.sleep(2 ** attempt)
-        if df is None:
-            df = pd.DataFrame()
-
-    # ── FUNDAMENTALS / INFO ───────────────────────────────────
+    # ── FUNDAMENTALS — yfinance financial statements ──────────
+    # These use different Yahoo URLs and are reliable
     info = {}
-    if use_fmp:
-        try:
-            profile = _fmp_get(f"v3/profile/{ticker}", fmp_key)
-            ratios  = _fmp_get(f"v3/ratios-ttm/{ticker}", fmp_key)
-            if profile and isinstance(profile, list) and len(profile) > 0:
-                p = profile[0]
-                info = {
-                    "longName":               p.get("companyName",""),
-                    "shortName":              p.get("companyName",""),
-                    "sector":                 p.get("sector",""),
-                    "industry":               p.get("industry",""),
-                    "marketCap":              p.get("mktCap", 0),
-                    "regularMarketPrice":     p.get("price", 0),
-                    "fiftyTwoWeekHigh":       p.get("range","").split("-")[-1].strip() if p.get("range") else 0,
-                    "fiftyTwoWeekLow":        p.get("range","").split("-")[0].strip() if p.get("range") else 0,
-                    "dividendYield":          (p.get("lastDiv", 0) or 0) / (p.get("price", 1) or 1),
-                    "beta":                   p.get("beta", 0),
-                    "currency":               p.get("currency","USD"),
-                    "exchange":               p.get("exchangeShortName",""),
-                    "description":            p.get("description",""),
-                }
-                try:
-                    info["fiftyTwoWeekHigh"] = float(info["fiftyTwoWeekHigh"])
-                    info["fiftyTwoWeekLow"]  = float(info["fiftyTwoWeekLow"])
-                except:
-                    pass
-            if ratios and isinstance(ratios, list) and len(ratios) > 0:
-                r = ratios[0]
-                info.update({
-                    "trailingPE":           r.get("peRatioTTM", 0),
-                    "forwardPE":            r.get("priceEarningsToGrowthRatioTTM", 0),
-                    "priceToBook":          r.get("priceToBookRatioTTM", 0),
-                    "pegRatio":             r.get("priceEarningsToGrowthRatioTTM", 0),
-                    "operatingMargins":     r.get("operatingProfitMarginTTM", 0),
-                    "profitMargins":        r.get("netProfitMarginTTM", 0),
-                    "returnOnEquity":       r.get("returnOnEquityTTM", 0),
-                    "debtToEquity":         r.get("debtEquityRatioTTM", 0),
-                    "currentRatio":         r.get("currentRatioTTM", 0),
-                    "revenueGrowth":        r.get("revenueGrowthTTM", 0),
-                    "earningsGrowth":       r.get("netIncomeGrowthTTM", 0),
-                })
-        except:
-            pass
-
-    # ── yfinance multi-endpoint fallback ─────────────────────
-    # raw.info is broken on Yahoo — use separate endpoints instead
     try:
-        raw_yf = yf.Ticker(yf_ticker)
+        fi = raw.fast_info
+        for attr, key in [
+            ('market_cap',          'marketCap'),
+            ('year_high',           'fiftyTwoWeekHigh'),
+            ('year_low',            'fiftyTwoWeekLow'),
+            ('last_price',          'regularMarketPrice'),
+            ('shares',              'sharesOutstanding'),
+            ('fifty_day_average',   'fiftyDayAverage'),
+            ('two_hundred_day_average', 'twoHundredDayAverage'),
+        ]:
+            try:
+                v = getattr(fi, attr, None)
+                if v is not None and v != 0:
+                    info[key] = v
+            except: pass
+    except: pass
 
-        # fast_info — always works, gives price + market cap + 52W
-        try:
-            fi = raw_yf.fast_info
-            # Correct attribute names for yfinance fast_info
-            fast_map = {
-                'market_cap':              'marketCap',
-                'year_high':               'fiftyTwoWeekHigh',
-                'year_low':                'fiftyTwoWeekLow',
-                'last_price':              'regularMarketPrice',
-                'shares':                  'sharesOutstanding',
-                'three_month_average_volume': 'averageVolume',
-                'fifty_day_average':       'fiftyDayAverage',
-                'two_hundred_day_average': 'twoHundredDayAverage',
-            }
-            for attr, key in fast_map.items():
-                try:
-                    v = getattr(fi, attr, None)
-                    if v is not None and v != 0:
-                        info.setdefault(key, v)
-                except: pass
-        except: pass
-
-        # income_stmt — revenue, margins (different Yahoo endpoint)
-        try:
-            inc = raw_yf.income_stmt
-            if inc is not None and not inc.empty:
-                cols = inc.columns.tolist()
-                if len(cols) >= 2:
-                    cur = inc[cols[0]]
-                    prv = inc[cols[1]]
-                    def _safe(df, row):
-                        try: return float(df.get(row, 0) or 0)
-                        except: return 0
-                    rev      = _safe(cur, 'Total Revenue')
-                    rev_prev = _safe(prv, 'Total Revenue')
-                    net      = _safe(cur, 'Net Income')
-                    op_inc   = _safe(cur, 'Operating Income')
-                    gross    = _safe(cur, 'Gross Profit')
-                    if rev > 0:
-                        info.setdefault('operatingMargins', op_inc / rev)
-                        info.setdefault('profitMargins',    net / rev)
-                        info.setdefault('grossMargins',     gross / rev)
-                    if rev > 0 and rev_prev > 0:
-                        info.setdefault('revenueGrowth', (rev - rev_prev) / abs(rev_prev))
-        except: pass
-
-        # balance_sheet — debt, equity, current ratio
-        try:
-            bs = raw_yf.balance_sheet
-            if bs is not None and not bs.empty:
-                cols = bs.columns.tolist()
-                cur = bs[cols[0]]
-                def _bsafe(row):
-                    try: return float(cur.get(row, 0) or 0)
-                    except: return 0
-                total_debt   = _bsafe('Total Debt') or _bsafe('Long Term Debt')
-                equity       = _bsafe('Stockholders Equity') or _bsafe('Total Equity Gross Minority Interest')
-                curr_assets  = _bsafe('Current Assets')
-                curr_liab    = _bsafe('Current Liabilities')
-                if equity != 0:
-                    info.setdefault('debtToEquity',   total_debt / abs(equity))
-                if curr_liab != 0:
-                    info.setdefault('currentRatio',   curr_assets / abs(curr_liab))
-        except: pass
-
-        # ── Derived ratios from financial statements ─────────
-        try:
+    # Income statement → margins, growth, EPS
+    try:
+        inc = raw.income_stmt
+        if inc is not None and not inc.empty:
             price  = float(info.get('regularMarketPrice', 0) or 0)
-            shares = float(info.get('sharesOutstanding', 0) or 1)
-            inc    = raw_yf.income_stmt
-            bs2    = raw_yf.balance_sheet
-
+            shares = float(info.get('sharesOutstanding', 1) or 1)
             def _row(df, *names):
-                """Get first matching row value, trying all name variants."""
                 for n in names:
                     for idx in df.index:
                         if n.lower() in str(idx).lower():
@@ -214,267 +94,197 @@ def fetch_ticker_data(ticker, fmp_key="", _v=9):
                                 if v != 0: return v
                             except: pass
                 return 0
-
-            if inc is not None and not inc.empty and price > 0:
-                net_inc      = _row(inc, 'Net Income', 'NetIncome', 'net income')
-                net_inc_prev = _row(inc.iloc[:, 1:2] if inc.shape[1]>1 else inc,
-                                    'Net Income', 'NetIncome') if inc.shape[1]>1 else 0
-                eps = net_inc / shares if shares else 0
-                if eps != 0:
-                    calc_pe = round(price / abs(eps), 2)
-                    if 1 < calc_pe < 500:  # sanity: skip if currency mismatch (ADRs)
-                        info.setdefault('trailingPE', calc_pe)
-                    info.setdefault('trailingEps', round(eps, 4))
-                if net_inc_prev != 0:
-                    info.setdefault('earningsGrowth', (net_inc - net_inc_prev) / abs(net_inc_prev))
-
-            if bs2 is not None and not bs2.empty:
-                equity = _row(bs2, 'Stockholders Equity', 'Total Equity', 'stockholders equity', 'Common Stock Equity')
-                net_inc2 = _row(inc, 'Net Income') if inc is not None and not inc.empty else 0
-                bvps = equity / shares if shares else 0
-                if bvps != 0 and price > 0:
-                    info.setdefault('priceToBook', round(price / abs(bvps), 2))
-                if equity != 0 and net_inc2 != 0:
-                    info.setdefault('returnOnEquity', net_inc2 / abs(equity))
-        except: pass
-
-        # dividend yield
-        try:
-            divs = raw_yf.dividends
-            if divs is not None and not divs.empty:
-                annual_div = float(divs.tail(4).sum())
-                price      = info.get('regularMarketPrice', 0) or 0
-                if price > 0 and annual_div > 0:
-                    info.setdefault('dividendYield', annual_div / price)
-        except: pass
-
-        # analyst price targets
-        try:
-            apt = raw_yf.analyst_price_targets
-            if apt and isinstance(apt, dict):
-                info.setdefault('targetMeanPrice',  apt.get('mean',    apt.get('current', 0)))
-                info.setdefault('targetLowPrice',   apt.get('low',  0))
-                info.setdefault('targetHighPrice',  apt.get('high', 0))
-        except: pass
-
-        # earnings per share from financials
-        try:
-            fin = raw_yf.financials
-            if fin is not None and not fin.empty:
-                cols = fin.columns.tolist()
-                eps_row = fin.loc['Diluted EPS'] if 'Diluted EPS' in fin.index else None
-                if eps_row is not None:
-                    info.setdefault('trailingEps', float(eps_row.iloc[0]))
-        except: pass
-
-        # recommendations — analyst consensus
-        try:
-            recs = raw_yf.recommendations
-            if recs is not None and not recs.empty:
-                latest = recs.iloc[-1] if len(recs) > 0 else None
-                if latest is not None:
-                    info.setdefault('recommendationKey', str(latest.get('To Grade', '')).lower())
-        except: pass
-
-        # calendar — earnings date
-        try:
-            cal = raw_yf.calendar
-            if cal is not None:
-                if isinstance(cal, dict) and 'Earnings Date' in cal:
-                    info.setdefault('earningsDate', cal['Earnings Date'])
-                elif hasattr(cal, 'columns') and 'Earnings Date' in cal.columns:
-                    info.setdefault('earningsDate', cal['Earnings Date'].iloc[0])
-        except: pass
-
-        # get_info() as last resort (newer yfinance)
-        try:
-            gi = raw_yf.get_info() or {}
-            for k, v in gi.items():
-                if v and k not in info:
-                    info[k] = v
-        except: pass
-
+            rev      = _row(inc, 'Total Revenue')
+            rev_prev = _row(inc.iloc[:,1:2] if inc.shape[1]>1 else inc, 'Total Revenue')
+            net      = _row(inc, 'Net Income')
+            net_prev = _row(inc.iloc[:,1:2] if inc.shape[1]>1 else inc, 'Net Income')
+            op_inc   = _row(inc, 'Operating Income')
+            gross    = _row(inc, 'Gross Profit')
+            if rev > 0:
+                info['operatingMargins'] = op_inc / rev
+                info['profitMargins']    = net / rev
+                info['grossMargins']     = gross / rev
+            if rev > 0 and rev_prev > 0:
+                info['revenueGrowth'] = (rev - rev_prev) / abs(rev_prev)
+            if net_prev != 0:
+                info['earningsGrowth'] = (net - net_prev) / abs(net_prev)
+            eps = net / shares if shares else 0
+            if eps != 0:
+                calc_pe = round(price / abs(eps), 2)
+                if 1 < calc_pe < 500:
+                    info['trailingPE'] = calc_pe
+                info['trailingEps'] = round(eps, 4)
     except: pass
 
-    # ── EARNINGS HISTORY ──────────────────────────────────────
-    earn_hist = None
-    if use_fmp:
-        try:
-            import pandas as pd
-            surp = _fmp_get(f"v3/earnings-surprises/{ticker}", fmp_key)
-            if surp and isinstance(surp, list):
-                rows = []
-                for e in surp[:4]:
-                    rows.append({
-                        "period":           e.get("date",""),
-                        "epsEstimate":      e.get("estimatedEps", 0),
-                        "epsActual":        e.get("actualEps", 0),
-                        "surprisePercent":  (e.get("actualEps",0) - e.get("estimatedEps",0)) / abs(e.get("estimatedEps",1) or 1),
-                    })
-                earn_hist = pd.DataFrame(rows)
-        except:
-            earn_hist = None
+    # Balance sheet → D/E, current ratio, P/B
+    try:
+        bs = raw.balance_sheet
+        if bs is not None and not bs.empty:
+            price  = float(info.get('regularMarketPrice', 0) or 0)
+            shares = float(info.get('sharesOutstanding', 1) or 1)
+            def _b(*names):
+                for n in names:
+                    for idx in bs.index:
+                        if n.lower() in str(idx).lower():
+                            try:
+                                v = float(bs.loc[idx].iloc[0] or 0)
+                                if v != 0: return v
+                            except: pass
+                return 0
+            equity    = _b('Stockholders Equity','Total Equity','Common Stock Equity')
+            debt      = _b('Total Debt','Long Term Debt')
+            c_assets  = _b('Current Assets')
+            c_liab    = _b('Current Liabilities')
+            if equity != 0:
+                if debt != 0:  info['debtToEquity'] = debt / abs(equity)
+                bvps = equity / shares
+                if bvps != 0 and price > 0:
+                    info['priceToBook'] = round(price / abs(bvps), 2)
+                net_inc = float(info.get('trailingEps', 0) or 0) * shares
+                if net_inc != 0:
+                    info['returnOnEquity'] = net_inc / abs(equity)
+            if c_liab != 0:
+                info['currentRatio'] = c_assets / abs(c_liab)
+    except: pass
 
-    # Fallback
-    if earn_hist is None:
-        try:
-            earn_hist = yf.Ticker(yf_ticker).earnings_history
-        except:
-            pass
+    # Dividends
+    try:
+        divs = raw.dividends
+        if divs is not None and not divs.empty:
+            annual_div = float(divs.tail(4).sum())
+            price = float(info.get('regularMarketPrice', 0) or 0)
+            if price > 0 and annual_div > 0:
+                info['dividendYield'] = annual_div / price
+    except: pass
 
-    # ── ANALYST RATINGS ───────────────────────────────────────
-    analyst_targets = None
-    rec_summary     = None
-    if use_fmp:
-        try:
-            import pandas as pd
-            est = _fmp_get(f"v3/analyst-stock-recommendations/{ticker}", fmp_key)
-            pt  = _fmp_get(f"v4/analyst-stock-recommendations/{ticker}", fmp_key)
-            tp  = _fmp_get(f"v3/price-target-consensus/{ticker}", fmp_key)
-            if tp and isinstance(tp, list) and tp:
-                t = tp[0]
-                analyst_targets = {
-                    "mean":  t.get("targetConsensus", 0),
-                    "high":  t.get("targetHigh", 0),
-                    "low":   t.get("targetLow", 0),
-                }
-                info["targetMeanPrice"]  = analyst_targets["mean"]
-                info["targetHighPrice"]  = analyst_targets["high"]
-                info["targetLowPrice"]   = analyst_targets["low"]
-            if est and isinstance(est, list) and est:
-                e = est[0]
-                buy  = int(e.get("strongBuy",0)) + int(e.get("buy",0))
-                hold = int(e.get("hold",0))
-                sell = int(e.get("sell",0)) + int(e.get("strongSell",0))
-                import pandas as pd
-                rec_summary = pd.DataFrame([{"strongBuy":e.get("strongBuy",0),"buy":e.get("buy",0),
-                    "hold":hold,"sell":e.get("sell",0),"strongSell":e.get("strongSell",0)}])
-                info["numberOfAnalystOpinions"] = buy + hold + sell
-        except:
-            pass
+    # Sector/industry from info (try raw.info but don't depend on it)
+    try:
+        yf_info = raw.info or {}
+        for k in ['sector','industry','longName','shortName','country',
+                  'shortPercentOfFloat','floatShares','pegRatio','forwardPE',
+                  'targetMeanPrice','targetLowPrice','targetHighPrice',
+                  'numberOfAnalystOpinions','recommendationKey','recommendationMean']:
+            if yf_info.get(k) and k not in info:
+                info[k] = yf_info[k]
+    except: pass
 
-    # ── INSIDER TRANSACTIONS ──────────────────────────────────
-    insider = None
-    if use_fmp:
-        try:
-            import pandas as pd
-            ins = _fmp_get(f"v4/insider-trading?symbol={ticker}&page=0", fmp_key)
-            if ins and isinstance(ins, list):
-                rows = []
-                for i in ins[:5]:
-                    rows.append({
-                        "Insider":      i.get("reportingName",""),
-                        "Position":     i.get("typeOfOwner",""),
-                        "Transaction":  i.get("transactionType",""),
-                        "Shares":       i.get("securitiesTransacted", 0),
-                        "Value":        (i.get("securitiesTransacted",0) or 0) * (i.get("price",0) or 0),
-                        "Date":         i.get("transactionDate",""),
-                    })
-                if rows:
-                    insider = pd.DataFrame(rows)
-        except:
-            pass
-
-    # ── NEWS ──────────────────────────────────────────────────
+    # ── NEWS — yfinance (free, reliable enough) ───────────────
     news = []
-    if use_fmp:
+    try:
+        for item in (raw.news or [])[:5]:
+            try:
+                t = str(item.get('title','') or item.get('content',{}).get('title',''))
+                p = str(item.get('publisher','') or '')
+                l = str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url',''))
+                if t: news.append({'title':t,'publisher':p,'link':l})
+            except: pass
+    except: pass
+    if not news and use_fmp:
         try:
             articles = _fmp_get(f"v3/stock_news?tickers={ticker}&limit=5", fmp_key)
-            if articles and isinstance(articles, list):
+            if articles:
                 for a in articles[:5]:
                     t = str(a.get("title",""))
-                    if t:
-                        news.append({
-                            "title":     t,
-                            "publisher": str(a.get("site","")),
-                            "link":      str(a.get("url","")),
-                        })
-        except:
-            pass
-
-    # Fallback for news
-    if not news:
-        try:
-            raw_yf = yf.Ticker(yf_ticker)
-            for item in (raw_yf.news or [])[:5]:
-                try:
-                    t = str(item.get("title","") or item.get("content",{}).get("title",""))
-                    p = str(item.get("publisher",""))
-                    l = str(item.get("link",""))
-                    if t: news.append({"title":t,"publisher":p,"link":l})
-                except: pass
+                    if t: news.append({"title":t,"publisher":str(a.get("site","")),"link":str(a.get("url",""))})
         except: pass
 
-    # ── EARNINGS DATE ─────────────────────────────────────────
-    earn_dates = None
-    calendar   = None
+    # ── FMP-ONLY SECTION (4 calls) ────────────────────────────
+    earn_hist       = None
+    insider         = None
+    rec_summary     = None
+    analyst_targets = None
+    calendar        = None
+    earn_dates      = None
+
     if use_fmp:
+        # Call 1: Earnings history (beat/miss) — yfinance can't do this
         try:
-            import pandas as pd
+            surp = _fmp_get(f"v3/earnings-surprises/{ticker}", fmp_key)
+            if surp and isinstance(surp, list):
+                rows = [{"period": e.get("date",""),
+                         "epsEstimate": e.get("estimatedEps",0),
+                         "epsActual":   e.get("actualEps",0),
+                         "surprisePercent": ((e.get("actualEps",0)-e.get("estimatedEps",0))/
+                                             abs(e.get("estimatedEps",1) or 1))}
+                        for e in surp[:4]]
+                earn_hist = pd.DataFrame(rows)
+        except: pass
+
+        # Call 2: Analyst consensus + price targets
+        try:
+            tp = _fmp_get(f"v3/price-target-consensus/{ticker}", fmp_key)
+            if tp and isinstance(tp, list) and tp:
+                t = tp[0]
+                analyst_targets = {"mean": t.get("targetConsensus",0),
+                                   "high": t.get("targetHigh",0),
+                                   "low":  t.get("targetLow",0)}
+                info.update({"targetMeanPrice": analyst_targets["mean"],
+                             "targetHighPrice": analyst_targets["high"],
+                             "targetLowPrice":  analyst_targets["low"]})
+        except: pass
+
+        # Call 3: Buy/hold/sell counts
+        try:
+            est = _fmp_get(f"v3/analyst-stock-recommendations/{ticker}", fmp_key)
+            if est and isinstance(est, list) and est:
+                e = est[0]
+                rec_summary = pd.DataFrame([{
+                    "strongBuy": e.get("strongBuy",0), "buy": e.get("buy",0),
+                    "hold": e.get("hold",0), "sell": e.get("sell",0),
+                    "strongSell": e.get("strongSell",0)
+                }])
+                total = sum(e.get(k,0) for k in ["strongBuy","buy","hold","sell","strongSell"])
+                info["numberOfAnalystOpinions"] = total
+        except: pass
+
+        # Call 4: Next earnings date
+        try:
             from datetime import datetime, timedelta
             today = datetime.now().strftime("%Y-%m-%d")
             fut   = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
             cal = _fmp_get(f"v3/earning_calendar?from={today}&to={fut}", fmp_key)
-            if cal and isinstance(cal, list):
+            if cal:
                 matches = [e for e in cal if e.get("symbol","").upper() == ticker.upper()]
                 if matches:
                     ned = matches[0].get("date","")
                     calendar = {"Earnings Date": ned}
                     info["earningsDate"] = ned
-        except:
-            pass
+        except: pass
 
-    # Fallback calendar
+    # Insider — yfinance works for most US stocks
+    try:
+        ins = raw.insider_transactions
+        if ins is not None and not ins.empty:
+            insider = ins
+    except: pass
+    if insider is None or (hasattr(insider,'empty') and insider.empty):
+        try:
+            insider = raw.insider_purchases
+        except: pass
+
+    # Calendar fallback — yfinance
     if not calendar:
         try:
-            raw_yf  = yf.Ticker(yf_ticker)
-            cal_yf  = raw_yf.calendar
+            cal_yf = raw.calendar
             if cal_yf is not None:
-                calendar = cal_yf if isinstance(cal_yf, dict) else (cal_yf.to_dict() if hasattr(cal_yf,"to_dict") else None)
+                calendar = cal_yf if isinstance(cal_yf, dict) else (cal_yf.to_dict() if hasattr(cal_yf,'to_dict') else None)
         except: pass
 
-    # ── RECOMMENDATIONS SUMMARY ───────────────────────────────
-    if rec_summary is None or (hasattr(rec_summary,'empty') and rec_summary.empty):
-        try:
-            rec_summary = yf.Ticker(yf_ticker).recommendations_summary
-        except: pass
-
-    # ── INSIDER TRANSACTIONS ──────────────────────────────────
-    if insider is None or (hasattr(insider,'empty') and insider.empty):
-        try:
-            insider = yf.Ticker(yf_ticker).insider_transactions
-        except: pass
-    if insider is None or (hasattr(insider,'empty') and insider.empty):
-        try:
-            insider = yf.Ticker(yf_ticker).insider_purchases
-        except: pass
-
-    # ── ANALYST PRICE TARGETS ─────────────────────────────────
-    if not analyst_targets:
-        try:
-            _apt = yf.Ticker(yf_ticker).analyst_price_targets
-            if _apt and isinstance(_apt, dict):
-                analyst_targets = _apt
-                info.setdefault('targetMeanPrice',  float(_apt.get('mean',    0) or 0))
-                info.setdefault('targetLowPrice',   float(_apt.get('low',     0) or 0))
-                info.setdefault('targetHighPrice',  float(_apt.get('high',    0) or 0))
-        except: pass
-
-    # ── IV ────────────────────────────────────────────────────
+    # IV from options chain
     iv = 0.0
     try:
-        raw_yf = yf.Ticker(yf_ticker)
-        opts   = raw_yf.options
+        opts = raw.options
         if opts:
-            chain  = raw_yf.option_chain(opts[0])
-            cp     = float(df["Close"].iloc[-1]) if not df.empty else 0
-            atm    = chain.calls.iloc[(chain.calls["strike"]-cp).abs().argsort()[:1]]
-            iv     = float(atm["impliedVolatility"].values[0]) * 100
+            chain = raw.option_chain(opts[0])
+            cp    = float(df["Close"].iloc[-1]) if not df.empty else 0
+            atm   = chain.calls.iloc[(chain.calls["strike"]-cp).abs().argsort()[:1]]
+            iv    = float(atm["impliedVolatility"].values[0]) * 100
     except: pass
 
     return {"df":df,"info":info,"calendar":calendar,"rec_summary":rec_summary,
             "earn_hist":earn_hist,"earn_dates":earn_dates,"insider":insider,
             "analyst_targets":analyst_targets,"news":news,"iv":iv}
+
 
 @st.cache_data(ttl=3600, show_spinner=False)
 def fetch_market_context():
@@ -1257,71 +1067,81 @@ def main():
             st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Enter a ticker</div>', unsafe_allow_html=True)
             st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:20px;">Type any stock symbol and press Analyze</div>', unsafe_allow_html=True)
 
+            fmp_key_lp = st.secrets.get("FMP_API_KEY", "")
+
             with st.form("ticker_form"):
-                ticker_in = st.text_input("", placeholder="NVDA  /  NPK.TO  /  SHOP.TO  /  RY.L", key="ticker_input", label_visibility="collapsed")
+                ticker_in = st.text_input("", placeholder="NVDA", key="ticker_input",
+                                          label_visibility="collapsed")
                 submitted = st.form_submit_button("Analyze →")
 
             ticker_upper = ticker_in.strip().upper() if ticker_in else ""
 
+            # ── Live search dropdown ──────────────────────────
+            if ticker_upper and len(ticker_upper) >= 1 and not submitted:
+                if fmp_key_lp:
+                    results = search_ticker_fmp(ticker_upper, fmp_key_lp)
+                    if results:
+                        st.markdown('''<div style="background:#0D1B2A;border:1px solid #14B8A6;
+                            border-radius:8px;margin-top:4px;overflow:hidden;">''',
+                            unsafe_allow_html=True)
+                        shown = 0
+                        for r in results:
+                            sym  = r.get("symbol","")
+                            name = r.get("name","")[:40]
+                            exch = r.get("exchangeShortName","")
+                            curr = r.get("currency","")
+                            if not sym: continue
+                            col_a, col_b, col_c = st.columns([1.2, 3, 1.2])
+                            with col_a:
+                                st.markdown(f'<span style="font-family:monospace;font-weight:800;'
+                                    f'color:#00FF88;font-size:13px;padding:4px 0;display:block;">{sym}</span>',
+                                    unsafe_allow_html=True)
+                            with col_b:
+                                st.markdown(f'<span style="font-size:11px;color:#94A3B8;'
+                                    f'display:block;padding:5px 0;">{name}<br>'
+                                    f'<span style="color:#5EEAD4;font-size:10px;">{exch} · {curr}</span></span>',
+                                    unsafe_allow_html=True)
+                            with col_c:
+                                if st.button("Select", key=f"dd_{sym}_{exch}"):
+                                    run_analysis(sym)
+                            shown += 1
+                            if shown < len(results):
+                                st.markdown('<hr style="margin:0;border-color:#1E3A4A;">',
+                                    unsafe_allow_html=True)
+                        st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    # No FMP — show hardcoded multi-listed if applicable
+                    if ticker_upper in MULTI_LISTED and len(MULTI_LISTED[ticker_upper]) > 1:
+                        st.markdown('''<div style="background:#0F3030;border:1px solid #14B8A6;
+                            border-radius:8px;padding:8px 14px;margin-top:8px;font-size:11px;
+                            color:#5EEAD4;letter-spacing:1px;">
+                            MULTIPLE LISTINGS — SELECT ONE:</div>''', unsafe_allow_html=True)
+                        for opt in MULTI_LISTED[ticker_upper]:
+                            ca, cb, cc = st.columns([2, 3, 1])
+                            with ca:
+                                st.markdown(f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{opt["ticker"]}</span>', unsafe_allow_html=True)
+                            with cb:
+                                st.markdown(f'<span style="font-size:12px;color:#E2E8F0;">{opt["name"]}</span>', unsafe_allow_html=True)
+                            with cc:
+                                if st.button(opt["exchange"], key=f'btn_{opt["ticker"]}'):
+                                    run_analysis(opt["ticker"])
+
+            # ── Direct analyze when submitted ─────────────────
             if submitted and ticker_upper:
-                fmp_key_search = st.secrets.get("FMP_API_KEY", "")
-                if fmp_key_search:
-                    # Use FMP to search and disambiguate across all global exchanges
-                    results = search_ticker_fmp(ticker_upper, fmp_key_search)
-                    # Exact symbol matches
-                    exact = [r for r in results if r.get("symbol","").upper() == ticker_upper]
+                if fmp_key_lp:
+                    results = search_ticker_fmp(ticker_upper, fmp_key_lp)
+                    exact   = [r for r in results if r.get("symbol","").upper() == ticker_upper]
                     if len(exact) == 1:
                         run_analysis(exact[0]["symbol"])
-                    elif len(exact) > 1:
-                        st.session_state['search_results'] = exact
-                        st.session_state['search_query']   = ticker_upper
-                        st.rerun()
-                    elif results:
-                        # No exact match — show top results
-                        st.session_state['search_results'] = results[:8]
-                        st.session_state['search_query']   = ticker_upper
-                        st.rerun()
-                    else:
-                        # FMP found nothing — try directly
+                    elif not results:
                         run_analysis(ticker_upper)
+                    # If multiple exact matches or partial — dropdown already shown above
                 else:
-                    # No FMP — use hardcoded list + direct run
-                    if ticker_upper in MULTI_LISTED and len(MULTI_LISTED[ticker_upper]) > 1:
-                        st.session_state['search_results'] = [
-                            {"symbol": o["ticker"], "name": o["name"], "exchangeShortName": o["exchange"]}
-                            for o in MULTI_LISTED[ticker_upper]
-                        ]
-                        st.session_state['search_query'] = ticker_upper
-                        st.rerun()
-                    else:
-                        t = MULTI_LISTED.get(ticker_upper, [{"ticker": ticker_upper}])[0]["ticker"]
-                        run_analysis(t)
+                    t = MULTI_LISTED.get(ticker_upper, [{"ticker": ticker_upper}])[0]["ticker"]
+                    run_analysis(t)
 
-            # ── Global exchange search results ────────────────
-            if "search_results" in st.session_state and st.session_state.get("search_query","") == ticker_upper:
-                results = st.session_state["search_results"]
-                st.markdown('''<div style="background:#0F3030;border:1px solid #14B8A6;border-radius:8px;
-                    padding:8px 14px;margin-top:8px;font-size:11px;color:#5EEAD4;letter-spacing:1px;">
-                    SELECT THE CORRECT LISTING:</div>''', unsafe_allow_html=True)
-                for r in results:
-                    sym  = r.get("symbol","")
-                    name = r.get("name","")[:35]
-                    exch = r.get("exchangeShortName", r.get("exchange",""))
-                    curr = r.get("currency","")
-                    ca, cb, cc, cd = st.columns([1.5, 3, 1, 1])
-                    with ca:
-                        st.markdown(f'<span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:14px;">{sym}</span>', unsafe_allow_html=True)
-                    with cb:
-                        st.markdown(f'<span style="font-size:12px;color:#E2E8F0;">{name}</span>', unsafe_allow_html=True)
-                    with cc:
-                        st.markdown(f'<span style="font-size:11px;color:#5EEAD4;">{exch}</span>', unsafe_allow_html=True)
-                    with cd:
-                        if st.button(curr or "Select", key=f"srch_{sym}"):
-                            del st.session_state["search_results"]
-                            del st.session_state["search_query"]
-                            run_analysis(sym)
+            st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:16px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: NPK.TO · RY.TO &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
 
-            st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:16px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: add .TO (RY.TO) &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
         return
 
     render_hud()
@@ -1351,7 +1171,7 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key, _v=9)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=10)
         df    = data['df']
         info  = data['info']
 
