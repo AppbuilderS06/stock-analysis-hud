@@ -1584,6 +1584,10 @@ def render_hud():
         with cols[i]:
             st.markdown(sig_html(s['label'], s['val'], s['bull'], s.get('neut', False)), unsafe_allow_html=True)
 
+    # ── DEBUG: show raw info keys (temporary) ───────────────
+    with st.expander("🔍 DEBUG — raw info keys (remove before launch)", expanded=False):
+        st.write({k: v for k, v in info.items() if v is not None and v != 0 and v != '' and not isinstance(v, (list, dict))})
+
     # ── ZONE 5: KEY LEVELS + FUNDAMENTALS ───────────────────
     vwap    = float(a.get('vwap', close))
     ema100  = float(a.get('ema100', float(row['MA100'])))
