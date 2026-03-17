@@ -575,50 +575,66 @@ st.markdown("""
   }
   .stTextInput input:focus { box-shadow: 0 0 0 3px #00FF8818 !important; }
   .stButton button {
-    background: #1A2232 !important;
-    color: #94A3B8 !important;
-    border: 1px solid #243348 !important;
-    border-radius: 6px !important;
-    font-size: 12px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.05em !important;
-    padding: 8px 16px !important;
-    transition: all 150ms !important;
+    background: #00FF88 !important;
+    color: #080E18 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+    letter-spacing: 1px !important;
+    width: 100% !important;
+    padding: 14px !important;
   }
-  .stButton button:hover {
-    border-color: #5EEAD4 !important;
-    color: #5EEAD4 !important;
-    background: #0F3030 !important;
-    opacity: 1 !important;
-  }
-  /* Primary action buttons - the main CTA only */
-  .stButton button[kind="primary"],
-  button[data-testid="baseButton-primary"] {
+  .stButton button:hover { opacity: 0.9 !important; }
+
+  /* Screener-specific buttons — override the global green */
+  .screener-btn .stButton button {
     background: #0D2818 !important;
     color: #00FF88 !important;
     border: 1px solid #00FF8866 !important;
     font-size: 14px !important;
     font-weight: 700 !important;
+    padding: 10px !important;
     letter-spacing: 0.03em !important;
   }
-  .stButton button[kind="primary"]:hover,
-  button[data-testid="baseButton-primary"]:hover {
+  .screener-btn .stButton button:hover {
     background: #052A14 !important;
     border-color: #00FF88 !important;
-    color: #00FF88 !important;
     box-shadow: 0 0 16px rgba(0,255,136,0.15) !important;
     opacity: 1 !important;
   }
-  /* Landing page Analyze button - keep it prominent */
-  .stTextInput + div .stButton button,
-  .analyze-btn .stButton button {
-    background: #00FF88 !important;
-    color: #080E18 !important;
-    border: none !important;
-    font-size: 15px !important;
-    font-weight: 800 !important;
-    letter-spacing: 1px !important;
-    padding: 14px !important;
+  /* Template pill buttons */
+  .tpl-btn .stButton button {
+    background: #131F32 !important;
+    color: #94A3B8 !important;
+    border: 1px solid #243348 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 6px 8px !important;
+    letter-spacing: 0 !important;
+    border-radius: 6px !important;
+  }
+  .tpl-btn .stButton button:hover {
+    border-color: #5EEAD4 !important;
+    color: #5EEAD4 !important;
+    background: #0F3030 !important;
+    opacity: 1 !important;
+  }
+  /* Reset button */
+  .reset-btn .stButton button {
+    background: #111827 !important;
+    color: #64748B !important;
+    border: 1px solid #374151 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 10px !important;
+    letter-spacing: 0 !important;
+  }
+  .reset-btn .stButton button:hover {
+    border-color: #FF6B6B !important;
+    color: #FF6B6B !important;
+    background: #1E0A0A !important;
+    opacity: 1 !important;
   }
 
   /* Footer */
@@ -1230,16 +1246,17 @@ def range_bar_html(low, high, current, cur):
 
 # ── Main App ──────────────────────────────────────────────────
 def main():
-    # ── Global disclaimer banner — visible on every page ─────
+    # ── Global disclaimer — visible on every page ────────────
     st.markdown("""
-    <div style="background:#1A1000;border-bottom:1px solid #FACC1530;
-                padding:5px 16px;margin:-16px -32px 12px;
+    <div style="background:#1A1000;border:1px solid #FACC1533;border-radius:6px;
+                padding:6px 14px;margin-bottom:8px;
                 display:flex;align-items:center;gap:10px;">
-      <span style="font-size:12px;">⚠️</span>
-      <span style="font-size:11px;color:#FACC15;font-weight:600;">Educational tool only — not financial advice.</span>
+      <span style="font-size:13px;">⚠️</span>
+      <span style="font-size:11px;color:#FACC15;font-weight:700;white-space:nowrap;">
+        Educational tool only — not financial advice.
+      </span>
       <span style="font-size:11px;color:#4A6080;">
-        AI-generated analysis does not guarantee any outcome.
-        Always conduct your own research before making any investment decision.
+        AI analysis does not guarantee any outcome. Always do your own research before trading.
       </span>
     </div>""", unsafe_allow_html=True)
 
@@ -3396,25 +3413,18 @@ def render_screener():
                 </div>"""
             st.markdown(tpl_html + "</div></div>", unsafe_allow_html=True)
 
-            # Invisible buttons for click detection — one row, zero height via CSS
-            st.markdown("""
-            <style>
-            div[data-testid="stHorizontalBlock"]:has(.tpl-btn-row) button {
-                height: 0px !important; padding: 0 !important; opacity: 0 !important;
-                position: absolute !important; pointer-events: all !important;
-            }
-            </style>
-            <div class="tpl-btn-row" style="height:0;overflow:hidden;margin:0;">
-            """, unsafe_allow_html=True)
-
+            # Real buttons — hidden visually but clickable via CSS wrapper classes
+            # Each wrapped in .tpl-btn so screener CSS scopes them correctly
             tpl_cols = st.columns(4)
             selected_template = None
             for i, tpl_name in enumerate(SNS_TEMPLATES.keys()):
                 with tpl_cols[i]:
-                    if st.button(tpl_name, key=f"tpl_{tpl_name}", use_container_width=True):
+                    st.markdown('<div class="tpl-btn">', unsafe_allow_html=True)
+                    if st.button(tpl_name, key=f"tpl_{tpl_name}",
+                                 use_container_width=True):
                         selected_template = tpl_name
                         st.session_state["_sns_active_tpl"] = tpl_name
-            st.markdown('</div>', unsafe_allow_html=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
 
             # Panel continuation
             st.markdown("""
@@ -3500,15 +3510,19 @@ def render_screener():
             # ── Run + Reset ────────────────────────────────────
             run_col, reset_col = st.columns([4, 1])
             with run_col:
+                st.markdown('<div class="screener-btn">', unsafe_allow_html=True)
                 run_btn = st.button("🔍  Find Best Setups", type="primary",
                                     use_container_width=True, key="sns_run")
+                st.markdown('</div>', unsafe_allow_html=True)
             with reset_col:
+                st.markdown('<div class="reset-btn">', unsafe_allow_html=True)
                 if st.button("↺", use_container_width=True, key="sns_reset",
                              help="Reset screener"):
                     for k in ["_sns_theme", "_sns_filter", "_sns_results",
                               "_sns_filter_confirmed", "_sns_active_tpl"]:
                         if k in st.session_state: del st.session_state[k]
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             # ── Disclaimer — prominent, above results ─────────
             st.markdown("""
