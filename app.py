@@ -644,6 +644,125 @@ st.markdown("""
   .score-markers { display: flex; justify-content: space-between; font-size: 9px; color: #374151; font-family: 'JetBrains Mono', monospace; }
 
   div[data-testid="stHorizontalBlock"] { gap: 8px; }
+
+  /* ── Screener: override Streamlit default green buttons ──── */
+
+  /* Template pills — dark teal style matching HUD panels */
+  div[data-testid="stButton"] button[kind="secondary"],
+  div[data-testid="stButton"] button {
+    background: #1A2232;
+    border: 1px solid #243348;
+    color: #94A3B8;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 6px 12px;
+    transition: border-color 150ms, color 150ms, background 150ms;
+  }
+  div[data-testid="stButton"] button:hover {
+    border-color: #14B8A6;
+    color: #5EEAD4;
+    background: #0F3030;
+  }
+
+  /* Primary action buttons (Find Best Setups, Analyze, etc.) */
+  div[data-testid="stButton"] button[kind="primary"] {
+    background: #0D2818;
+    border: 1px solid #00FF88;
+    color: #00FF88;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.03em;
+  }
+  div[data-testid="stButton"] button[kind="primary"]:hover {
+    background: #052A14;
+    border-color: #00FF88;
+    color: #86EFAC;
+    box-shadow: 0 0 12px rgba(0,255,136,0.2);
+  }
+
+  /* Active template pill — highlighted when selected */
+  .tpl-active button {
+    background: #0A1E12 !important;
+    border-color: #00FF88 !important;
+    color: #00FF88 !important;
+  }
+
+  /* Reset button — subtle, not competing with primary */
+  .btn-reset button {
+    background: #111827 !important;
+    border-color: #374151 !important;
+    color: #64748B !important;
+    font-size: 11px !important;
+  }
+  .btn-reset button:hover {
+    border-color: #FF6B6B !important;
+    color: #FF6B6B !important;
+  }
+
+  /* Confirm button in filter panel */
+  .btn-confirm button[kind="primary"] {
+    background: #0A1525 !important;
+    border-color: #38BDF8 !important;
+    color: #38BDF8 !important;
+  }
+  .btn-confirm button[kind="primary"]:hover {
+    background: #0D1B2A !important;
+    box-shadow: 0 0 12px rgba(56,189,248,0.2) !important;
+  }
+
+  /* Screener tab sub-tabs */
+  div[data-testid="stTabs"] button[role="tab"] {
+    font-size: 12px;
+    color: #64748B;
+    font-weight: 500;
+  }
+  div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+    color: #E2E8F0;
+    font-weight: 700;
+  }
+
+  /* Selectbox — dark theme */
+  div[data-testid="stSelectbox"] > div > div {
+    background: #1A2232 !important;
+    border-color: #243348 !important;
+    color: #E2E8F0 !important;
+  }
+
+  /* Text area — dark theme */
+  div[data-testid="stTextArea"] textarea {
+    background: #0D1B2A !important;
+    border-color: #243348 !important;
+    color: #E2E8F0 !important;
+    font-size: 13px;
+  }
+  div[data-testid="stTextArea"] textarea:focus {
+    border-color: #38BDF8 !important;
+    box-shadow: 0 0 0 1px #38BDF840 !important;
+  }
+
+  /* Number inputs in R/R calculator */
+  div[data-testid="stNumberInput"] input {
+    background: #1A2232 !important;
+    border-color: #243348 !important;
+    color: #FACC15 !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 14px !important;
+  }
+
+  /* Progress bar */
+  div[data-testid="stProgress"] > div > div {
+    background: linear-gradient(90deg, #14B8A6, #00FF88) !important;
+  }
+
+  /* Info/warning boxes */
+  div[data-testid="stAlert"] {
+    background: #0D1B2A !important;
+    border-color: #243348 !important;
+    color: #94A3B8 !important;
+  }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -3232,10 +3351,12 @@ def render_screener():
                 run_btn = st.button("🔍 Find Best Setups", type="primary",
                                     use_container_width=True, key="sns_run")
             with reset_col:
+                st.markdown('<div class="btn-reset">', unsafe_allow_html=True)
                 if st.button("↺ Reset", use_container_width=True, key="sns_reset"):
                     for k in ["_sns_theme", "_sns_filter", "_sns_results", "_sns_filter_confirmed"]:
                         if k in st.session_state: del st.session_state[k]
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             st.markdown('<div style="font-size:10px;color:#4A6080;margin-top:2px;">⚠ Educational only. Not financial advice. ~$0.02 Claude API cost per screen.</div>', unsafe_allow_html=True)
 
@@ -3313,10 +3434,12 @@ def render_screener():
 
             conf_col1, conf_col2, conf_col3 = st.columns(3)
             with conf_col1:
+                st.markdown('<div class="btn-confirm">', unsafe_allow_html=True)
                 if st.button("✅ Looks good — Run Screen", type="primary",
                              use_container_width=True, key="sns_confirm"):
                     st.session_state["_sns_filter_confirmed"] = True
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
             with conf_col2:
                 if st.button("↩ Try different theme", use_container_width=True, key="sns_retry"):
                     del st.session_state["_sns_filter"]
