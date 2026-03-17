@@ -575,17 +575,51 @@ st.markdown("""
   }
   .stTextInput input:focus { box-shadow: 0 0 0 3px #00FF8818 !important; }
   .stButton button {
+    background: #1A2232 !important;
+    color: #94A3B8 !important;
+    border: 1px solid #243348 !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.05em !important;
+    padding: 8px 16px !important;
+    transition: all 150ms !important;
+  }
+  .stButton button:hover {
+    border-color: #5EEAD4 !important;
+    color: #5EEAD4 !important;
+    background: #0F3030 !important;
+    opacity: 1 !important;
+  }
+  /* Primary action buttons - the main CTA only */
+  .stButton button[kind="primary"],
+  button[data-testid="baseButton-primary"] {
+    background: #0D2818 !important;
+    color: #00FF88 !important;
+    border: 1px solid #00FF8866 !important;
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+  }
+  .stButton button[kind="primary"]:hover,
+  button[data-testid="baseButton-primary"]:hover {
+    background: #052A14 !important;
+    border-color: #00FF88 !important;
+    color: #00FF88 !important;
+    box-shadow: 0 0 16px rgba(0,255,136,0.15) !important;
+    opacity: 1 !important;
+  }
+  /* Landing page Analyze button - keep it prominent */
+  .stTextInput + div .stButton button,
+  .analyze-btn .stButton button {
     background: #00FF88 !important;
     color: #080E18 !important;
     border: none !important;
-    border-radius: 8px !important;
     font-size: 15px !important;
     font-weight: 800 !important;
     letter-spacing: 1px !important;
-    width: 100% !important;
     padding: 14px !important;
   }
-  .stButton button:hover { opacity: 0.9 !important; }
 
   /* Footer */
   .hud-footer { text-align: center; font-size: 10px; color: #243348; padding: 12px 0; letter-spacing: 1px; }
@@ -1196,6 +1230,19 @@ def range_bar_html(low, high, current, cur):
 
 # ── Main App ──────────────────────────────────────────────────
 def main():
+    # ── Global disclaimer banner — visible on every page ─────
+    st.markdown("""
+    <div style="background:#1A1000;border-bottom:1px solid #FACC1530;
+                padding:5px 16px;margin:-16px -32px 12px;
+                display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;">⚠️</span>
+      <span style="font-size:11px;color:#FACC15;font-weight:600;">Educational tool only — not financial advice.</span>
+      <span style="font-size:11px;color:#4A6080;">
+        AI-generated analysis does not guarantee any outcome.
+        Always conduct your own research before making any investment decision.
+      </span>
+    </div>""", unsafe_allow_html=True)
+
     # ── Sidebar: cache controls ──────────────────────────────
     with st.sidebar:
         st.markdown("### ⚙️ Controls")
@@ -2139,6 +2186,18 @@ def render_hud():
 
     # ── ZONE 7b: RISK / REWARD CALCULATOR ───────────────────
     st.markdown('<div class="section-header" style="margin-top:8px;">⚡ Risk / Reward Calculator</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background:#1A1000;border:1px solid #FACC1544;border-radius:0 0 0 0;
+                border-top:none;padding:7px 14px;margin-bottom:4px;
+                display:flex;align-items:center;gap:8px;">
+      <span style="font-size:13px;">⚠️</span>
+      <span style="font-size:11px;color:#FACC15;font-weight:700;">NOT FINANCIAL ADVICE</span>
+      <span style="font-size:11px;color:#64748B;">
+        These numbers are for educational position-sizing practice only.
+        This is not a recommendation to buy or sell any security.
+        Never risk more than you can afford to lose.
+      </span>
+    </div>""", unsafe_allow_html=True)
 
     # All data available for pre-filling
     atr_val  = float(row['ATR'])
@@ -3264,11 +3323,24 @@ def sns_one_liner(r, filters):
 def render_screener():
     """Signal Narrative Screener — AI theme mode + classic watchlist."""
 
+    # ── Screener header — matches HUD identity bar style ──────
     st.markdown("""
-    <div style="text-align:center;margin-bottom:16px;">
-      <div style="font-size:12px;color:#4A6080;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">AI Powered</div>
-      <div style="font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:4px;">📈 Signal Narrative Screener</div>
-      <div style="font-size:13px;color:#4A6080;">Describe a trade setup in plain English → AI ranks the best matching stocks</div>
+    <div style="background:linear-gradient(135deg,#0A1E12 0%,#0A1525 100%);
+                border:1px solid #14B8A6;border-radius:10px;
+                padding:16px 22px;margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:10px;color:#5EEAD4;letter-spacing:3px;
+                      text-transform:uppercase;margin-bottom:4px;">AI Powered · Signal Narrative Screener</div>
+          <div style="font-size:20px;font-weight:800;color:#F1F5F9;">
+            Describe a trade setup in plain English
+          </div>
+          <div style="font-size:12px;color:#64748B;margin-top:2px;">
+            AI translates your words into filters → ranks every matching stock by signal strength
+          </div>
+        </div>
+        <div style="text-align:right;font-size:32px;">📈</div>
+      </div>
     </div>""", unsafe_allow_html=True)
 
     mode_tab1, mode_tab2 = st.tabs(["🤖 AI Theme", "📋 Watchlist"])
@@ -3283,82 +3355,173 @@ def render_screener():
             anthropic_key = st.secrets.get("ANTHROPIC_API_KEY", "")
             fmp_key = st.secrets.get("FMP_API_KEY", "")
 
-            # ── Template pills ────────────────────────────────
-            st.markdown('<div style="font-size:10px;color:#5EEAD4;letter-spacing:1.5px;margin-bottom:6px;">QUICK TEMPLATES</div>', unsafe_allow_html=True)
+            # ── Template pills — rendered as HUD panels ───────
+            st.markdown("""
+            <div style="background:#1A2232;border:1px solid #243348;border-radius:8px 8px 0 0;
+                        padding:8px 14px 6px;">
+              <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;
+                          text-transform:uppercase;margin-bottom:10px;font-weight:700;">
+                ⚡ Quick Templates — click to use
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:4px;">
+            """, unsafe_allow_html=True)
+
+            # Render template cards as HTML for visual design
+            tpl_meta = {
+                "Bounce Plays":       {"icon": "📉", "color": "#FF6B6B", "bg": "#2D1015",
+                                       "desc": "Oversold stocks near support"},
+                "Breakout Watch":     {"icon": "🚀", "color": "#00FF88", "bg": "#0D2818",
+                                       "desc": "Breaking to new highs"},
+                "Earnings Momentum":  {"icon": "📊", "color": "#38BDF8", "bg": "#0A1525",
+                                       "desc": "Recent earnings beats"},
+                "Deep Value Dip":     {"icon": "💎", "color": "#FACC15", "bg": "#251800",
+                                       "desc": "Quality stocks on sale"},
+            }
+
+            active_tpl = st.session_state.get("_sns_active_tpl", "")
+            tpl_html = ""
+            for name, meta in tpl_meta.items():
+                is_active = active_tpl == name
+                border = meta["color"] if is_active else "#243348"
+                bg = meta["bg"] if is_active else "#131F32"
+                text_col = meta["color"] if is_active else "#94A3B8"
+                active_dot = f'<span style="color:{meta["color"]};font-size:8px;">●</span> ' if is_active else ""
+                tpl_html += f"""
+                <div style="background:{bg};border:1px solid {border};border-radius:6px;
+                            padding:10px 10px 8px;cursor:pointer;transition:all 150ms;">
+                  <div style="font-size:16px;margin-bottom:4px;">{meta['icon']}</div>
+                  <div style="font-size:11px;font-weight:700;color:{text_col};
+                              margin-bottom:3px;">{active_dot}{name}</div>
+                  <div style="font-size:10px;color:#4A6080;line-height:1.3;">{meta['desc']}</div>
+                </div>"""
+            st.markdown(tpl_html + "</div></div>", unsafe_allow_html=True)
+
+            # Invisible buttons for click detection — one row, zero height via CSS
+            st.markdown("""
+            <style>
+            div[data-testid="stHorizontalBlock"]:has(.tpl-btn-row) button {
+                height: 0px !important; padding: 0 !important; opacity: 0 !important;
+                position: absolute !important; pointer-events: all !important;
+            }
+            </style>
+            <div class="tpl-btn-row" style="height:0;overflow:hidden;margin:0;">
+            """, unsafe_allow_html=True)
+
             tpl_cols = st.columns(4)
             selected_template = None
-            for i, (tpl_name, _) in enumerate(SNS_TEMPLATES.items()):
-                with tpl_cols[i % 4]:
+            for i, tpl_name in enumerate(SNS_TEMPLATES.keys()):
+                with tpl_cols[i]:
                     if st.button(tpl_name, key=f"tpl_{tpl_name}", use_container_width=True):
                         selected_template = tpl_name
+                        st.session_state["_sns_active_tpl"] = tpl_name
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # Panel continuation
+            st.markdown("""
+            <div style="background:#1A2232;border:1px solid #243348;border-top:none;
+                        border-radius:0 0 8px 8px;padding:14px 14px 10px;">
+            """, unsafe_allow_html=True)
 
             # ── Theme input ───────────────────────────────────
+            st.markdown('<div style="font-size:10px;color:#5EEAD4;letter-spacing:1.5px;margin-bottom:6px;text-transform:uppercase;font-weight:700;">Or describe your own setup</div>', unsafe_allow_html=True)
+
             default_theme = SNS_TEMPLATES[selected_template]["theme"] if selected_template else ""
             if selected_template and st.session_state.get("_sns_theme") != default_theme:
                 st.session_state["_sns_theme"] = default_theme
 
             theme_text = st.text_area(
-                "Describe your setup",
+                "setup",
                 value=st.session_state.get("_sns_theme", ""),
                 placeholder='e.g. "Oversold tech stocks near key support with recent earnings beats"',
-                height=80, key="sns_theme_input",
-                label_visibility="visible"
+                height=75, key="sns_theme_input",
+                label_visibility="collapsed"
             )
-            # Keep session state in sync
             if theme_text:
                 st.session_state["_sns_theme"] = theme_text
 
-            # ── Universe selector ─────────────────────────────
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+            # ── Universe + Top N ──────────────────────────────
+            st.markdown("""
+            <div style="background:#1A2232;border:1px solid #243348;border-radius:8px;
+                        padding:12px 14px 10px;margin-bottom:8px;">
+              <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                          font-weight:700;margin-bottom:10px;">Scan Settings</div>
+            """, unsafe_allow_html=True)
+
             univ_col, sort_col = st.columns([3, 2])
             with univ_col:
                 universe_name = st.selectbox(
                     "Universe — what stocks should I scan?",
                     list(SNS_UNIVERSES.keys()),
-                    key="sns_universe"
+                    key="sns_universe",
+                    label_visibility="collapsed"
                 )
             with sort_col:
-                top_n = st.selectbox("Show top", [5, 10, 15, 20], index=1, key="sns_top_n")
+                top_n = st.selectbox("Show top", [5, 10, 15, 20], index=1,
+                                     key="sns_top_n", label_visibility="collapsed")
 
-            # Show universe metadata hint
+            # Universe metadata
             meta = SNS_UNIVERSE_META.get(universe_name, {})
             if meta:
                 meta_col = "#FACC15" if meta["count"] > 50 else "#5EEAD4"
                 st.markdown(
-                    f'<div style="font-size:11px;color:{meta_col};margin:-4px 0 6px;padding:4px 8px;'
-                    f'background:#111827;border-radius:4px;display:inline-block;">'
-                    f'⏱ {meta["time"]} · {meta["note"]}</div>',
+                    f'<div style="display:flex;justify-content:space-between;'
+                    f'font-size:11px;margin-top:2px;">'
+                    f'<span style="color:{meta_col};">⏱ {meta["time"]}</span>'
+                    f'<span style="color:#64748B;">{meta["note"]}</span></div>',
                     unsafe_allow_html=True
                 )
+
+            st.markdown('</div>', unsafe_allow_html=True)
 
             # ── My Own List input ────────────────────────────
             custom_tickers_input = ""
             if universe_name == "✏️ My Own List":
                 st.markdown(
-                    '<div style="font-size:11px;color:#5EEAD4;margin-bottom:4px;">'
-                    'Paste from TradingView, type manually, or mix both — up to 50 tickers</div>',
+                    '<div style="background:#0D1B2A;border:1px solid #243348;border-radius:8px;'
+                    'padding:10px 14px;margin-bottom:8px;">'
+                    '<div style="font-size:10px;color:#5EEAD4;letter-spacing:1.5px;'
+                    'text-transform:uppercase;font-weight:700;margin-bottom:6px;">Your Tickers</div>'
+                    '<div style="font-size:11px;color:#4A6080;margin-bottom:6px;">'
+                    'Comma separated, one per line, or TradingView paste format — up to 50</div>',
                     unsafe_allow_html=True
                 )
                 custom_tickers_input = st.text_area(
-                    "Your tickers",
-                    placeholder="NVDA, AAPL, PLTR, RY.TO\nor one per line:\nNASDAQ:NVDA\nTSX:RY",
-                    height=100,
-                    key="sns_custom_tickers",
+                    "tickers",
+                    placeholder="NVDA, AAPL, PLTR, RY.TO\nor: NASDAQ:NVDA / TSX:RY",
+                    height=90, key="sns_custom_tickers",
                     label_visibility="collapsed"
                 )
-
-            run_col, reset_col = st.columns([3, 1])
-            with run_col:
-                run_btn = st.button("🔍 Find Best Setups", type="primary",
-                                    use_container_width=True, key="sns_run")
-            with reset_col:
-                st.markdown('<div class="btn-reset">', unsafe_allow_html=True)
-                if st.button("↺ Reset", use_container_width=True, key="sns_reset"):
-                    for k in ["_sns_theme", "_sns_filter", "_sns_results", "_sns_filter_confirmed"]:
-                        if k in st.session_state: del st.session_state[k]
-                    st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown('<div style="font-size:10px;color:#4A6080;margin-top:2px;">⚠ Educational only. Not financial advice. ~$0.02 Claude API cost per screen.</div>', unsafe_allow_html=True)
+            # ── Run + Reset ────────────────────────────────────
+            run_col, reset_col = st.columns([4, 1])
+            with run_col:
+                run_btn = st.button("🔍  Find Best Setups", type="primary",
+                                    use_container_width=True, key="sns_run")
+            with reset_col:
+                if st.button("↺", use_container_width=True, key="sns_reset",
+                             help="Reset screener"):
+                    for k in ["_sns_theme", "_sns_filter", "_sns_results",
+                              "_sns_filter_confirmed", "_sns_active_tpl"]:
+                        if k in st.session_state: del st.session_state[k]
+                    st.rerun()
+
+            # ── Disclaimer — prominent, above results ─────────
+            st.markdown("""
+            <div style="background:#1A1000;border:1px solid #FACC1544;border-radius:6px;
+                        padding:8px 14px;margin-top:8px;display:flex;align-items:center;gap:8px;">
+              <span style="font-size:14px;">⚠️</span>
+              <span style="font-size:11px;color:#FACC15;font-weight:600;">
+                Educational tool only — not financial advice.
+              </span>
+              <span style="font-size:11px;color:#64748B;">
+                AI analysis does not guarantee any outcome. Always do your own research before trading.
+              </span>
+            </div>""", unsafe_allow_html=True)
 
         # ── STEP 1: Translate theme → Filter JSON ─────────────
         if run_btn and theme_text.strip():
