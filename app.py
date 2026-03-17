@@ -604,68 +604,50 @@ st.markdown("""
     opacity: 1 !important;
   }
   /* Template card buttons — each card is a styled Streamlit button */
-  .tpl-btn .stButton button {
-    height: 110px !important;
+  /* Template card overlay buttons — transparent, cover the HTML card */
+  .tpl-card-wrap {
+    position: relative;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .tpl-card-wrap .stButton {
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 10 !important;
+  }
+  .tpl-card-wrap .stButton button {
+    position: absolute !important;
+    inset: 0 !important;
     width: 100% !important;
+    height: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer !important;
     border-radius: 8px !important;
-    font-size: 12px !important;
-    font-weight: 700 !important;
-    padding: 12px 14px !important;
-    text-align: left !important;
-    white-space: pre-wrap !important;
-    line-height: 1.5 !important;
-    letter-spacing: 0 !important;
-    transition: all 200ms ease !important;
+    box-shadow: none !important;
+    opacity: 0 !important;
   }
-  /* Bounce Plays — red */
-  .tpl-bounce .stButton button {
-    background: #1A0A0D !important; color: #94A3B8 !important;
-    border: 1px solid #3D1520 !important;
+  .tpl-card-wrap .stButton button:hover {
+    background: transparent !important;
+    opacity: 0 !important;
+    box-shadow: none !important;
   }
-  .tpl-bounce .stButton button:hover {
-    background: #2D1015 !important; color: #FF6B6B !important;
-    border-color: #FF6B6B !important;
-    box-shadow: 0 0 16px rgba(255,107,107,0.15) !important;
-    opacity: 1 !important;
+  /* Card hover effect on the HTML div */
+  .tpl-card-wrap:hover .tpl-card-inner {
+    filter: brightness(1.15);
+    transform: translateY(-1px);
   }
-  /* Breakout Watch — green */
-  .tpl-breakout .stButton button {
-    background: #0A1810 !important; color: #94A3B8 !important;
-    border: 1px solid #1A3020 !important;
+  .tpl-card-inner {
+    transition: all 180ms ease;
+    border-radius: 8px;
+    padding: 14px 16px;
+    cursor: pointer;
   }
-  .tpl-breakout .stButton button:hover {
-    background: #0D2818 !important; color: #00FF88 !important;
-    border-color: #00FF88 !important;
-    box-shadow: 0 0 16px rgba(0,255,136,0.15) !important;
-    opacity: 1 !important;
-  }
-  /* Earnings Momentum — blue */
-  .tpl-earnings .stButton button {
-    background: #080F1A !important; color: #94A3B8 !important;
-    border: 1px solid #0F2035 !important;
-  }
-  .tpl-earnings .stButton button:hover {
-    background: #0A1525 !important; color: #38BDF8 !important;
-    border-color: #38BDF8 !important;
-    box-shadow: 0 0 16px rgba(56,189,248,0.15) !important;
-    opacity: 1 !important;
-  }
-  /* Deep Value Dip — gold */
-  .tpl-value .stButton button {
-    background: #141008 !important; color: #94A3B8 !important;
-    border: 1px solid #352A0A !important;
-  }
-  .tpl-value .stButton button:hover {
-    background: #251800 !important; color: #FACC15 !important;
-    border-color: #FACC15 !important;
-    box-shadow: 0 0 16px rgba(250,204,21,0.15) !important;
-    opacity: 1 !important;
-  }
-  /* Active state — stays lit after selection */
-  .tpl-bounce-active .stButton button  { background: #2D1015 !important; color: #FF6B6B !important; border-color: #FF6B6B !important; }
-  .tpl-breakout-active .stButton button { background: #0D2818 !important; color: #00FF88 !important; border-color: #00FF88 !important; }
-  .tpl-earnings-active .stButton button { background: #0A1525 !important; color: #38BDF8 !important; border-color: #38BDF8 !important; }
-  .tpl-value-active .stButton button   { background: #251800 !important; color: #FACC15 !important; border-color: #FACC15 !important; }
   /* Reset button */
   .reset-btn .stButton button {
     background: #111827 !important;
@@ -3418,12 +3400,13 @@ def render_screener():
             anthropic_key = st.secrets.get("ANTHROPIC_API_KEY", "")
             fmp_key = st.secrets.get("FMP_API_KEY", "")
 
-            # ── Template cards — styled Streamlit buttons, no HTML cards ──
+            # ── Template cards — HTML design + transparent overlay button ──
+            # Card is the visual, button is invisible overlay covering whole card
             st.markdown("""
-            <div style="background:#1A2232;border:1px solid #243348;border-radius:8px 8px 0 0;
-                        padding:10px 14px 8px;">
+            <div style="background:#1A2232;border:1px solid #243348;
+                        border-radius:8px 8px 0 0;padding:10px 14px 12px;">
               <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;
-                          text-transform:uppercase;margin-bottom:10px;font-weight:700;">
+                          text-transform:uppercase;margin-bottom:12px;font-weight:700;">
                 ⚡ Quick Templates — click any card to use
               </div>
             </div>""", unsafe_allow_html=True)
@@ -3431,30 +3414,46 @@ def render_screener():
             active_tpl = st.session_state.get("_sns_active_tpl", "")
 
             tpl_cfg = [
-                ("Bounce Plays",      "bounce",   "📉", "Oversold stocks\nnear key support"),
-                ("Breakout Watch",    "breakout", "🚀", "Breaking out to\nnew highs"),
-                ("Earnings Momentum", "earnings", "📊", "Recent earnings\nbeats & momentum"),
-                ("Deep Value Dip",    "value",    "💎", "Quality stocks\ncurrently on sale"),
+                ("Bounce Plays",      "📉", "#FF6B6B", "#2D1015", "#3D1520",
+                 "Oversold stocks near key support"),
+                ("Breakout Watch",    "🚀", "#00FF88", "#0D2818", "#1A3020",
+                 "Breaking out to new highs"),
+                ("Earnings Momentum", "📊", "#38BDF8", "#0A1525", "#0F2035",
+                 "Recent earnings beats"),
+                ("Deep Value Dip",    "💎", "#FACC15", "#251800", "#352A0A",
+                 "Quality stocks on sale"),
             ]
 
             tpl_cols = st.columns(4)
             selected_template = None
-            for i, (tpl_name, css_key, icon, desc) in enumerate(tpl_cfg):
+            for i, (tpl_name, icon, color, bg, border, desc) in enumerate(tpl_cfg):
                 is_active = active_tpl == tpl_name
-                wrapper_class = f"tpl-{css_key}-active" if is_active else f"tpl-{css_key}"
-                active_marker = "✓ " if is_active else ""
+                card_bg     = bg     if is_active else "#131F32"
+                card_border = color  if is_active else border
+                name_col    = color  if is_active else "#E2E8F0"
+                desc_col    = color  if is_active else "#64748B"
+                active_dot  = f'<span style="color:{color};margin-right:4px;">●</span>' if is_active else ""
+
                 with tpl_cols[i]:
-                    st.markdown(f'<div class="tpl-btn {wrapper_class}">', unsafe_allow_html=True)
-                    if st.button(
-                        f"{icon}  {active_marker}{tpl_name}\n{desc}",
-                        key=f"tpl_{tpl_name}",
-                        use_container_width=True
-                    ):
+                    # HTML card — visual design
+                    st.markdown(f"""
+                    <div class="tpl-card-wrap" id="tpl_wrap_{i}">
+                      <div class="tpl-card-inner"
+                           style="background:{card_bg};border:1px solid {card_border};">
+                        <div style="font-size:20px;margin-bottom:8px;">{icon}</div>
+                        <div style="font-size:12px;font-weight:700;color:{name_col};
+                                    margin-bottom:4px;">{active_dot}{tpl_name}</div>
+                        <div style="font-size:11px;color:{desc_col};
+                                    line-height:1.4;">{desc}</div>
+                      </div>
+                    </div>""", unsafe_allow_html=True)
+
+                    # Invisible Streamlit button overlaid on top via CSS
+                    if st.button("select", key=f"tpl_{tpl_name}",
+                                 use_container_width=True):
                         selected_template = tpl_name
                         st.session_state["_sns_active_tpl"] = tpl_name
-                    st.markdown('</div>', unsafe_allow_html=True)
 
-            # Gap between cards and the panel below
             st.markdown("""
             <div style="background:#1A2232;border:1px solid #243348;border-top:none;
                         border-radius:0 0 8px 8px;padding:14px 14px 10px;">
