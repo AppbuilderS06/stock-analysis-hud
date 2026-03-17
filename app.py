@@ -1255,7 +1255,7 @@ def main():
       <span style="font-size:11px;color:#FACC15;font-weight:700;white-space:nowrap;">
         Educational tool only — not financial advice.
       </span>
-      <span style="font-size:11px;color:#4A6080;">
+      <span style="font-size:11px;color:#CBD5E1;">
         AI analysis does not guarantee any outcome. Always do your own research before trading.
       </span>
     </div>""", unsafe_allow_html=True)
@@ -2209,7 +2209,7 @@ def render_hud():
                 display:flex;align-items:center;gap:8px;">
       <span style="font-size:13px;">⚠️</span>
       <span style="font-size:11px;color:#FACC15;font-weight:700;">NOT FINANCIAL ADVICE</span>
-      <span style="font-size:11px;color:#64748B;">
+      <span style="font-size:11px;color:#CBD5E1;">
         These numbers are for educational position-sizing practice only.
         This is not a recommendation to buy or sell any security.
         Never risk more than you can afford to lose.
@@ -3399,22 +3399,46 @@ def render_screener():
             tpl_html = ""
             for name, meta in tpl_meta.items():
                 is_active = active_tpl == name
-                border = meta["color"] if is_active else "#243348"
-                bg = meta["bg"] if is_active else "#131F32"
-                text_col = meta["color"] if is_active else "#94A3B8"
-                active_dot = f'<span style="color:{meta["color"]};font-size:8px;">●</span> ' if is_active else ""
+                border     = meta["color"] if is_active else "#243348"
+                bg         = meta["bg"] if is_active else "#131F32"
+                text_col   = meta["color"] if is_active else "#E2E8F0"
+                desc_col   = meta["color"] if is_active else "#64748B"
+                btn_bg     = meta["color"] if is_active else "#1A2232"
+                btn_col    = "#111827" if is_active else meta["color"]
+                btn_border = meta["color"]
+                btn_label  = "✓ Selected" if is_active else "▶ Select"
                 tpl_html += f"""
-                <div style="background:{bg};border:1px solid {border};border-radius:6px;
-                            padding:10px 10px 8px;cursor:pointer;transition:all 150ms;">
-                  <div style="font-size:16px;margin-bottom:4px;">{meta['icon']}</div>
-                  <div style="font-size:11px;font-weight:700;color:{text_col};
-                              margin-bottom:3px;">{active_dot}{name}</div>
-                  <div style="font-size:10px;color:#4A6080;line-height:1.3;">{meta['desc']}</div>
+                <div style="background:{bg};border:1px solid {border};border-radius:8px;
+                            padding:12px 12px 10px;transition:all 150ms;position:relative;">
+                  <div style="font-size:18px;margin-bottom:6px;">{meta['icon']}</div>
+                  <div style="font-size:12px;font-weight:700;color:{text_col};
+                              margin-bottom:3px;letter-spacing:0.03em;">{name}</div>
+                  <div style="font-size:10px;color:{desc_col};line-height:1.4;
+                              margin-bottom:10px;">{meta['desc']}</div>
+                  <div style="font-size:10px;font-weight:700;color:{btn_col};
+                              background:{btn_bg};border:1px solid {btn_border};
+                              border-radius:4px;padding:4px 8px;text-align:center;
+                              letter-spacing:0.05em;">{btn_label}</div>
                 </div>"""
             st.markdown(tpl_html + "</div></div>", unsafe_allow_html=True)
 
-            # Real buttons — hidden visually but clickable via CSS wrapper classes
-            # Each wrapped in .tpl-btn so screener CSS scopes them correctly
+            # Streamlit buttons for click detection — visually hidden, keep functionality
+            st.markdown("""
+            <style>
+            .tpl-btn .stButton button {
+                height: 0px !important;
+                min-height: 0px !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                opacity: 0 !important;
+                border: none !important;
+                background: transparent !important;
+                overflow: hidden !important;
+                line-height: 0 !important;
+                font-size: 0 !important;
+            }
+            </style>""", unsafe_allow_html=True)
+
             tpl_cols = st.columns(4)
             selected_template = None
             for i, tpl_name in enumerate(SNS_TEMPLATES.keys()):
