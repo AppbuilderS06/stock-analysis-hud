@@ -2791,30 +2791,108 @@ def render_earnings_analyzer():
 # ── SNS: Signal Narrative Screener ───────────────────────────
 # Curated universes for AI theme mode
 SNS_UNIVERSES = {
-    "S&P 500 Top 50": [
+
+    # ── Beginner-friendly: names everyone recognizes ──────────
+    "🌟 Most Popular Stocks": [
+        "AAPL","MSFT","NVDA","AMZN","TSLA","META","GOOGL","NFLX","DIS","UBER",
+        "PYPL","SQ","SHOP","PLTR","AMD","INTC","BAC","JPM","WMT","KO",
+        "MCD","NKE","SBUX","V","MA","XOM","CVX","PFE","JNJ","MRNA",
+    ],
+
+    # ── Broad US scan — biggest net on free tier ──────────────
+    "🇺🇸 S&P 500 — Top 100": [
         "AAPL","MSFT","NVDA","AMZN","META","GOOGL","TSLA","BRK-B","AVGO","JPM",
         "LLY","UNH","V","XOM","MA","JNJ","PG","COST","HD","MRK",
         "ABBV","CVX","WMT","BAC","NFLX","KO","CRM","AMD","PEP","TMO",
         "ACN","MCD","CSCO","LIN","DHR","TXN","ABT","WFC","CAT","SPGI",
-        "ISRG","PM","NEE","AXP","BKNG","MS","RTX","HON","IBM","AMGN"
+        "ISRG","PM","NEE","AXP","BKNG","MS","RTX","HON","IBM","AMGN",
+        "GS","BLK","SCHW","C","USB","PNC","TFC","AIG","MET","PRU",
+        "LOW","TGT","CMG","ORLY","AZO","TSCO","ROST","TJX","DG","DLTR",
+        "UNP","UPS","FDX","CSX","NSC","DAL","UAL","AAL","LUV","BA",
+        "LMT","NOC","GD","RTX","HII","L","MMM","EMR","ETN","ROK",
+        "DE","CAT","CMI","PCAR","ITW","PH","GWW","FTV","AME","ROP",
     ],
-    "Tech Giants": [
+
+    # ── Sector: Technology ────────────────────────────────────
+    "💻 Technology (50)": [
         "AAPL","MSFT","NVDA","GOOGL","META","AMZN","TSLA","AMD","AVGO","INTC",
-        "CRM","ORCL","ADBE","QCOM","TXN","MU","AMAT","NOW","SNOW","PLTR"
+        "CRM","ORCL","ADBE","QCOM","TXN","MU","AMAT","NOW","SNOW","PLTR",
+        "PANW","CRWD","ZS","NET","DDOG","OKTA","TWLO","HUBS","HCP","GTLB",
+        "FTNT","CHKP","INTU","ANSS","CDNS","SNPS","KLAC","LRCX","ASML","MRVL",
+        "SWKS","QRVO","MPWR","ENTG","ONTO","ACLS","COHU","FORM","POWI","RMBS",
     ],
-    "High Growth": [
-        "NVDA","PLTR","SNOW","CRWD","DDOG","ZS","NET","MELI","SHOP","TTD",
-        "CELH","AXON","MNDY","GTLB","BILL","APP","IOT","HUBS","TMDX","AEHR"
+
+    # ── Sector: Healthcare ────────────────────────────────────
+    "🏥 Healthcare (40)": [
+        "JNJ","UNH","LLY","ABBV","MRK","TMO","ABT","DHR","BMY","AMGN",
+        "GILD","ISRG","REGN","VRTX","BIIB","ILMN","DXCM","MRNA","BNTX","PFE",
+        "CVS","CI","HUM","ELV","CNC","MOH","HCA","THC","UHS","LPNT",
+        "ZBH","SYK","BSX","MDT","EW","HOLX","IDXX","WAT","MTD","BIO",
     ],
-    "Dividend Kings": [
-        "KO","PG","JNJ","MMM","CL","ABT","GIS","SYY","KMB","TGT",
-        "WMT","MCD","PEP","VFC","ADM","XOM","CVX","T","VZ","IBM"
+
+    # ── Sector: Energy ────────────────────────────────────────
+    "⛽ Energy (30)": [
+        "XOM","CVX","COP","SLB","EOG","PXD","OXY","MPC","PSX","VLO",
+        "DVN","FANG","APA","HAL","BKR","NOV","WMB","KMI","OKE","ET",
+        "EPD","MPLX","PAA","TRGP","DT","LNG","RRC","AR","CHK","SW",
     ],
-    "TSX Blue Chips": [
-        "RY.TO","TD.TO","BNS.TO","BMO.TO","CM.TO","CNR.TO","ENB.TO",
-        "TRP.TO","SU.TO","BCE.TO","SHOP.TO","AC.TO","BAM.TO","CP.TO","MFC.TO"
+
+    # ── Sector: Financials ────────────────────────────────────
+    "🏦 Financials (40)": [
+        "JPM","BAC","WFC","GS","MS","C","BLK","SCHW","AXP","V",
+        "MA","COF","DFS","SYF","ALLY","USB","PNC","TFC","KEY","RF",
+        "FITB","HBAN","CFG","ZION","WAL","SIVB","PACW","FRC","EWBC","BOH",
+        "ICE","CME","CBOE","NDAQ","COIN","SQ","PYPL","AFRM","SOFI","UPST",
     ],
-    "Custom List": [],
+
+    # ── Sector: Consumer brands everyone knows ────────────────
+    "🛍️ Consumer Brands (35)": [
+        "AMZN","WMT","COST","TGT","HD","LOW","NKE","SBUX","MCD","CMG",
+        "YUM","DPZ","QSR","JACK","DRI","TXRH","CAKE","DENN","EAT","SHAK",
+        "KO","PEP","PM","MO","MNST","CELH","KHC","GIS","K","CPB",
+        "CL","PG","CHD","ENR","KMB",
+    ],
+
+    # ── High attention / trending stocks ─────────────────────
+    "🔥 Trending & Meme-Adjacent (30)": [
+        "TSLA","GME","AMC","BBBY","PLTR","RIVN","LCID","NIO","XPEV","LI",
+        "SOFI","HOOD","COIN","MSTR","MARA","RIOT","HUT","BITF","CLSK","WULF",
+        "NVDA","AMD","ARM","SMCI","DELL","HPE","IONQ","QBTS","RGTI","ARQQ",
+    ],
+
+    # ── Dividend income — good for beginners learning value ───
+    "💰 Dividend Income (35)": [
+        "KO","PEP","JNJ","PG","MMM","CL","ABT","GIS","SYY","KMB",
+        "TGT","WMT","MCD","PEP","VFC","ADM","XOM","CVX","T","VZ",
+        "IBM","CSCO","INTC","QCOM","TXN","MO","PM","BTI","ENB","TRP",
+        "EPD","ET","KMI","WMB","OKE",
+    ],
+
+    # ── Canadian market ───────────────────────────────────────
+    "🍁 TSX — Canada (30)": [
+        "RY.TO","TD.TO","BNS.TO","BMO.TO","CM.TO","NA.TO","CWB.TO",
+        "CNR.TO","CP.TO","TRP.TO","ENB.TO","SU.TO","CNQ.TO","CVE.TO","IMO.TO",
+        "BCE.TO","T.TO","SHOP.TO","BAM.TO","BN.TO","MFC.TO","SLF.TO","GWO.TO",
+        "AC.TO","CAR-UN.TO","REI-UN.TO","AP-UN.TO","DIR-UN.TO","HR-UN.TO","WN.TO",
+    ],
+
+    # ── Free text — user brings their own list ─────────────────
+    "✏️ My Own List": [],
+}
+
+# Universe metadata — shown to user to set expectations
+SNS_UNIVERSE_META = {
+    "🌟 Most Popular Stocks":       {"count": 30,  "time": "~15s", "note": "Best starting point — stocks you already know"},
+    "🇺🇸 S&P 500 — Top 100":        {"count": 100, "time": "~50s", "note": "Broad US blue-chip scan — takes ~1 min"},
+    "💻 Technology (50)":           {"count": 50,  "time": "~25s", "note": "All major tech names"},
+    "🏥 Healthcare (40)":           {"count": 40,  "time": "~20s", "note": "Pharma, biotech, medical devices"},
+    "⛽ Energy (40)":               {"count": 30,  "time": "~15s", "note": "Oil, gas, pipelines"},
+    "🏦 Financials (40)":           {"count": 40,  "time": "~20s", "note": "Banks, payments, fintech"},
+    "🛍️ Consumer Brands (35)":      {"count": 35,  "time": "~18s", "note": "Household names — great for beginners"},
+    "🔥 Trending & Meme-Adjacent":  {"count": 30,  "time": "~15s", "note": "High-volatility attention stocks"},
+    "💰 Dividend Income (35)":      {"count": 35,  "time": "~18s", "note": "Stable companies that pay dividends"},
+    "🍁 TSX — Canada (30)":         {"count": 30,  "time": "~15s", "note": "Top Canadian stocks in CAD"},
+    "✏️ My Own List":               {"count": 0,   "time": "varies", "note": "Paste any tickers you want to scan"},
 }
 
 # Template themes — pre-translated, no Claude call needed
@@ -3114,18 +3192,39 @@ def render_screener():
             # ── Universe selector ─────────────────────────────
             univ_col, sort_col = st.columns([3, 2])
             with univ_col:
-                universe_name = st.selectbox("Universe", list(SNS_UNIVERSES.keys()),
-                                              key="sns_universe")
+                universe_name = st.selectbox(
+                    "Universe — what stocks should I scan?",
+                    list(SNS_UNIVERSES.keys()),
+                    key="sns_universe"
+                )
             with sort_col:
                 top_n = st.selectbox("Show top", [5, 10, 15, 20], index=1, key="sns_top_n")
 
-            # Custom list input
+            # Show universe metadata hint
+            meta = SNS_UNIVERSE_META.get(universe_name, {})
+            if meta:
+                meta_col = "#FACC15" if meta["count"] > 50 else "#5EEAD4"
+                st.markdown(
+                    f'<div style="font-size:11px;color:{meta_col};margin:-4px 0 6px;padding:4px 8px;'
+                    f'background:#111827;border-radius:4px;display:inline-block;">'
+                    f'⏱ {meta["time"]} · {meta["note"]}</div>',
+                    unsafe_allow_html=True
+                )
+
+            # ── My Own List input ────────────────────────────
             custom_tickers_input = ""
-            if universe_name == "Custom List":
-                custom_tickers_input = st.text_input(
-                    "Your tickers (comma separated)",
-                    placeholder="NVDA, AAPL, PLTR, RY.TO ...",
-                    key="sns_custom_tickers"
+            if universe_name == "✏️ My Own List":
+                st.markdown(
+                    '<div style="font-size:11px;color:#5EEAD4;margin-bottom:4px;">'
+                    'Paste from TradingView, type manually, or mix both — up to 50 tickers</div>',
+                    unsafe_allow_html=True
+                )
+                custom_tickers_input = st.text_area(
+                    "Your tickers",
+                    placeholder="NVDA, AAPL, PLTR, RY.TO\nor one per line:\nNASDAQ:NVDA\nTSX:RY",
+                    height=100,
+                    key="sns_custom_tickers",
+                    label_visibility="collapsed"
                 )
 
             run_col, reset_col = st.columns([3, 1])
@@ -3233,10 +3332,30 @@ def render_screener():
             fd = st.session_state["_sns_filter"]
 
             # Build ticker universe
-            if universe_name == "Custom List":
-                universe = [t.strip().upper() for t in custom_tickers_input.split(",") if t.strip()]
+            if universe_name == "✏️ My Own List":
+                # Parse custom input — supports comma, newline, TradingView format
+                TV_MAP = {
+                    "TSX":"TO","TSXV":".V","LSE":".L","XETRA":".DE",
+                    "EPA":".PA","AMS":".AS","HKEX":".HK","NASDAQ":"","NYSE":"",
+                    "AMEX":"","NYSEARCA":"","BATS":"","OTC":"",
+                }
+                raw_tokens = custom_tickers_input.replace(",", "\n").split("\n")
+                universe = []
+                for token in raw_tokens:
+                    token = token.strip().upper()
+                    if not token: continue
+                    if ":" in token:
+                        exch, sym = token.split(":", 1)
+                        sfx = TV_MAP.get(exch, "")
+                        sym = sym.replace(".", "-")
+                        if sfx and sfx.startswith(".") and not sym.endswith(sfx):
+                            sym = sym + sfx
+                        universe.append(sym)
+                    else:
+                        universe.append(token.replace(".", "-"))
+                universe = list(dict.fromkeys(universe))[:50]  # dedupe, cap 50
             else:
-                universe = SNS_UNIVERSES.get(universe_name, [])
+                universe = SNS_UNIVERSES.get(universe_name, [])[:50]  # cap 50 for speed
 
             if not universe:
                 st.error("No tickers in universe. Please add tickers or choose a different universe.")
