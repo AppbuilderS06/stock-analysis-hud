@@ -6,19 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import anthropic
 import json
-from datetime import datetimeWEEK 1 — Fix what's broken
-  Day 1 ✅ Cache version mismatch + CI wire-up
-  Day 2    Button CSS fix + visual consistency
-  Day 3    Terms of Service + Privacy Policy
-  Day 4    Disclaimer placement fix
-  Day 5    Golden fixture regression run (5 tickers)
-
-WEEK 2 — Beginner UX layer
-  Day 6    Jargon audit (17 labels → plain English)
-  Day 7    Apply plain English to HUD
-  Day 8    Beginner onboarding hint
-  Day 9    Screener template plain English rename
-  Day 10   Stabilization sign-off + show to 2 non-traders
+from datetime import datetime
 
 # ── Data layer: FMP primary, yfinance fallback ───────────────
 # FMP API key stored in Streamlit secrets as FMP_API_KEY
@@ -3385,7 +3373,7 @@ def render_screener():
                         prog.info(f"⏳ Scanning {ticker}... ({i+1}/{len(universe)})")
                         prog_bar.progress((i + 1) / len(universe))
                         try:
-                            data = fetch_ticker_data(ticker, fmp_key, _v=13)
+                            data = fetch_ticker_data(ticker, fmp_key, _v=14)
                             df_t = data.get("df", pd.DataFrame())
                             info_t = data.get("info", {})
                             earn_hist = data.get("earn_hist", [])
@@ -3689,7 +3677,7 @@ def render_screener():
         for i, ticker in enumerate(tickers):
             prog_wl.info(f"⏳ Screening {ticker}... ({i+1}/{len(tickers)})")
             try:
-                data = fetch_ticker_data(ticker, fmp_key_wl, _v=13)
+                data = fetch_ticker_data(ticker, fmp_key_wl, _v=14)
                 df_w = data.get("df", pd.DataFrame())
                 info_w = data.get("info", {})
                 if df_w.empty or len(df_w) < 50:
