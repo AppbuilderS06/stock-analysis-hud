@@ -52,16 +52,21 @@ jobs:
           print("✅ No duplicate definitions")
           EOF
 
-      - name: ③ Cache version consistent
+      - name: ③ Cache version consistent (all call sites)
         run: |
           python - << 'EOF'
           import re, sys
           src = open("app.py").read()
           d = re.search(r'def fetch_ticker_data\([^)]*_v\s*=\s*(\d+)', src)
-          c = re.search(r'fetch_ticker_data\([^)]*_v\s*=\s*(\d+)', src)
-          assert d and c, "Cannot find _v parameter"
-          assert d.group(1) == c.group(1), f"Version mismatch: def={d.group(1)} call={c.group(1)}"
-          print(f"✅ Cache version _v={d.group(1)} consistent")
+          calls = re.findall(r'fetch_ticker_data\([^)]*_v\s*=\s*(\d+)', src)
+          assert d, "Cannot find fetch_ticker_data definition"
+          assert calls, "Cannot find any fetch_ticker_data call"
+          defn_v = d.group(1)
+          bad = [v for v in calls if v != defn_v]
+          if bad:
+              print(f"FAIL: definition _v={defn_v} but {len(bad)} call(s) use different version: {set(bad)}")
+              sys.exit(1)
+          print(f"✅ All {len(calls)} call sites consistent at _v={defn_v}")
           EOF
 
       - name: ④ No SVG in st.markdown
