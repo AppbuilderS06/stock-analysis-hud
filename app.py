@@ -58,7 +58,7 @@ def search_ticker_fmp(query, fmp_key=""):
     return result
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key="", _v=13):
+def fetch_ticker_data(ticker, fmp_key="", _v=14):
     """Hybrid: yfinance for price+fundamentals, FMP only for analyst/earnings/insider.
     Uses ~4 FMP calls per ticker instead of 11. Search is separate cached call."""
     import time, requests
@@ -95,6 +95,15 @@ def fetch_ticker_data(ticker, fmp_key="", _v=13):
                 if v is not None and v != 0:
                     info[key] = v
             except: pass
+        # fast_info.long_name is reliable even when raw.info is broken
+        try:
+            ln = getattr(fi, 'long_name', None) or getattr(fi, 'longName', None)
+            if ln and str(ln).strip() and str(ln).upper() != ticker.upper():
+                if 'longName' not in info:
+                    info['longName']  = str(ln).strip()
+                if 'shortName' not in info:
+                    info['shortName'] = str(ln).strip()
+        except: pass
     except: pass
 
     # Income statement → margins, growth, EPS
@@ -240,17 +249,27 @@ def fetch_ticker_data(ticker, fmp_key="", _v=13):
                         info[key] = val
         except: pass
 
-        # Call 1: Earnings history (beat/miss) — yfinance can't do this
+        # Call 1: Earnings history (beat/miss)
         try:
             surp = _fmp_get(f"v3/earnings-surprises/{ticker}", fmp_key)
             if surp and isinstance(surp, list):
-                rows = [{"period": e.get("date",""),
-                         "epsEstimate": e.get("estimatedEps",0),
-                         "epsActual":   e.get("actualEps",0),
-                         "surprisePercent": ((e.get("actualEps",0)-e.get("estimatedEps",0))/
-                                             abs(e.get("estimatedEps",1) or 1))}
-                        for e in surp[:4]]
-                earn_hist = pd.DataFrame(rows)
+                rows = []
+                for e in surp[:4]:
+                    # FMP v3/earnings-surprises returns actualEarningResult + estimatedEarning
+                    # (NOT actualEps/estimatedEps — those are different endpoints)
+                    act_val  = e.get("actualEarningResult",  e.get("actualEps",   e.get("actual",   0)))
+                    est_val  = e.get("estimatedEarning",     e.get("estimatedEps",e.get("estimate", 0)))
+                    act_val  = float(act_val or 0)
+                    est_val  = float(est_val or 0)
+                    surp_pct = ((act_val - est_val) / abs(est_val)) if est_val != 0 else 0
+                    rows.append({
+                        "period":          e.get("date", ""),
+                        "epsEstimate":     est_val,
+                        "epsActual":       act_val,
+                        "surprisePercent": surp_pct,
+                    })
+                if rows:
+                    earn_hist = pd.DataFrame(rows)
         except: pass
 
         # Call 2: Analyst consensus + price targets
@@ -271,30 +290,39 @@ def fetch_ticker_data(ticker, fmp_key="", _v=13):
             est = _fmp_get(f"v3/analyst-stock-recommendations/{ticker}", fmp_key)
             if est and isinstance(est, list) and est:
                 e = est[0]
+                # FMP returns analystRatingsStrongBuy etc. (not strongBuy)
+                # Try both naming conventions for robustness
+                sb   = int(e.get("analystRatingsStrongBuy",  e.get("strongBuy",  0)) or 0)
+                b    = int(e.get("analystRatingsBuy",         e.get("buy",       0)) or 0)
+                h    = int(e.get("analystRatingsHold",        e.get("hold",      0)) or 0)
+                s    = int(e.get("analystRatingsSell",        e.get("sell",      0)) or 0)
+                ss   = int(e.get("analystRatingsStrongSell",  e.get("strongSell",0)) or 0)
                 rec_summary = pd.DataFrame([{
-                    "strongBuy": e.get("strongBuy",0), "buy": e.get("buy",0),
-                    "hold": e.get("hold",0), "sell": e.get("sell",0),
-                    "strongSell": e.get("strongSell",0)
+                    "strongBuy": sb, "buy": b,
+                    "hold": h, "sell": s, "strongSell": ss
                 }])
-                total = sum(e.get(k,0) for k in ["strongBuy","buy","hold","sell","strongSell"])
-                info["numberOfAnalystOpinions"] = total
+                total = sb + b + h + s + ss
+                if total > 0:
+                    info["numberOfAnalystOpinions"] = total
         except: pass
 
         # Call 4: Next earnings date
         try:
-            from datetime import datetime, timedelta
-            today = datetime.now().strftime("%Y-%m-%d")
-            fut   = (datetime.now() + timedelta(days=90)).strftime("%Y-%m-%d")
+            from datetime import datetime as _dt, timedelta
+            today = _dt.now().strftime("%Y-%m-%d")
+            fut   = (_dt.now() + timedelta(days=180)).strftime("%Y-%m-%d")  # 180d window
             cal = _fmp_get(f"v3/earning_calendar?from={today}&to={fut}", fmp_key)
-            if cal:
-                matches = [e for e in cal if e.get("symbol","").upper() == ticker.upper()]
+            if cal and isinstance(cal, list):
+                matches = [e for e in cal if str(e.get("symbol","")).upper() == ticker.upper()]
                 if matches:
-                    ned = matches[0].get("date","")
-                    calendar = {"Earnings Date": ned}
-                    info["earningsDate"] = ned
+                    ned_str = str(matches[0].get("date",""))
+                    if ned_str:
+                        # Store as plain string — parse_earn_date handles it in run_analysis
+                        calendar = {"Earnings Date": ned_str}
+                        info["earningsDate"] = ned_str
         except: pass
 
-    # Insider — yfinance works for most US stocks
+    # Insider — try all known yfinance column name variants
     try:
         ins = raw.insider_transactions
         if ins is not None and not ins.empty:
@@ -302,8 +330,25 @@ def fetch_ticker_data(ticker, fmp_key="", _v=13):
     except: pass
     if insider is None or (hasattr(insider,'empty') and insider.empty):
         try:
-            insider = raw.insider_purchases
+            ins = raw.insider_purchases
+            if ins is not None and not ins.empty:
+                insider = ins
         except: pass
+    # Normalize column names — yfinance changed these across versions
+    if insider is not None and hasattr(insider, 'columns'):
+        col_map = {}
+        for c in insider.columns:
+            cl = c.lower().replace(' ','').replace('_','')
+            if cl in ('shares','sharesowned','sharesnumber'):          col_map[c] = 'Shares'
+            elif cl in ('value','transactionvalue','dollarvalue'):     col_map[c] = 'Value'
+            elif cl in ('text','transactiontext','description'):       col_map[c] = 'Text'
+            elif cl in ('transaction','transactiontype','type'):       col_map[c] = 'Transaction'
+            elif cl in ('insider','name','filername','ownername'):     col_map[c] = 'Insider'
+            elif cl in ('position','title','filerrelation','role'):    col_map[c] = 'Position'
+            elif cl in ('date','startdate','transactiondate','filingdate'): col_map[c] = 'Date'
+        if col_map:
+            try: insider = insider.rename(columns=col_map)
+            except: pass
 
     # Calendar fallback — yfinance
     if not calendar:
@@ -1052,7 +1097,7 @@ def main():
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown('<div style="text-align:center;font-size:12px;color:#4A6080;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Stock Analysis · AI HUD</div>', unsafe_allow_html=True)
 
-            tab1, tab2 = st.tabs(["📊 Stock Analysis", "🎙️ Earnings Call Analyzer"])
+            tab1, tab2, tab3 = st.tabs(["📊 Stock Analysis", "🎙️ Earnings Call Analyzer", "📈 Screener"])
 
             with tab1:
                 st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Enter a ticker</div>', unsafe_allow_html=True)
@@ -1147,6 +1192,9 @@ def main():
             with tab2:
                 render_earnings_analyzer()
 
+            with tab3:
+                render_screener()
+
         return
 
     render_hud()
@@ -1176,7 +1224,7 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key, _v=13)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=14)
         df    = data['df']
         info  = data['info']
 
@@ -1583,7 +1631,28 @@ def render_hud():
             if k in st.session_state: del st.session_state[k]
         st.rerun()
 
-    # ── ZONE 1: IDENTITY ─────────────────────────────────────
+    # ── DATA DEBUG EXPANDER ──────────────────────────────────
+    with st.expander("🔍 Data Sources Debug — click to inspect what was fetched", expanded=False):
+        d = st.session_state
+        fmp_ok = bool(st.secrets.get("FMP_API_KEY",""))
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("**Company Name**")
+            st.code(f"longName:  {info.get('longName','❌ missing')}\nshortName: {info.get('shortName','❌ missing')}")
+            st.markdown("**Earnings Date**")
+            st.code(f"earn_date_str: {d.get('earn_date_str','❌')}\ndays_to_earn:  {d.get('days_to_earn',0)}\nearningsDate in info: {info.get('earningsDate','❌')}")
+            st.markdown("**Earnings History**")
+            eh = d.get('earnings_hist',[])
+            st.code(f"{len(eh)} quarters loaded\n{eh[:2] if eh else 'EMPTY — check FMP earnings-surprises'}")
+        with col_b:
+            st.markdown("**Analyst Data**")
+            ad = d.get('analyst_data',{})
+            st.code(f"target: {ad.get('target',0)}\nbuy: {ad.get('buy',0)} hold: {ad.get('hold',0)} sell: {ad.get('sell',0)}\nnum_analysts: {ad.get('num_analysts',0)}\nrec_key: {ad.get('rec_key','❌')}")
+            st.markdown("**Insider Transactions**")
+            ins = d.get('insider_data',[])
+            st.code(f"{len(ins)} transactions loaded\n{ins[:1] if ins else 'EMPTY'}")
+            st.markdown(f"**FMP key active:** {'✅ Yes' if fmp_ok else '❌ No — add FMP_API_KEY to secrets'}")
+
     chg_badge = f'<span class="price-change-up">▲ {sign}{chg:.2f} ({sign}{chg_pct:.2f}%)</span>' if chg >= 0 else \
                 f'<span class="price-change-dn">▼ {chg:.2f} ({chg_pct:.2f}%)</span>'
     st.markdown(f'''
@@ -2716,5 +2785,284 @@ def render_earnings_analyzer():
 
 
 
-if __name__ == "__main__":
+
+# ── Prospection Screener ──────────────────────────────────────
+def render_screener():
+    """Screen multiple tickers by signal score. No Claude API call — pure technical."""
+
+    st.markdown("""
+    <div style="text-align:center;margin-bottom:16px;">
+      <div style="font-size:12px;color:#4A6080;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;">AI Tool</div>
+      <div style="font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:4px;">📈 Prospection Screener</div>
+      <div style="font-size:13px;color:#4A6080;">Enter up to 20 tickers → ranked by signal score in seconds · No AI cost</div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── Input ─────────────────────────────────────────────────
+    col1, col2, col3 = st.columns([1, 4, 1])
+    with col2:
+        tickers_raw = st.text_area(
+            "Tickers to screen",
+            placeholder="NVDA, AAPL, PLTR, MSFT, TSLA\nor one per line:\nNVDA\nAAPL\nPLTR",
+            height=120, key="screener_tickers",
+            label_visibility="visible"
+        )
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            sort_by = st.selectbox("Sort by", ["Signal Score ↓", "Signal Score ↑", "Price Change % ↓", "RSI ↓", "ATR% ↓"], key="screener_sort")
+        with sc2:
+            min_score = st.slider("Min Signal Score", 0, 10, 0, key="screener_min_score")
+
+        run_btn = st.button("🔍 Screen Tickers", type="primary", use_container_width=True, key="screener_run")
+        st.markdown('<div style="font-size:10px;color:#4A6080;margin-top:4px;">⚠ For educational purposes only. Not financial advice.</div>', unsafe_allow_html=True)
+
+    if not run_btn:
+        # Show example use cases
+        st.markdown("""
+        <div style="background:#1A2232;border:1px solid #243348;border-radius:8px;padding:14px 18px;margin-top:8px;">
+          <div style="font-size:11px;color:#5EEAD4;letter-spacing:1px;margin-bottom:10px;font-weight:700;">HOW TO USE</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+            <div style="background:#111827;border-radius:6px;padding:10px 12px;">
+              <div style="font-size:10px;color:#FACC15;font-weight:700;margin-bottom:4px;">MORNING SCAN</div>
+              <div style="font-size:11px;color:#94A3B8;">Paste your watchlist every morning → instantly see which setups are strongest today</div>
+            </div>
+            <div style="background:#111827;border-radius:6px;padding:10px 12px;">
+              <div style="font-size:10px;color:#38BDF8;font-weight:700;margin-bottom:4px;">SECTOR SCREEN</div>
+              <div style="font-size:11px;color:#94A3B8;">Screen all stocks in a sector → rank by signal score → focus only on the top setups</div>
+            </div>
+            <div style="background:#111827;border-radius:6px;padding:10px 12px;">
+              <div style="font-size:10px;color:#00FF88;font-weight:700;margin-bottom:4px;">EARNINGS PLAYS</div>
+              <div style="font-size:11px;color:#94A3B8;">Screen earnings calendar stocks → find which ones have the strongest technical setup going in</div>
+            </div>
+          </div>
+        </div>""", unsafe_allow_html=True)
+        return
+
+    # ── Parse tickers ─────────────────────────────────────────
+    if not tickers_raw or not tickers_raw.strip():
+        st.error("Please enter at least one ticker.")
+        return
+
+    # Accept comma-separated or newline-separated
+    raw_list = [t.strip().upper() for t in tickers_raw.replace(',', '\n').split('\n') if t.strip()]
+    tickers = list(dict.fromkeys(raw_list))[:20]  # dedupe, max 20
+
+    if not tickers:
+        st.error("No valid tickers found.")
+        return
+
+    # ── Run screening ─────────────────────────────────────────
+    prog = st.empty()
+    results = []
+
+    for i, ticker in enumerate(tickers):
+        prog.info(f"⏳ Screening {ticker}... ({i+1}/{len(tickers)})")
+        try:
+            import yfinance as yf
+            import time
+            yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
+
+            # Fetch price data — use cached fetch_ticker_data if available
+            fmp_key = st.secrets.get("FMP_API_KEY", "")
+            try:
+                data = fetch_ticker_data(ticker, fmp_key, _v=14)
+                df   = data['df']
+                info = data['info']
+            except:
+                df   = pd.DataFrame()
+                info = {}
+
+            if df.empty or len(df) < 50:
+                results.append({
+                    'ticker': ticker, 'score': 0, 'error': 'No data',
+                    'close': 0, 'chg_pct': 0, 'rsi': 0, 'atr_pct': 0,
+                    'ma_trend': '—', 'volume': '—', 'sector': '—'
+                })
+                continue
+
+            df = calculate_indicators(df)
+            if len(df) < 5:
+                continue
+
+            row  = df.iloc[-1]
+            prev = df.iloc[-2]
+            _, score = calc_signals(row)
+
+            close   = float(row['Close'])
+            prev_c  = float(prev['Close'])
+            chg_pct = round((close - prev_c) / prev_c * 100, 2) if prev_c else 0
+            rsi     = round(float(row['RSI']), 1)
+            atr_pct = round(float(row['ATRPct']) * 100, 1)
+
+            # MA trend summary
+            above = sum([close > float(row['MA20']), close > float(row['MA50']), close > float(row['MA200'])])
+            ma_trend = "↑↑↑" if above == 3 else "↑↑" if above == 2 else "↑" if above == 1 else "↓↓↓"
+            ma_col   = "#00FF88" if above >= 2 else "#FACC15" if above == 1 else "#FF6B6B"
+
+            # Currency
+            if ticker.endswith('.TO'):   cur = "CA$"
+            elif ticker.endswith('.L'):  cur = "£"
+            else:                        cur = "$"
+
+            # 52W position
+            h52 = float(info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()))
+            l52 = float(info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min()))
+            w52_pct = round((close - l52) / (h52 - l52) * 100) if h52 > l52 else 50
+
+            sector  = info.get('sector', '—')[:18]
+            company = info.get('longName', info.get('shortName', ticker))[:28]
+            mc      = info.get('marketCap', 0) or 0
+
+            results.append({
+                'ticker':   ticker,
+                'company':  company,
+                'score':    score,
+                'close':    close,
+                'cur':      cur,
+                'chg_pct':  chg_pct,
+                'rsi':      rsi,
+                'atr_pct':  atr_pct,
+                'ma_trend': ma_trend,
+                'ma_col':   ma_col,
+                'above_mas': above,
+                'w52_pct':  w52_pct,
+                'sector':   sector,
+                'mc':       mc,
+                'error':    None,
+            })
+
+        except Exception as e:
+            results.append({
+                'ticker': ticker, 'score': 0, 'error': str(e)[:40],
+                'close': 0, 'chg_pct': 0, 'rsi': 0, 'atr_pct': 0,
+                'ma_trend': '—', 'ma_col': '#94A3B8', 'above_mas': 0,
+                'w52_pct': 0, 'sector': '—', 'mc': 0, 'company': ticker,
+                'cur': '$',
+            })
+
+    prog.empty()
+
+    # ── Sort ──────────────────────────────────────────────────
+    valid   = [r for r in results if not r.get('error') and r['score'] >= min_score]
+    invalid = [r for r in results if r.get('error')]
+
+    if sort_by == "Signal Score ↓":
+        valid.sort(key=lambda x: x['score'], reverse=True)
+    elif sort_by == "Signal Score ↑":
+        valid.sort(key=lambda x: x['score'])
+    elif sort_by == "Price Change % ↓":
+        valid.sort(key=lambda x: x['chg_pct'], reverse=True)
+    elif sort_by == "RSI ↓":
+        valid.sort(key=lambda x: x['rsi'], reverse=True)
+    elif sort_by == "ATR% ↓":
+        valid.sort(key=lambda x: x['atr_pct'], reverse=True)
+
+    if not valid:
+        st.warning("No results match the filter criteria.")
+        return
+
+    # ── Summary stats ─────────────────────────────────────────
+    avg_score = round(sum(r['score'] for r in valid) / len(valid), 1)
+    bullish   = sum(1 for r in valid if r['score'] >= 7)
+    bearish   = sum(1 for r in valid if r['score'] <= 3)
+
+    s1, s2, s3, s4 = st.columns(4)
+    for scol, lbl, val, col in [
+        (s1, "Tickers Screened", len(tickers), "#94A3B8"),
+        (s2, "Avg Signal Score",  f"{avg_score}/10", "#FACC15"),
+        (s3, "Bullish (≥7)",      bullish, "#00FF88"),
+        (s4, "Bearish (≤3)",      bearish, "#FF6B6B"),
+    ]:
+        with scol:
+            st.markdown(f'''<div class="earn-bar" style="border-left-color:{col};">
+              <div class="earn-label">{lbl}</div>
+              <div class="earn-val" style="color:{col};font-size:20px;">{val}</div>
+            </div>''', unsafe_allow_html=True)
+
+    # ── Results table ─────────────────────────────────────────
+    st.markdown('<div class="section-header" style="margin-top:8px;">Screening Results — Ranked by Signal Score</div>', unsafe_allow_html=True)
+    st.markdown('''<div style="background:#1A2232;border:1px solid #243348;border-top:none;border-radius:0 0 8px 8px;">
+      <div style="display:grid;grid-template-columns:80px 1fr 90px 80px 80px 70px 70px 60px 120px;
+                  gap:4px;padding:7px 14px;background:#131F32;
+                  font-size:10px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">
+        <span>Ticker</span><span>Company</span><span>Score</span>
+        <span>Price</span><span>Change</span><span>RSI</span><span>ATR%</span>
+        <span>MAs</span><span>52W Pos.</span>
+      </div>''', unsafe_allow_html=True)
+
+    for r in valid:
+        score     = r['score']
+        score_col = "#00FF88" if score >= 7 else "#FACC15" if score >= 4 else "#FF6B6B"
+        chg_col   = "#00FF88" if r['chg_pct'] >= 0 else "#FF6B6B"
+        chg_sign  = "+" if r['chg_pct'] >= 0 else ""
+        rsi_col   = "#FF6B6B" if r['rsi'] > 70 else "#00FF88" if r['rsi'] < 30 else "#FACC15"
+        w52       = r['w52_pct']
+        w52_col   = "#00FF88" if w52 > 60 else "#FACC15" if w52 > 30 else "#FF6B6B"
+
+        # Score bar
+        score_bar = (
+            f'<div style="display:flex;align-items:center;gap:6px;">'
+            f'<span style="color:{score_col};font-weight:800;font-size:15px;font-family:monospace;">{score}</span>'
+            f'<div style="flex:1;height:4px;background:#243348;border-radius:2px;">'
+            f'<div style="width:{score*10}%;height:4px;background:{score_col};border-radius:2px;"></div>'
+            f'</div><span style="color:#64748B;font-size:10px;">/10</span></div>'
+        )
+
+        # 52W position mini-bar
+        w52_bar = (
+            f'<div style="display:flex;align-items:center;gap:4px;">'
+            f'<div style="flex:1;position:relative;height:4px;background:#243348;border-radius:2px;">'
+            f'<div style="position:absolute;left:0;top:0;width:100%;height:4px;border-radius:2px;'
+            f'background:linear-gradient(90deg,#FF6B6B,#FACC15,#00FF88);"></div>'
+            f'<div style="position:absolute;left:{min(max(w52,2),98)}%;top:-3px;width:8px;height:8px;'
+            f'background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:1px solid #111827;"></div>'
+            f'</div>'
+            f'<span style="font-size:10px;color:{w52_col};">{w52}%</span></div>'
+        )
+
+        st.markdown(f'''
+        <div style="display:grid;grid-template-columns:80px 1fr 90px 80px 80px 70px 70px 60px 120px;
+                    gap:4px;padding:9px 14px;border-bottom:1px solid #111827;
+                    font-size:12px;align-items:center;">
+          <span style="font-family:monospace;font-weight:800;color:#00FF88;">{r["ticker"]}</span>
+          <span style="color:#CBD5E1;font-size:11px;">{r["company"]}</span>
+          <span>{score_bar}</span>
+          <span style="color:#FACC15;font-family:monospace;">{r["cur"]}{r["close"]:.2f}</span>
+          <span style="color:{chg_col};font-family:monospace;">{chg_sign}{r["chg_pct"]:.1f}%</span>
+          <span style="color:{rsi_col};font-family:monospace;">{r["rsi"]}</span>
+          <span style="color:#38BDF8;font-family:monospace;">{r["atr_pct"]:.1f}%</span>
+          <span style="color:{r["ma_col"]};font-size:13px;">{r["ma_trend"]}</span>
+          <span>{w52_bar}</span>
+        </div>''', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Analyze button per ticker ─────────────────────────────
+    st.markdown('<div style="margin-top:12px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:11px;color:#5EEAD4;letter-spacing:1px;margin-bottom:8px;">▼ OPEN FULL ANALYSIS</div>', unsafe_allow_html=True)
+
+    btn_cols = st.columns(min(len(valid), 5))
+    for i, r in enumerate(valid[:10]):
+        col_idx = i % 5
+        if i < 5:
+            with btn_cols[col_idx]:
+                score_col = "#00FF88" if r['score'] >= 7 else "#FACC15" if r['score'] >= 4 else "#FF6B6B"
+                if st.button(f"{r['ticker']} · {r['score']}/10", key=f"screen_analyze_{r['ticker']}",
+                             use_container_width=True):
+                    run_analysis(r['ticker'])
+
+    if len(valid) > 5:
+        btn_cols2 = st.columns(min(len(valid) - 5, 5))
+        for i, r in enumerate(valid[5:10]):
+            with btn_cols2[i]:
+                if st.button(f"{r['ticker']} · {r['score']}/10", key=f"screen_analyze2_{r['ticker']}",
+                             use_container_width=True):
+                    run_analysis(r['ticker'])
+
+    # ── Failed tickers ────────────────────────────────────────
+    if invalid:
+        st.markdown(f'<div style="font-size:11px;color:#4A6080;margin-top:8px;">⚠ Could not fetch data for: {", ".join(r["ticker"] for r in invalid)}</div>', unsafe_allow_html=True)
+
+
+
+if __name__ == '__main__':
     main()
