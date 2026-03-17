@@ -2017,12 +2017,12 @@ def render_hud():
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
         <div style="background:#111827;border-radius:6px;padding:8px 12px;">
-          <div style="font-size:10px;color:#FACC15;font-weight:700;letter-spacing:1px;margin-bottom:3px;">① MAX RISK</div>
-          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">The most you're willing to lose on this trade. The calculator sizes your position so a stop-loss hit = exactly this amount lost.</div>
+          <div style="font-size:10px;color:#FACC15;font-weight:700;letter-spacing:1px;margin-bottom:3px;">① POSITION SIZE</div>
+          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">Total dollars you want to invest in this trade. e.g. $10,000 buys you Position ÷ Entry price shares.</div>
         </div>
         <div style="background:#111827;border-radius:6px;padding:8px 12px;">
-          <div style="font-size:10px;color:#38BDF8;font-weight:700;letter-spacing:1px;margin-bottom:3px;">② ENTRY → STOP → TARGET</div>
-          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">Entry = price you buy at. Stop Loss = price you sell if wrong (cuts your loss). Target = price you sell if right (takes your profit).</div>
+          <div style="font-size:10px;color:#38BDF8;font-weight:700;letter-spacing:1px;margin-bottom:3px;">② RISK % → STOP AUTO-SET</div>
+          <div style="font-size:11px;color:#94A3B8;line-height:1.5;">% of your position you can afford to lose. At 5% on $10K = $500 max loss. Stop loss is calculated automatically — you can still override it.</div>
         </div>
         <div style="background:#111827;border-radius:6px;padding:8px 12px;">
           <div style="font-size:10px;color:#00FF88;font-weight:700;letter-spacing:1px;margin-bottom:3px;">③ R:R RATIO</div>
@@ -2069,36 +2069,62 @@ def render_hud():
     # ── Inputs ────────────────────────────────────────────────
     stop_preset, target_preset = calc_presets(selected_mode)
 
-    # 4 inputs — no portfolio size needed
-    rr_c1, rr_c2, rr_c3, rr_c4 = st.columns(4)
+    # 5 inputs — position size model
+    rr_c1, rr_c2, rr_c3, rr_c4, rr_c5 = st.columns(5)
     with rr_c1:
-        max_risk = st.number_input(f"Max Risk ({cur})", min_value=1.0, max_value=1000000.0,
-                                    value=500.0, step=100.0, key="rr_max_risk",
-                                    help="Max dollar amount you're willing to lose on this trade")
+        position_size_input = st.number_input(
+            f"Position Size ({cur})",
+            min_value=1.0, max_value=10000000.0,
+            value=5000.0, step=500.0, key="rr_position",
+            help="Total amount you want to invest in this trade")
     with rr_c2:
-        entry_price = st.number_input(f"Entry ({cur})", min_value=0.01,
-                                       value=float(entry_mid), step=0.01, key="rr_entry",
-                                       format="%.2f")
+        risk_pct = st.number_input(
+            "Risk (%)",
+            min_value=0.1, max_value=100.0,
+            value=5.0, step=0.5, key="rr_risk_pct",
+            help="% of position you're willing to lose if stop is hit")
     with rr_c3:
-        stop_price = st.number_input(f"Stop Loss ({cur})", min_value=0.01,
-                                      value=float(stop_preset), step=0.01, key=f"rr_stop_{selected_mode}",
-                                      format="%.2f")
+        entry_price = st.number_input(
+            f"Entry ({cur})", min_value=0.01,
+            value=float(entry_mid), step=0.01, key="rr_entry",
+            format="%.2f")
+
+    # ── Derive stop from position size + risk % ───────────────
+    # Shares = Position ÷ Entry
+    # Dollar at risk = Position × Risk%
+    # Risk per share = Dollar at risk ÷ Shares = Risk% × Entry
+    # Derived stop = Entry − (Risk% × Entry)
+    shares_derived     = int(position_size_input / entry_price) if entry_price > 0 else 0
+    dollar_risk        = round(position_size_input * (risk_pct / 100), 2)
+    derived_stop       = round(entry_price - (dollar_risk / shares_derived), 2) if shares_derived > 0 else stop_preset
+    derived_stop       = max(0.01, derived_stop)
+
     with rr_c4:
-        target_price = st.number_input(f"Target ({cur})", min_value=0.01,
-                                        value=float(target_preset), step=0.01, key=f"rr_target_{selected_mode}",
-                                        format="%.2f")
+        stop_price = st.number_input(
+            f"Stop Loss ({cur})",
+            min_value=0.01,
+            value=float(derived_stop),
+            step=0.01, key=f"rr_stop_{selected_mode}_{round(derived_stop,2)}",
+            format="%.2f",
+            help="Auto-calculated from your risk %. Adjust to override.")
+    with rr_c5:
+        target_price = st.number_input(
+            f"Target ({cur})", min_value=0.01,
+            value=float(target_preset), step=0.01,
+            key=f"rr_target_{selected_mode}",
+            format="%.2f")
 
     # ── Calculations ──────────────────────────────────────────
-    # Max Risk model: user picks max $ they'll lose → size position accordingly
-    # Shares = Max Risk ÷ Risk per Share
-    # Position value = Shares × Entry (what you actually need to buy)
+    # Use actual shares from position size
+    # If user overrode stop, actual loss changes — show that too
     risk_per_share   = round(abs(entry_price - stop_price), 2)
     reward_per_share = round(abs(target_price - entry_price), 2)
     rr_ratio         = round(reward_per_share / risk_per_share, 2) if risk_per_share > 0 else 0
-    position_size    = int(max_risk / risk_per_share) if risk_per_share > 0 else 0
+    position_size    = shares_derived  # shares bought
     position_value   = round(position_size * entry_price, 2)
     actual_loss      = round(position_size * risk_per_share, 2)
     actual_gain      = round(position_size * reward_per_share, 2)
+    loss_pct         = round((actual_loss / position_size_input) * 100, 1) if position_size_input > 0 else 0
     stop_pct         = round((risk_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
     target_pct       = round((reward_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
     rr_col           = "#00FF88" if rr_ratio >= 2 else "#FACC15" if rr_ratio >= 1 else "#FF6B6B"
@@ -2117,13 +2143,12 @@ def render_hud():
         st.markdown(f'''<div class="earn-bar" style="border-left-color:#38BDF8;margin-top:6px;">
           <div class="earn-label">Shares to Buy</div>
           <div class="earn-val" style="color:#38BDF8;font-size:22px;">{position_size:,} <span style="font-size:13px;">shares</span></div>
-          <div style="font-size:11px;color:#64748B;margin-top:3px;">Costs {cur}{position_value:,.0f} to open this position</div>
-          <div style="font-size:10px;color:#4A6080;margin-top:2px;">{position_size:,} × {cur}{entry_price:.2f} entry price</div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px;">{cur}{position_size_input:,.0f} position · {position_size:,} × {cur}{entry_price:.2f}</div>
         </div>''', unsafe_allow_html=True)
     with rc3:
         st.markdown(f'''<div class="earn-bar" style="border-left-color:#818CF8;margin-top:6px;">
           <div class="earn-label">Worst Case &nbsp;/&nbsp; Best Case</div>
-          <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{actual_loss:,.0f} <span style="font-size:10px;color:#FF6B6B88;">if stop hit</span></div>
+          <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{actual_loss:,.0f} <span style="font-size:10px;color:#FF6B6B88;">({loss_pct:.1f}% of position)</span></div>
           <div style="font-size:16px;color:#00FF88;font-weight:700;font-family:monospace;margin-top:4px;">+{cur}{actual_gain:,.0f} <span style="font-size:10px;color:#00FF8888;">if target hit</span></div>
         </div>''', unsafe_allow_html=True)
 
@@ -2234,11 +2259,11 @@ def render_hud():
                 padding:8px 16px;margin-top:6px;display:flex;gap:20px;flex-wrap:wrap;
                 font-size:11px;font-family:'JetBrains Mono',monospace;align-items:center;">
       <span style="color:#64748B;">Mode <span style="color:{mode_colors[selected_mode]};font-weight:700;">{selected_mode}</span></span>
+      <span style="color:#64748B;">Position <span style="color:#38BDF8;">{cur}{position_size_input:,.0f}</span></span>
       <span style="color:#64748B;">Entry <span style="color:#FACC15;">{cur}{entry_price:.2f}</span></span>
       <span style="color:#64748B;">Stop <span style="color:#FF6B6B;">{cur}{stop_price:.2f} (−{stop_pct:.1f}%)</span></span>
       <span style="color:#64748B;">Target <span style="color:#00FF88;">{cur}{target_price:.2f} (+{target_pct:.1f}%)</span></span>
-      <span style="color:#64748B;">Max risk <span style="color:#FF6B6B;">{cur}{max_risk:,.0f}</span></span>
-      <span style="color:#64748B;">Costs to open <span style="color:#94A3B8;">{cur}{position_value:,.0f}</span></span>
+      <span style="color:#64748B;">Max loss <span style="color:#FF6B6B;">{cur}{actual_loss:,.0f} ({loss_pct:.1f}% of position)</span></span>
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 8: EARNINGS ─────────────────────────────────────
