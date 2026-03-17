@@ -28,16 +28,13 @@ class TestFmpGet:
         return mock
 
     def _run(self, json_body, status=200):
-        """Run _fmp_get with a mocked requests.get."""
-        from unittest.mock import patch
-        import requests
+        """Run _fmp_get logic with a mocked response — no real HTTP calls."""
+        from unittest.mock import MagicMock
 
-        def mock_fmp_get(endpoint, api_key, params=""):
+        # Inline the _fmp_get logic so no requests import needed
+        def mock_fmp_get(json_body, status_code):
             try:
-                if not api_key:
-                    return None
-                url = f"https://financialmodelingprep.com/api/{endpoint}?apikey={api_key}{params}"
-                r = requests.get(url, timeout=10)
+                r = self._make_response(status_code, json_body)
                 if r.status_code == 200:
                     data = r.json()
                     if not data:
@@ -49,8 +46,7 @@ class TestFmpGet:
             except:
                 return None
 
-        with patch("requests.get", return_value=self._make_response(status, json_body)):
-            return mock_fmp_get("v3/profile/NVDA", "test_key")
+        return mock_fmp_get(json_body, status)
 
     def test_rate_limit_returns_none(self, fmp_rate_limit_response):
         result = self._run(fmp_rate_limit_response)
@@ -87,8 +83,6 @@ class TestFmpGet:
         assert result is None
 
     def test_no_api_key_returns_none(self):
-        import requests
-
         def mock_fmp_get(endpoint, api_key, params=""):
             if not api_key:
                 return None
@@ -192,11 +186,11 @@ class TestFundamentals:
 
     def test_pe_calculated_from_income_stmt(self):
         price = 875.0
-        shares = 24_400_000_000
-        net_income = 29_760_000_000  # ~$29.76B
+        shares = 2_440_000_000   # NVDA: 2.44B shares outstanding
+        net_income = 29_760_000_000  # ~$29.76B net income
 
-        eps = net_income / shares
-        calc_pe = round(price / abs(eps), 2)
+        eps = net_income / shares  # = $12.20
+        calc_pe = round(price / abs(eps), 2)  # = ~71.7
         assert 1 < calc_pe < 500, f"PE={calc_pe} failed sanity check"
         assert abs(calc_pe - 71.7) < 5  # NVDA ballpark
 
