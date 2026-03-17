@@ -6,7 +6,19 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import anthropic
 import json
-from datetime import datetime
+from datetime import datetimeWEEK 1 — Fix what's broken
+  Day 1 ✅ Cache version mismatch + CI wire-up
+  Day 2    Button CSS fix + visual consistency
+  Day 3    Terms of Service + Privacy Policy
+  Day 4    Disclaimer placement fix
+  Day 5    Golden fixture regression run (5 tickers)
+
+WEEK 2 — Beginner UX layer
+  Day 6    Jargon audit (17 labels → plain English)
+  Day 7    Apply plain English to HUD
+  Day 8    Beginner onboarding hint
+  Day 9    Screener template plain English rename
+  Day 10   Stabilization sign-off + show to 2 non-traders
 
 # ── Data layer: FMP primary, yfinance fallback ───────────────
 # FMP API key stored in Streamlit secrets as FMP_API_KEY
