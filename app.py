@@ -3043,6 +3043,8 @@ def render_earnings_analyzer():
 
         # Guidance detail
         st.markdown(f'''
+    render_disclaimer()
+
         <div style="background:#1A2232;border:1px solid #243348;border-left:3px solid {guid_col};
                     border-radius:8px;padding:10px 16px;margin-top:8px;">
           <div style="font-size:10px;color:#4A6080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Guidance Detail</div>
@@ -3229,8 +3231,6 @@ SNS_TEMPLATES = {
 
 
 def translate_theme_to_filter(theme_text, anthropic_key):
-    render_disclaimer()
-
 
     """
     Call Claude to translate NL theme → Filter JSON.
