@@ -3437,9 +3437,9 @@ def render_screener():
       </div>
     </div>""", unsafe_allow_html=True)
 
-    mode_tab1, mode_tab2 = st.tabs(["🤖 AI Theme", "📋 Watchlist"])
+    render_disclaimer()
 
-    # ════════════════════════════════════════════════════════════
+    mode_tab1, mode_tab2 = st.tabs(["🤖 AI Theme", "📋 Watchlist"])
     # TAB 1 — AI THEME (SNS core)
     # ════════════════════════════════════════════════════════════
     with mode_tab1:
@@ -4183,8 +4183,6 @@ def render_screener():
         if invalid_wl:
             st.markdown(f'<div style="font-size:11px;color:#CBD5E1;margin-top:8px;">⚠ Could not fetch: {", ".join(r["ticker"] for r in invalid_wl)}</div>', unsafe_allow_html=True)
 
-
-    render_disclaimer()
 
 
 if __name__ == '__main__':
