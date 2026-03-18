@@ -1,0 +1,69 @@
+{
+  "iv": 0.0,
+  "news": [
+    {
+      "title": "Why This Dimensional International ETF Belongs in Every Retiree\u2019s Core Portfolio",
+      "publisher": "",
+      "link": "https://247wallst.com/investing/2026/03/17/why-this-dimensional-international-etf-belongs-in-every-retirees-core-portfolio/"
+    },
+    {
+      "title": "Royal Bank Of Canada Flags S&P 500 Risk As Valuation Gap Emerges",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/royal-bank-canada-flags-p-011305322.html"
+    },
+    {
+      "title": "Tax Refunds Are Up 11.5% This Year. Who Is Getting the Most.",
+      "publisher": "",
+      "link": "https://www.barrons.com/articles/tax-refunds-up-spending-obbba-b2892a82?siteid=yhoof2&yptr=yahoo"
+    },
+    {
+      "title": "Wall Street Is Flashing a Warning Signal Investors Shouldn't Ignore",
+      "publisher": "",
+      "link": "https://www.fool.com/investing/2026/03/16/wall-street-is-flashing-a-warning-signal-investors/"
+    },
+    {
+      "title": "Royal Bank (RY) Could Be a Great Choice",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/royal-bank-ry-could-great-154502370.html"
+    }
+  ],
+  "analyst_targets": null,
+  "calendar": "{'Dividend Date': datetime.date(2026, 5, 22), 'Ex-Dividend Date': datetime.date(2026, 4, 23), 'Earnings Date': [datetime.date(2026, 5, 28)], 'Earnings High': 3.91, 'Earnings Low': 3.66, 'Earnings Average': 3.7616, 'Revenue High': 17437000000, 'Revenue Low': 16867000000, 'Revenue Average': 17093484929}",
+  "info": {
+    "marketCap": 311374159565.885,
+    "fiftyTwoWeekHigh": 240.33999633789062,
+    "fiftyTwoWeekLow": 151.25,
+    "regularMarketPrice": 222.9499969482422,
+    "sharesOutstanding": 1396609840,
+    "fiftyDayAverage": 230.8756005859375,
+    "twoHundredDayAverage": 206.62730049133302,
+    "operatingMargins": 0.0,
+    "profitMargins": 0.3060482173991463,
+    "grossMargins": 0.0,
+    "revenueGrowth": 0.15725939712302794,
+    "earningsGrowth": 0.2545902649414664,
+    "trailingPE": 15.29,
+    "trailingEps": 14.5796,
+    "debtToEquity": 3.9214261064619103,
+    "priceToBook": 2.24,
+    "returnOnEquity": 0.14639240806993933,
+    "dividendYield": 0.027808926148760293,
+    "sector": "Financial Services",
+    "industry": "Banks - Diversified",
+    "longName": "Royal Bank of Canada",
+    "shortName": "ROYAL BANK OF CANADA",
+    "country": "Canada",
+    "floatShares": 1395324959,
+    "forwardPE": 12.7975445,
+    "targetMeanPrice": 245.07143,
+    "targetLowPrice": 196.0,
+    "targetHighPrice": 271.0,
+    "numberOfAnalystOpinions": 14,
+    "recommendationKey": "buy",
+    "recommendationMean": 1.8
+  },
+  "df_rows": 503,
+  "earn_hist_rows": 0,
+  "rec_summary_rows": 0,
+  "insider_rows": 150
+}

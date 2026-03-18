@@ -1,0 +1,71 @@
+{
+  "iv": 4.004866210937499,
+  "news": [
+    {
+      "title": "How one Web3 company is investing in the future of the blockchain",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/video/one-web3-company-investing-future-110031694.html"
+    },
+    {
+      "title": "Does Nvidia have a stock problem? Experts weigh in",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/video/does-nvidia-stock-problem-experts-103052995.html"
+    },
+    {
+      "title": "Sector Update: Tech Stocks Retreat Late Afternoon",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/sector-tech-stocks-retreat-afternoon-194543425.html"
+    },
+    {
+      "title": "How Investors May Respond To QUALCOMM (QCOM) $20 Billion Buyback And Higher Dividend",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/investors-may-respond-qualcomm-qcom-180819421.html"
+    },
+    {
+      "title": "How The Apple (AAPL) Investment Narrative Is Shifting With AI, Costs And Regional Demand",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/apple-aapl-investment-narrative-shifting-180809800.html"
+    }
+  ],
+  "analyst_targets": null,
+  "calendar": "{'Dividend Date': datetime.date(2026, 2, 12), 'Ex-Dividend Date': datetime.date(2026, 2, 9), 'Earnings Date': [datetime.date(2026, 4, 30)], 'Earnings High': 2.16, 'Earnings Low': 1.85, 'Earnings Average': 1.95539, 'Revenue High': 112596000000, 'Revenue Low': 105000000000, 'Revenue Average': 109084922300}",
+  "info": {
+    "marketCap": 3673599660323.6084,
+    "fiftyTwoWeekHigh": 288.6199951171875,
+    "fiftyTwoWeekLow": 169.2100067138672,
+    "regularMarketPrice": 249.94000244140625,
+    "sharesOutstanding": 14697926000,
+    "fiftyDayAverage": 261.99119873046874,
+    "twoHundredDayAverage": 246.1176993560791,
+    "operatingMargins": 0.31970799762591884,
+    "profitMargins": 0.2691506412181824,
+    "grossMargins": 0.4690516410716045,
+    "revenueGrowth": 0.0642551178283274,
+    "earningsGrowth": 0.19495177946573355,
+    "trailingPE": 32.8,
+    "trailingEps": 7.6208,
+    "debtToEquity": 1.3380304612588665,
+    "priceToBook": 49.82,
+    "returnOnEquity": 1.5191292156944651,
+    "currentRatio": 1.7625065692334643,
+    "dividendYield": 0.004160998599029016,
+    "sector": "Technology",
+    "industry": "Consumer Electronics",
+    "longName": "Apple Inc.",
+    "shortName": "Apple Inc.",
+    "country": "United States",
+    "shortPercentOfFloat": 0.0088,
+    "floatShares": 14656182062,
+    "forwardPE": 26.81446,
+    "targetMeanPrice": 295.43536,
+    "targetLowPrice": 205.0,
+    "targetHighPrice": 350.0,
+    "numberOfAnalystOpinions": 41,
+    "recommendationKey": "buy",
+    "recommendationMean": 1.89583
+  },
+  "df_rows": 501,
+  "earn_hist_rows": 0,
+  "rec_summary_rows": 0,
+  "insider_rows": 75
+}

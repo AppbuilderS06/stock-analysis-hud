@@ -1,0 +1,70 @@
+{
+  "iv": 46.045461425781255,
+  "news": [
+    {
+      "title": "Is it a good idea to let companies report earnings biannually?",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/video/good-idea-let-companies-report-163000575.html"
+    },
+    {
+      "title": "Palantir Has an $11.2 Billion Revenue Backlog, a $10 Billion Army Deal, and a 61% Growth Forecast. Is It a Buy for 2026?",
+      "publisher": "",
+      "link": "https://www.fool.com/investing/2026/03/18/palantir-has-an-112-billion-revenue-backlog-a-10-b/"
+    },
+    {
+      "title": "Software Stock Could Bounce After Bullish Crossover",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/software-stock-could-bounce-bullish-191056509.html"
+    },
+    {
+      "title": "Is BigBear.ai the Next Palantir? What You Should Know Before Investing",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/bigbear-ai-next-palantir-know-190500297.html"
+    },
+    {
+      "title": "Palantir Is Launching New AI OS Reference Architecture with Nvidia. Should You Buy PLTR Stock?",
+      "publisher": "",
+      "link": "https://www.barchart.com/story/news/824743/palantir-is-launching-new-ai-os-reference-architecture-with-nvidia-should-you-buy-pltr-stock"
+    }
+  ],
+  "analyst_targets": null,
+  "calendar": "{'Earnings Date': [datetime.date(2026, 5, 4)], 'Earnings High': 0.32, 'Earnings Low': 0.27, 'Earnings Average': 0.2793, 'Revenue High': 1590939000, 'Revenue Low': 1521500000, 'Revenue Average': 1538582670}",
+  "info": {
+    "marketCap": 365376308587.81104,
+    "fiftyTwoWeekHigh": 207.52000427246094,
+    "fiftyTwoWeekLow": 66.12000274658203,
+    "regularMarketPrice": 152.77000427246094,
+    "sharesOutstanding": 2391675711,
+    "fiftyDayAverage": 153.0952005004883,
+    "twoHundredDayAverage": 163.11872520446778,
+    "operatingMargins": 0.3159495165398041,
+    "profitMargins": 0.3630996776634105,
+    "grossMargins": 0.8236651721415028,
+    "revenueGrowth": 0.5618339093221548,
+    "earningsGrowth": 2.5159414959215907,
+    "trailingPE": 224.84,
+    "trailingEps": 0.6795,
+    "debtToEquity": 0.031045035864408873,
+    "priceToBook": 49.46,
+    "returnOnEquity": 0.21999251220133073,
+    "currentRatio": 2.2897719594594594,
+    "sector": "Technology",
+    "industry": "Software - Infrastructure",
+    "longName": "Palantir Technologies Inc.",
+    "shortName": "Palantir Technologies Inc.",
+    "country": "United States",
+    "shortPercentOfFloat": 0.0238,
+    "floatShares": 2209095187,
+    "forwardPE": 81.80937,
+    "targetMeanPrice": 186.60307,
+    "targetLowPrice": 70.0,
+    "targetHighPrice": 260.0,
+    "numberOfAnalystOpinions": 26,
+    "recommendationKey": "buy",
+    "recommendationMean": 1.92857
+  },
+  "df_rows": 501,
+  "earn_hist_rows": 0,
+  "rec_summary_rows": 0,
+  "insider_rows": 150
+}

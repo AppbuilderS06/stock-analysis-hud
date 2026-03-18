@@ -1,0 +1,71 @@
+{
+  "iv": 8.545836425781252,
+  "news": [
+    {
+      "title": "Tech stocks today: Microsoft shakes up AI leadership, Nvidia's Jensen Huang hosts GTC event",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/live/tech-stocks-today-microsoft-shakes-up-ai-leadership-nvidias-jensen-huang-hosts-gtc-event-144220282.html"
+    },
+    {
+      "title": "Nvidia CEO's secret to success? \u2018Don\u2019t die\u2019",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/video/nvidia-ceos-secret-success-don-143634863.html"
+    },
+    {
+      "title": "Nvidia to power Uber's autonomous fleet in new partnership",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/video/nvidia-power-ubers-autonomous-fleet-211500441.html"
+    },
+    {
+      "title": "Dow Jones, S&P 500 Undercut Lows Amid Cautious Powell; Micron Earnings Crush Views But Oil Prices Hit $100",
+      "publisher": "",
+      "link": "https://www.investors.com/market-trend/stock-market-today/dow-jones-futures-sp-500-lows-powell-oil-prices-micron-earnings-guidance/?src=A00220&yptr=yahoo"
+    },
+    {
+      "title": "2 No-Brainer Tech Stocks to Buy Right Now",
+      "publisher": "",
+      "link": "https://www.fool.com/investing/2026/03/18/2-no-brainer-tech-stocks-to-buy-right-now/"
+    }
+  ],
+  "analyst_targets": null,
+  "calendar": "{'Dividend Date': datetime.date(2026, 4, 1), 'Ex-Dividend Date': datetime.date(2026, 3, 11), 'Earnings Date': [datetime.date(2026, 5, 20)], 'Earnings High': 1.99, 'Earnings Low': 1.69, 'Earnings Average': 1.77474, 'Revenue High': 85512000000, 'Revenue Low': 77618000000, 'Revenue Average': 78725558980}",
+  "info": {
+    "marketCap": 4384621851654.0527,
+    "fiftyTwoWeekHigh": 212.19000244140625,
+    "fiftyTwoWeekLow": 86.62000274658203,
+    "regularMarketPrice": 180.39999389648438,
+    "sharesOutstanding": 24305000000,
+    "fiftyDayAverage": 185.25660003662108,
+    "twoHundredDayAverage": 177.8466505432129,
+    "operatingMargins": 0.6038168363141272,
+    "profitMargins": 0.5560253406070261,
+    "grossMargins": 0.7106808435754708,
+    "revenueGrowth": 0.654735357900948,
+    "earningsGrowth": 0.6474615806805708,
+    "trailingPE": 36.52,
+    "trailingEps": 4.94,
+    "debtToEquity": 0.07018748450344262,
+    "priceToBook": 27.88,
+    "returnOnEquity": 0.7633314896403528,
+    "currentRatio": 4.680809361849311,
+    "dividendYield": 0.00022172949752399918,
+    "sector": "Technology",
+    "industry": "Semiconductors",
+    "longName": "NVIDIA Corporation",
+    "shortName": "NVIDIA Corporation",
+    "country": "United States",
+    "shortPercentOfFloat": 0.0107,
+    "floatShares": 23330430000,
+    "forwardPE": 16.384851,
+    "targetMeanPrice": 267.5351,
+    "targetLowPrice": 140.0,
+    "targetHighPrice": 380.0,
+    "numberOfAnalystOpinions": 55,
+    "recommendationKey": "strong_buy",
+    "recommendationMean": 1.2807
+  },
+  "df_rows": 501,
+  "earn_hist_rows": 0,
+  "rec_summary_rows": 0,
+  "insider_rows": 150
+}

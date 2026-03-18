@@ -1,0 +1,69 @@
+{
+  "iv": 20.30108996582031,
+  "news": [
+    {
+      "title": "Kill Quarterly Earnings Reports? Warren Buffett and Jamie Dimon Had a Better Idea.",
+      "publisher": "",
+      "link": "https://www.barrons.com/articles/sec-eliminate-earnings-quarterly-reporting-cda218c3?siteid=yhoof2&yptr=yahoo"
+    },
+    {
+      "title": "Berkshire, Broadcom & Nucor Are Revving Their Buyback Engines",
+      "publisher": "",
+      "link": "https://www.marketbeat.com/stock-ideas/berkshire-broadcom-and-nucor-are-reving-their-buyback-engines/?utm_source=yahoofinance&utm_medium=yahoofinance"
+    },
+    {
+      "title": "Berkshire Hathaway\u2019s Pay Structure Is Straight Out of the \u201960s. Why That\u2019s a Good Thing.",
+      "publisher": "",
+      "link": "https://www.barrons.com/articles/berkshire-hathaway-stock-pay-cash-b48c79f5?siteid=yhoof2&yptr=yahoo"
+    },
+    {
+      "title": "Is Warren Buffett Invested in Tesla?",
+      "publisher": "",
+      "link": "https://finance.yahoo.com/news/warren-buffett-invested-tesla-145216067.html"
+    },
+    {
+      "title": "The Market\u2019s Seen This Movie Before. It\u2019s Not an Oscar Winner for Investors.",
+      "publisher": "",
+      "link": "https://www.barrons.com/articles/stock-market-oil-nvidia-things-to-know-today-736a21ab?siteid=yhoof2&yptr=yahoo"
+    }
+  ],
+  "analyst_targets": null,
+  "calendar": "{'Earnings Date': [datetime.date(2026, 5, 2)], 'Earnings High': 5.41184, 'Earnings Low': 4.85, 'Earnings Average': 5.13092, 'Revenue High': 94693000000, 'Revenue Low': 94693000000, 'Revenue Average': 94693000000}",
+  "info": {
+    "marketCap": 1045163971388.3153,
+    "fiftyTwoWeekHigh": 542.0700073242188,
+    "fiftyTwoWeekLow": 455.19000244140625,
+    "regularMarketPrice": 484.4700012207031,
+    "sharesOutstanding": 2157334755,
+    "fiftyDayAverage": 493.35600036621094,
+    "twoHundredDayAverage": 491.50949966430665,
+    "operatingMargins": 0.0,
+    "profitMargins": 0.1631288944319671,
+    "grossMargins": 0.0,
+    "revenueGrowth": -0.032317222651756586,
+    "earningsGrowth": -0.24750828698241475,
+    "trailingPE": 15.61,
+    "trailingEps": 31.042,
+    "debtToEquity": 0.17992414474665433,
+    "priceToBook": 1.46,
+    "returnOnEquity": 0.09334570936190707,
+    "sector": "Financial Services",
+    "industry": "Insurance - Diversified",
+    "longName": "Berkshire Hathaway Inc.",
+    "shortName": "Berkshire Hathaway Inc. New",
+    "country": "United States",
+    "shortPercentOfFloat": 0.0095,
+    "floatShares": 1235323,
+    "forwardPE": 22.249472,
+    "targetMeanPrice": 523.0,
+    "targetLowPrice": 481.0,
+    "targetHighPrice": 578.0,
+    "numberOfAnalystOpinions": 3,
+    "recommendationKey": "buy",
+    "recommendationMean": 2.0
+  },
+  "df_rows": 501,
+  "earn_hist_rows": 0,
+  "rec_summary_rows": 0,
+  "insider_rows": 33
+}
