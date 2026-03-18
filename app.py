@@ -3930,6 +3930,7 @@ def render_screener():
               </div>
             </div>""", unsafe_allow_html=True)
 
+            render_disclaimer()
     # ════════════════════════════════════════════════════════════
     # TAB 2 — CLASSIC WATCHLIST (existing, unchanged)
     # ════════════════════════════════════════════════════════════
