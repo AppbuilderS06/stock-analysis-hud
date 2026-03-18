@@ -3042,14 +3042,15 @@ def render_earnings_analyzer():
             st.markdown(html + '</div>', unsafe_allow_html=True)
 
         # Guidance detail
-        st.markdown(f'''
-    render_disclaimer()
 
+        st.markdown(f'''
         <div style="background:#1A2232;border:1px solid #243348;border-left:3px solid {guid_col};
                     border-radius:8px;padding:10px 16px;margin-top:8px;">
           <div style="font-size:10px;color:#4A6080;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Guidance Detail</div>
           <div style="font-size:13px;color:#E2E8F0;">{result.get("guidance_detail","")}</div>
         </div>''', unsafe_allow_html=True)
+    render_disclaimer()
+
 
 
 
