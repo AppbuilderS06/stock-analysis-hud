@@ -604,37 +604,38 @@ st.markdown("""
     opacity: 1 !important;
   }
   /* Template card buttons — each card is a styled Streamlit button */
-  /* Template cards — vertical stack, hover brightens, select button inside */
+  /* Template cards — full width vertical stack */
   .tpl-card {
     border-radius: 8px;
-    padding: 14px 16px 12px;
-    margin-bottom: 6px;
-    cursor: pointer;
-    transition: filter 180ms ease, transform 180ms ease, border-color 180ms ease;
-    position: relative;
+    padding: 14px 16px;
+    transition: background 180ms ease, border-color 180ms ease;
   }
-  .tpl-card:hover { filter: brightness(1.2); transform: translateX(3px); }
+  /* Hover: each card lights up in its accent color */
+  .tpl-wrap-red   .tpl-card:hover { background: #2D1015 !important; border-color: #FF6B6B !important; }
+  .tpl-wrap-green .tpl-card:hover { background: #0D2818 !important; border-color: #00FF88 !important; }
+  .tpl-wrap-blue  .tpl-card:hover { background: #0A1525 !important; border-color: #38BDF8 !important; }
+  .tpl-wrap-gold  .tpl-card:hover { background: #251800 !important; border-color: #FACC15 !important; }
 
-  /* Select button inside card — matches card accent */
+  /* Select button — right side, small, colored, NOT green */
   .tpl-select .stButton button {
     background: transparent !important;
-    border: 1px solid currentColor !important;
     font-size: 10px !important;
     font-weight: 700 !important;
-    padding: 3px 10px !important;
+    padding: 5px 12px !important;
     width: auto !important;
-    letter-spacing: 0.08em !important;
+    height: auto !important;
+    min-height: 0 !important;
+    letter-spacing: 0.06em !important;
     border-radius: 4px !important;
-    margin-top: 8px !important;
   }
-  .tpl-select-red   .stButton button { color: #FF6B6B !important; border-color: #FF6B6B !important; background: #2D101500 !important; }
-  .tpl-select-green .stButton button { color: #00FF88 !important; border-color: #00FF88 !important; background: #0D281800 !important; }
-  .tpl-select-blue  .stButton button { color: #38BDF8 !important; border-color: #38BDF8 !important; background: #0A152500 !important; }
-  .tpl-select-gold  .stButton button { color: #FACC15 !important; border-color: #FACC15 !important; background: #25180000 !important; }
-  .tpl-select-red   .stButton button:hover { background: #FF6B6B22 !important; opacity:1 !important; }
-  .tpl-select-green .stButton button:hover { background: #00FF8822 !important; opacity:1 !important; }
-  .tpl-select-blue  .stButton button:hover { background: #38BDF822 !important; opacity:1 !important; }
-  .tpl-select-gold  .stButton button:hover { background: #FACC1522 !important; opacity:1 !important; }
+  .tpl-select-red   .stButton button { color: #FF6B6B !important; border: 1px solid #FF6B6B !important; }
+  .tpl-select-green .stButton button { color: #00FF88 !important; border: 1px solid #00FF88 !important; }
+  .tpl-select-blue  .stButton button { color: #38BDF8 !important; border: 1px solid #38BDF8 !important; }
+  .tpl-select-gold  .stButton button { color: #FACC15 !important; border: 1px solid #FACC15 !important; }
+  .tpl-select-red   .stButton button:hover { background: #FF6B6B22 !important; opacity: 1 !important; }
+  .tpl-select-green .stButton button:hover { background: #00FF8822 !important; opacity: 1 !important; }
+  .tpl-select-blue  .stButton button:hover { background: #38BDF822 !important; opacity: 1 !important; }
+  .tpl-select-gold  .stButton button:hover { background: #FACC1522 !important; opacity: 1 !important; }
   /* Reset button */
   .reset-btn .stButton button {
     background: #111827 !important;
@@ -3387,7 +3388,7 @@ def render_screener():
             anthropic_key = st.secrets.get("ANTHROPIC_API_KEY", "")
             fmp_key = st.secrets.get("FMP_API_KEY", "")
 
-            # ── Template cards — vertical stack with Select button inside ──
+            # ── Template cards — vertical stack, card + button on right ──
             st.markdown("""
             <div style="background:#1A2232;border:1px solid #243348;
                         border-radius:8px;padding:12px 14px 6px;margin-bottom:8px;">
@@ -3418,25 +3419,34 @@ def render_screener():
                 desc_col    = color if is_active else "#64748B"
                 dot = f'<span style="color:{color};">● </span>' if is_active else ""
 
-                # Card HTML
-                st.markdown(f"""
-                <div class="tpl-card"
-                     style="background:{card_bg};border:1px solid {card_border};">
-                  <div style="font-size:20px;margin-bottom:6px;">{icon}</div>
-                  <div style="font-size:13px;font-weight:700;color:{name_col};
-                              margin-bottom:3px;">{dot}{tpl_name}</div>
-                  <div style="font-size:11px;color:{desc_col};line-height:1.4;
-                              margin-bottom:8px;">{desc}</div>
-                </div>""", unsafe_allow_html=True)
-
-                # Styled Select button right after each card
-                st.markdown(f'<div class="tpl-select tpl-select-{css_color}" style="margin:-4px 0 6px 0;">',
-                            unsafe_allow_html=True)
-                if st.button(f"▶  Select {tpl_name}", key=f"tpl_{tpl_name}",
-                             use_container_width=True):
-                    selected_template = tpl_name
-                    st.session_state["_sns_active_tpl"] = tpl_name
-                st.markdown('</div>', unsafe_allow_html=True)
+                # Two columns: card content (wide) + select button (narrow)
+                c_card, c_btn = st.columns([5, 1])
+                with c_card:
+                    # Wrap in hover-color class
+                    st.markdown(f"""
+                    <div class="tpl-wrap-{css_color}" style="margin-bottom:6px;">
+                      <div class="tpl-card"
+                           style="background:{card_bg};border:1px solid {card_border};">
+                        <div style="display:flex;align-items:flex-start;gap:12px;">
+                          <div style="font-size:22px;line-height:1;">{icon}</div>
+                          <div>
+                            <div style="font-size:13px;font-weight:700;color:{name_col};
+                                        margin-bottom:3px;">{dot}{tpl_name}</div>
+                            <div style="font-size:11px;color:{desc_col};
+                                        line-height:1.4;">{desc}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>""", unsafe_allow_html=True)
+                with c_btn:
+                    st.markdown(f'<div class="tpl-select tpl-select-{css_color}" style="padding-top:10px;">',
+                                unsafe_allow_html=True)
+                    if st.button("▶", key=f"tpl_{tpl_name}",
+                                 use_container_width=True,
+                                 help=f"Use {tpl_name} template"):
+                        selected_template = tpl_name
+                        st.session_state["_sns_active_tpl"] = tpl_name
+                    st.markdown('</div>', unsafe_allow_html=True)
 
             st.markdown('</div>', unsafe_allow_html=True)
 
