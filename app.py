@@ -3437,8 +3437,6 @@ def render_screener():
       </div>
     </div>""", unsafe_allow_html=True)
 
-    render_disclaimer()
-
     mode_tab1, mode_tab2 = st.tabs(["🤖 AI Theme", "📋 Watchlist"])
     # TAB 1 — AI THEME (SNS core)
     # ════════════════════════════════════════════════════════════
@@ -3989,10 +3987,12 @@ def render_screener():
                 </div>
               </div>
             </div>""", unsafe_allow_html=True)
+            render_disclaimer()
             return
 
         if not tickers_raw or not tickers_raw.strip():
             st.error("Please enter at least one ticker.")
+            render_disclaimer()
             return
 
         TV_EXCHANGE_MAP = {
@@ -4036,6 +4036,7 @@ def render_screener():
             st.info(f"ℹ️ Skipped (crypto/forex/index not supported): {', '.join(skipped[:5])}")
         if not tickers:
             st.error("No valid stock tickers found.")
+            render_disclaimer()
             return
 
         st.markdown(f'<div style="font-size:11px;color:#5EEAD4;margin-bottom:8px;">Screening {len(tickers)} tickers: <span style="color:#00FF88;font-family:monospace;">{" · ".join(tickers)}</span></div>', unsafe_allow_html=True)
@@ -4100,6 +4101,7 @@ def render_screener():
 
         if not valid_wl:
             st.warning("No results match the filter criteria.")
+            render_disclaimer()
             return
 
         avg_s = round(sum(r["score"] for r in valid_wl) / len(valid_wl), 1)
@@ -4184,6 +4186,8 @@ def render_screener():
             st.markdown(f'<div style="font-size:11px;color:#CBD5E1;margin-top:8px;">⚠ Could not fetch: {", ".join(r["ticker"] for r in invalid_wl)}</div>', unsafe_allow_html=True)
 
 
+
+    render_disclaimer()
 
 if __name__ == '__main__':
     main()
