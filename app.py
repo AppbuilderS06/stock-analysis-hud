@@ -3368,7 +3368,7 @@ def render_screener():
           <div style="font-size:20px;font-weight:800;color:#F1F5F9;">
             Describe a trade setup in plain English
           </div>
-          <div style="font-size:12px;color:#64748B;margin-top:2px;">
+          <div style="font-size:12px;color:#CBD5E1;margin-top:2px;">
             AI translates your words into filters → ranks every matching stock by signal strength
           </div>
         </div>
@@ -3416,7 +3416,7 @@ def render_screener():
                 card_bg     = bg    if is_active else "#131F32"
                 card_border = color if is_active else "#243348"
                 name_col    = color if is_active else "#E2E8F0"
-                desc_col    = color if is_active else "#64748B"
+                desc_col    = color if is_active else "#CBD5E1"
                 dot = f'<span style="color:{color};">● </span>' if is_active else ""
 
                 # Two columns: card content (wide) + select button (narrow)
@@ -3499,7 +3499,7 @@ def render_screener():
                     f'<div style="display:flex;justify-content:space-between;'
                     f'font-size:11px;margin-top:2px;">'
                     f'<span style="color:{meta_col};">⏱ {meta["time"]}</span>'
-                    f'<span style="color:#64748B;">{meta["note"]}</span></div>',
+                    f'<span style="color:#CBD5E1;">{meta["note"]}</span></div>',
                     unsafe_allow_html=True
                 )
 
@@ -3513,7 +3513,7 @@ def render_screener():
                     'padding:10px 14px;margin-bottom:8px;">'
                     '<div style="font-size:10px;color:#5EEAD4;letter-spacing:1.5px;'
                     'text-transform:uppercase;font-weight:700;margin-bottom:6px;">Your Tickers</div>'
-                    '<div style="font-size:11px;color:#4A6080;margin-bottom:6px;">'
+                    '<div style="font-size:11px;color:#CBD5E1;margin-bottom:6px;">'
                     'Comma separated, one per line, or TradingView paste format — up to 50</div>',
                     unsafe_allow_html=True
                 )
@@ -3550,7 +3550,7 @@ def render_screener():
               <span style="font-size:11px;color:#FACC15;font-weight:600;">
                 Educational tool only — not financial advice.
               </span>
-              <span style="font-size:11px;color:#64748B;">
+              <span style="font-size:11px;color:#CBD5E1;">
                 AI analysis does not guarantee any outcome. Always do your own research before trading.
               </span>
             </div>""", unsafe_allow_html=True)
@@ -3813,7 +3813,7 @@ def render_screener():
                             f'<div style="flex:1;position:relative;height:3px;background:#243348;border-radius:2px;">'
                             f'<div style="position:absolute;left:0;top:0;width:100%;height:3px;border-radius:2px;background:linear-gradient(90deg,#FF6B6B,#FACC15,#00FF88);"></div>'
                             f'<div style="position:absolute;left:{min(max(w52,2),98)}%;top:-3px;width:7px;height:7px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:1px solid #111827;"></div>'
-                            f'</div><span style="font-size:10px;color:#64748B;">{w52}%</span></div>'
+                            f'</div><span style="font-size:10px;color:#CBD5E1;">{w52}%</span></div>'
                         )
 
                         ma_icons = "".join([
@@ -3827,24 +3827,24 @@ def render_screener():
                                     border-radius:8px;padding:12px 16px;margin-bottom:8px;">
                           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                             <div style="display:flex;align-items:center;gap:10px;">
-                              <span style="font-size:11px;color:#4A6080;font-family:monospace;">#{rank}</span>
+                              <span style="font-size:11px;color:#CBD5E1;font-family:monospace;">#{rank}</span>
                               <span style="font-family:monospace;font-weight:800;color:#00FF88;font-size:16px;">{r["ticker"]}</span>
                               <span style="font-size:12px;color:#CBD5E1;">{r["company"]}</span>
-                              <span style="font-size:11px;color:#64748B;">{r["sector"][:18] if r["sector"] else ""}</span>
+                              <span style="font-size:11px;color:#CBD5E1;">{r["sector"][:18] if r["sector"] else ""}</span>
                             </div>
                             <div style="display:flex;align-items:center;gap:12px;">
                               <div style="text-align:right;">
-                                <div style="font-size:10px;color:#64748B;letter-spacing:1px;">COMPOSITE</div>
+                                <div style="font-size:10px;color:#CBD5E1;letter-spacing:1px;">COMPOSITE</div>
                                 <div style="font-size:18px;font-weight:800;color:{score_col};font-family:monospace;">{score}</div>
                               </div>
                             </div>
                           </div>
                           <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px;">
                             <span style="font-size:13px;color:#FACC15;font-family:monospace;font-weight:700;">{r["cur"]}{r["close"]:.2f}</span>
-                            <span style="font-size:11px;color:#64748B;">RSI <span style="color:{rsi_col};font-weight:700;">{r["rsi"]:.0f}</span></span>
-                            <span style="font-size:11px;color:#64748B;">Signal <span style="color:{sig_col};font-weight:700;">{sig}/10</span></span>
-                            <span style="font-size:11px;color:#64748B;">52W {w52_bar}</span>
-                            <span style="font-size:11px;color:#64748B;">MAs {ma_icons}</span>
+                            <span style="font-size:11px;color:#CBD5E1;">RSI <span style="color:{rsi_col};font-weight:700;">{r["rsi"]:.0f}</span></span>
+                            <span style="font-size:11px;color:#CBD5E1;">Signal <span style="color:{sig_col};font-weight:700;">{sig}/10</span></span>
+                            <span style="font-size:11px;color:#CBD5E1;">52W {w52_bar}</span>
+                            <span style="font-size:11px;color:#CBD5E1;">MAs {ma_icons}</span>
                             {'<span style="font-size:11px;color:#00FF88;">Earnings +' + f"{r['earnings_surprise']:.0f}%" + '</span>' if r.get("earnings_surprise", 0) >= 5 else ""}
                           </div>
                           <div style="font-size:11px;color:#5EEAD4;font-style:italic;">"{r["one_liner"]}"</div>
@@ -3917,7 +3917,7 @@ def render_screener():
                 min_score = st.slider("Min Signal Score", 0, 10, 0, key="screener_min_score")
 
             run_wl = st.button("🔍 Screen Watchlist", type="primary", use_container_width=True, key="screener_run")
-            st.markdown('<div style="font-size:10px;color:#4A6080;margin-top:4px;">⚠ For educational purposes only. Not financial advice.</div>', unsafe_allow_html=True)
+            st.markdown('<div style="font-size:10px;color:#CBD5E1;margin-top:4px;">⚠ For educational purposes only. Not financial advice.</div>', unsafe_allow_html=True)
 
         if not run_wl:
             st.markdown("""
@@ -4072,7 +4072,7 @@ def render_screener():
         st.markdown('''<div style="background:#1A2232;border:1px solid #243348;border-top:none;border-radius:0 0 8px 8px;">
           <div style="display:grid;grid-template-columns:80px 1fr 90px 80px 80px 70px 70px 60px 120px;
                       gap:4px;padding:7px 14px;background:#131F32;
-                      font-size:10px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">
+                      font-size:10px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">
             <span>Ticker</span><span>Company</span><span>Score</span>
             <span>Price</span><span>Change</span><span>RSI</span><span>ATR%</span>
             <span>MAs</span><span>52W Pos.</span>
@@ -4090,7 +4090,7 @@ def render_screener():
                 f'<span style="color:{sc_col};font-weight:800;font-size:15px;font-family:monospace;">{sc}</span>'
                 f'<div style="flex:1;height:4px;background:#243348;border-radius:2px;">'
                 f'<div style="width:{sc*10}%;height:4px;background:{sc_col};border-radius:2px;"></div>'
-                f'</div><span style="color:#64748B;font-size:10px;">/10</span></div>')
+                f'</div><span style="color:#CBD5E1;font-size:10px;">/10</span></div>')
             w52_bar = (f'<div style="display:flex;align-items:center;gap:4px;">'
                 f'<div style="flex:1;position:relative;height:4px;background:#243348;border-radius:2px;">'
                 f'<div style="position:absolute;left:0;top:0;width:100%;height:4px;border-radius:2px;background:linear-gradient(90deg,#FF6B6B,#FACC15,#00FF88);"></div>'
@@ -4130,7 +4130,7 @@ def render_screener():
                         run_analysis(r["ticker"])
 
         if invalid_wl:
-            st.markdown(f'<div style="font-size:11px;color:#4A6080;margin-top:8px;">⚠ Could not fetch: {", ".join(r["ticker"] for r in invalid_wl)}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:11px;color:#CBD5E1;margin-top:8px;">⚠ Could not fetch: {", ".join(r["ticker"] for r in invalid_wl)}</div>', unsafe_allow_html=True)
 
 
 if __name__ == '__main__':
