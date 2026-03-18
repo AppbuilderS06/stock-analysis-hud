@@ -2,33 +2,33 @@
   "iv": 8.545836425781252,
   "news": [
     {
-      "title": "Tech stocks today: Microsoft shakes up AI leadership, Nvidia's Jensen Huang hosts GTC event",
+      "title": "Why this analyst says Micron's margins might be peaking",
       "publisher": "",
-      "link": "https://finance.yahoo.com/news/live/tech-stocks-today-microsoft-shakes-up-ai-leadership-nvidias-jensen-huang-hosts-gtc-event-144220282.html"
+      "link": "https://finance.yahoo.com/video/why-analyst-says-microns-margins-214438548.html"
     },
     {
-      "title": "Nvidia CEO's secret to success? \u2018Don\u2019t die\u2019",
+      "title": "Nvidia's changing its strategic approach to AI, going all in on inferencing and agents",
       "publisher": "",
-      "link": "https://finance.yahoo.com/video/nvidia-ceos-secret-success-don-143634863.html"
+      "link": "https://finance.yahoo.com/news/nvidias-changing-its-strategic-approach-to-ai-going-all-in-on-inferencing-and-agents-185557754.html"
     },
     {
-      "title": "Nvidia to power Uber's autonomous fleet in new partnership",
+      "title": "Nvidia CEO Huang says company sees more than $1 trillion in sales through 2027",
       "publisher": "",
-      "link": "https://finance.yahoo.com/video/nvidia-power-ubers-autonomous-fleet-211500441.html"
+      "link": "https://finance.yahoo.com/news/nvidia-ceo-huang-says-company-sees-more-than-1-trillion-in-sales-through-2027-221700475.html"
     },
     {
-      "title": "Dow Jones, S&P 500 Undercut Lows Amid Cautious Powell; Micron Earnings Crush Views But Oil Prices Hit $100",
+      "title": "Down Almost 9% in 1 Week, Is This Your Chance to Buy Starbucks Stock?",
       "publisher": "",
-      "link": "https://www.investors.com/market-trend/stock-market-today/dow-jones-futures-sp-500-lows-powell-oil-prices-micron-earnings-guidance/?src=A00220&yptr=yahoo"
+      "link": "https://www.fool.com/investing/2026/03/18/down-almost-9-in-1-week-is-this-your-chance-to-buy/"
     },
     {
-      "title": "2 No-Brainer Tech Stocks to Buy Right Now",
+      "title": "Why New Fortress Energy Stock Just Fell 20.3%",
       "publisher": "",
-      "link": "https://www.fool.com/investing/2026/03/18/2-no-brainer-tech-stocks-to-buy-right-now/"
+      "link": "https://www.fool.com/investing/2026/03/18/why-new-fortress-energy-stock-just-fell-203/"
     }
   ],
   "analyst_targets": null,
-  "calendar": "{'Dividend Date': datetime.date(2026, 4, 1), 'Ex-Dividend Date': datetime.date(2026, 3, 11), 'Earnings Date': [datetime.date(2026, 5, 20)], 'Earnings High': 1.99, 'Earnings Low': 1.69, 'Earnings Average': 1.77474, 'Revenue High': 85512000000, 'Revenue Low': 77618000000, 'Revenue Average': 78725558980}",
+  "calendar": "{'Dividend Date': datetime.date(2026, 4, 1), 'Ex-Dividend Date': datetime.date(2026, 3, 11), 'Earnings Date': [datetime.date(2026, 5, 20)], 'Earnings High': 1.99, 'Earnings Low': 1.69, 'Earnings Average': 1.7754, 'Revenue High': 85512000000, 'Revenue Low': 77618000000, 'Revenue Average': 78737732150}",
   "info": {
     "marketCap": 4384621851654.0527,
     "fiftyTwoWeekHigh": 212.19000244140625,
@@ -57,12 +57,12 @@
     "shortPercentOfFloat": 0.0107,
     "floatShares": 23330430000,
     "forwardPE": 16.384851,
-    "targetMeanPrice": 267.5351,
+    "targetMeanPrice": 268.426,
     "targetLowPrice": 140.0,
     "targetHighPrice": 380.0,
     "numberOfAnalystOpinions": 55,
     "recommendationKey": "strong_buy",
-    "recommendationMean": 1.2807
+    "recommendationMean": 1.27586
   },
   "df_rows": 501,
   "earn_hist_rows": 0,
