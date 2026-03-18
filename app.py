@@ -58,7 +58,7 @@ def search_ticker_fmp(query, fmp_key=""):
     return result
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key="", _v=14):
+def fetch_ticker_data(ticker, fmp_key="", _v=15):
     """Hybrid: yfinance for price+fundamentals, FMP only for analyst/earnings/insider.
     Uses ~4 FMP calls per ticker instead of 11. Search is separate cached call."""
     import time, requests
@@ -1262,20 +1262,6 @@ def range_bar_html(low, high, current, cur):
 
 # ── Main App ──────────────────────────────────────────────────
 def main():
-    # ── Global disclaimer — visible on every page ────────────
-    st.markdown("""
-    <div style="background:#1A1000;border:1px solid #FACC1533;border-radius:6px;
-                padding:6px 14px;margin-bottom:8px;
-                display:flex;align-items:center;gap:10px;">
-      <span style="font-size:13px;">⚠️</span>
-      <span style="font-size:11px;color:#FACC15;font-weight:700;white-space:nowrap;">
-        Educational tool only — not financial advice.
-      </span>
-      <span style="font-size:11px;color:#CBD5E1;">
-        AI analysis does not guarantee any outcome. Always do your own research before trading.
-      </span>
-    </div>""", unsafe_allow_html=True)
-
     # ── Sidebar: cache controls ──────────────────────────────
     with st.sidebar:
         st.markdown("### ⚙️ Controls")
@@ -1445,6 +1431,25 @@ For privacy questions, use the feedback mechanism on the platform or contact the
 
                 st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:20px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: add .TO (RY.TO) &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
 
+                # ── Bottom disclaimer + legal links ───────────
+                st.markdown("""
+                <div style="margin-top:32px;padding:14px 20px;
+                            background:#1A1000;border:1px solid #FACC1533;
+                            border-radius:8px;text-align:center;">
+                  <div style="font-size:12px;color:#FACC15;font-weight:700;margin-bottom:4px;">
+                    ⚠️ Educational tool only — not financial advice
+                  </div>
+                  <div style="font-size:11px;color:#CBD5E1;line-height:1.6;">
+                    AI-generated analysis does not guarantee any outcome.
+                    Always conduct your own research before making any investment decision.
+                    Never risk more than you can afford to lose.
+                  </div>
+                  <div style="font-size:10px;color:#4A6080;margin-top:8px;">
+                    📄 Terms of Use &nbsp;·&nbsp; 🔒 Privacy Policy
+                    &nbsp;— available in the sidebar menu ☰
+                  </div>
+                </div>""", unsafe_allow_html=True)
+
             with tab2:
                 render_earnings_analyzer()
 
@@ -1480,7 +1485,7 @@ def run_analysis(ticker):
         # ── 1. Fetch all data (cached 15 min) ──────────────────
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key, _v=14)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=15)
         df    = data['df']
         info  = data['info']
 
@@ -3748,7 +3753,7 @@ def render_screener():
                         prog.info(f"⏳ Scanning {ticker}... ({i+1}/{len(universe)})")
                         prog_bar.progress((i + 1) / len(universe))
                         try:
-                            data = fetch_ticker_data(ticker, fmp_key, _v=14)
+                            data = fetch_ticker_data(ticker, fmp_key, _v=15)
                             df_t = data.get("df", pd.DataFrame())
                             info_t = data.get("info", {})
                             earn_hist = data.get("earn_hist", [])
@@ -4052,7 +4057,7 @@ def render_screener():
         for i, ticker in enumerate(tickers):
             prog_wl.info(f"⏳ Screening {ticker}... ({i+1}/{len(tickers)})")
             try:
-                data = fetch_ticker_data(ticker, fmp_key_wl, _v=14)
+                data = fetch_ticker_data(ticker, fmp_key_wl, _v=15)
                 df_w = data.get("df", pd.DataFrame())
                 info_w = data.get("info", {})
                 if df_w.empty or len(df_w) < 50:
