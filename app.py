@@ -1338,7 +1338,7 @@ def sig_html(label, val, bull, neut=False, subtitle=""):
     cls = "sig-neut" if neut else ("sig-bull" if bull else "sig-bear")
     vcls = "sig-val-y" if neut else ("sig-val-g" if bull else "sig-val-r")
     prefix = "~ " if neut else ("+ " if bull else "− ")
-    sub_html = f'<div style="font-size:11px;color:#94A3B8;margin-top:3px;letter-spacing:0.3px;">{subtitle}</div>' if subtitle else ""
+    sub_html = f'<div style="font-size:11px;color:#F1F5F9;margin-top:3px;letter-spacing:0.3px;">{subtitle}</div>' if subtitle else ""
     return f'''<div class="{cls}">
       <div class="sig-label">{label}{info_icon(label)}</div>
       {sub_html}
@@ -2222,12 +2222,12 @@ def render_hud():
     st.markdown(f'''
     <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Open']:.2f}</div><div style="font-size:12px;color:#E2E8F0;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['High']:.2f}</div><div style="font-size:12px;color:#E2E8F0;letter-spacing:1px;text-transform:uppercase;">High</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Low']:.2f}</div><div style="font-size:12px;color:#E2E8F0;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:12px;color:#E2E8F0;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['VolTrend']:.2f}x</div><div style="font-size:12px;color:#E2E8F0;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:12px;color:#E2E8F0;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Open']:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['High']:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">High</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Low']:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['VolTrend']:.2f}x</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
       </div>
       <div style="color:#5EEAD4;font-size:11px;">{analyzed}</div>
     </div>''', unsafe_allow_html=True)
