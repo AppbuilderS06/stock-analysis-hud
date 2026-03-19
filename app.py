@@ -427,6 +427,18 @@ st.markdown("""
   #MainMenu, footer, header { visibility: hidden; }
   .stDeployButton { display: none; }
 
+  /* Sidebar — narrow and clean */
+  section[data-testid="stSidebar"] {
+    width: 220px !important;
+    min-width: 220px !important;
+    background: #0E1828 !important;
+    border-right: 1px solid #243348 !important;
+  }
+  section[data-testid="stSidebar"] > div {
+    width: 220px !important;
+    padding: 16px 12px !important;
+  }
+
   /* Identity bar */
   .identity-bar {
     background: linear-gradient(135deg, #112D20 0%, #112240 100%);
@@ -1231,7 +1243,7 @@ def sig_html(label, val, bull, neut=False, subtitle=""):
     cls = "sig-neut" if neut else ("sig-bull" if bull else "sig-bear")
     vcls = "sig-val-y" if neut else ("sig-val-g" if bull else "sig-val-r")
     prefix = "~ " if neut else ("+ " if bull else "− ")
-    sub_html = f'<div style="font-size:9px;color:#4A6080;margin-top:1px;letter-spacing:0.5px;">{subtitle}</div>' if subtitle else ""
+    sub_html = f'<div style="font-size:10px;color:#64748B;margin-top:2px;letter-spacing:0.5px;font-style:italic;">{subtitle}</div>' if subtitle else ""
     return f'''<div class="{cls}">
       <div class="sig-label">{label}{info_icon(label)}</div>
       {sub_html}
