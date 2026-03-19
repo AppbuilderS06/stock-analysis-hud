@@ -1966,12 +1966,12 @@ def render_hud():
     st.markdown(f'''
     <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Open']:.2f}</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['High']:.2f}</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">High</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Low']:.2f}</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['VolTrend']:.2f}x</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Open']:.2f}</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['High']:.2f}</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">High</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Low']:.2f}</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['VolTrend']:.2f}x</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
       </div>
       <div style="color:#5EEAD4;font-size:11px;">{analyzed}</div>
     </div>''', unsafe_allow_html=True)
