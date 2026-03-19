@@ -427,18 +427,6 @@ st.markdown("""
   #MainMenu, footer, header { visibility: hidden; }
   .stDeployButton { display: none; }
 
-  /* Sidebar — narrow and clean */
-  section[data-testid="stSidebar"] {
-    width: 220px !important;
-    min-width: 220px !important;
-    background: #0E1828 !important;
-    border-right: 1px solid #243348 !important;
-  }
-  section[data-testid="stSidebar"] > div {
-    width: 220px !important;
-    padding: 16px 12px !important;
-  }
-
   /* Identity bar */
   .identity-bar {
     background: linear-gradient(135deg, #112D20 0%, #112240 100%);
