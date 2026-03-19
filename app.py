@@ -890,14 +890,14 @@ def calculate_indicators(df):
 def calc_signals(row):
     close = row['Close']
     sigs = {
-        'MA20':  {'bull': close > row['MA20'],         'label': '20 MA',  'val': 'Above' if close > row['MA20']  else 'Below'},
-        'MA50':  {'bull': close > row['MA50'],         'label': '50 MA',  'val': 'Above' if close > row['MA50']  else 'Below'},
-        'MA200': {'bull': close > row['MA200'],        'label': '200 MA', 'val': 'Above' if close > row['MA200'] else 'Below'},
-        'RSI':   {'bull': 40 < row['RSI'] < 70,       'label': 'RSI',    'val': f"{row['RSI']:.1f}", 'neut': True},
-        'MACD':  {'bull': row['MACD'] > row['MACDSig'],'label': 'MACD',  'val': 'Bullish' if row['MACD'] > row['MACDSig'] else 'Bearish'},
-        'OBV':   {'bull': row['OBV'] > 0,             'label': 'OBV',    'val': 'Rising' if row['OBV'] > 0 else 'Falling'},
-        'Vol':   {'bull': row['VolTrend'] > 0.8,      'label': 'Volume', 'val': f"{row['VolTrend']:.2f}x"},
-        'ATR':   {'bull': row['ATRPct'] < 0.04,       'label': 'ATR',    'val': f"${row['ATR']:.2f} ({row['ATRPct']*100:.1f}%)"},
+        'MA20':  {'bull': close > row['MA20'],         'label': '20 MA',  'subtitle': 'short-term trend',  'val': 'Above' if close > row['MA20']  else 'Below'},
+        'MA50':  {'bull': close > row['MA50'],         'label': '50 MA',  'subtitle': 'mid-term trend',     'val': 'Above' if close > row['MA50']  else 'Below'},
+        'MA200': {'bull': close > row['MA200'],        'label': '200 MA', 'subtitle': 'long-term trend',    'val': 'Above' if close > row['MA200'] else 'Below'},
+        'RSI':   {'bull': 40 < row['RSI'] < 70,       'label': 'RSI',    'subtitle': 'momentum',           'val': f"{row['RSI']:.1f}", 'neut': True},
+        'MACD':  {'bull': row['MACD'] > row['MACDSig'],'label': 'MACD',  'subtitle': 'trend crossover',    'val': 'Bullish' if row['MACD'] > row['MACDSig'] else 'Bearish'},
+        'OBV':   {'bull': row['OBV'] > 0,             'label': 'OBV',    'subtitle': 'volume flow',        'val': 'Rising' if row['OBV'] > 0 else 'Falling'},
+        'Vol':   {'bull': row['VolTrend'] > 0.8,      'label': 'Volume', 'subtitle': 'vs average',         'val': f"{row['VolTrend']:.2f}x"},
+        'ATR':   {'bull': row['ATRPct'] < 0.04,       'label': 'ATR',    'subtitle': 'volatility',         'val': f"${row['ATR']:.2f} ({row['ATRPct']*100:.1f}%)"},
     }
     bull_count = sum(1 for k, v in sigs.items() if v['bull'])
     return sigs, round((bull_count / 8) * 10)
@@ -1227,12 +1227,14 @@ def info_icon(label):
     url = INFO_LINKS.get(label, "https://www.investopedia.com/search?q=" + label.replace(" ","+"))
     return f'<a href="{url}" target="_blank" class="info-link" title="Learn about {label} on Investopedia">ⓘ</a>'
 
-def sig_html(label, val, bull, neut=False):
+def sig_html(label, val, bull, neut=False, subtitle=""):
     cls = "sig-neut" if neut else ("sig-bull" if bull else "sig-bear")
     vcls = "sig-val-y" if neut else ("sig-val-g" if bull else "sig-val-r")
     prefix = "~ " if neut else ("+ " if bull else "− ")
+    sub_html = f'<div style="font-size:9px;color:#4A6080;margin-top:1px;letter-spacing:0.5px;">{subtitle}</div>' if subtitle else ""
     return f'''<div class="{cls}">
       <div class="sig-label">{label}{info_icon(label)}</div>
+      {sub_html}
       <div class="{vcls}">{prefix}{val}</div>
     </div>'''
 
@@ -1962,14 +1964,16 @@ def render_hud():
     except:
         analyzed = datetime.now().strftime("%b %d · %I:%M %p")
     st.markdown(f'''
-    <div class="status-bar">
-      O&nbsp;<span>{row['Open']:.2f}</span>&nbsp;&nbsp;
-      H&nbsp;<span>{row['High']:.2f}</span>&nbsp;&nbsp;
-      L&nbsp;<span>{row['Low']:.2f}</span>&nbsp;&nbsp;
-      VOL&nbsp;<span>{fmt_vol(vol)}</span>&nbsp;&nbsp;
-      AVG&nbsp;<span>{row['VolTrend']:.2f}x</span>&nbsp;&nbsp;
-      ATR&nbsp;<span>{cur}{float(row["ATR"]):.2f}&nbsp;({atr_pct*100:.1f}%)</span>&nbsp;&nbsp;
-      <span style="float:right;color:#5EEAD4;">{analyzed}</span>
+    <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Open']:.2f}</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['High']:.2f}</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">High</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Low']:.2f}</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['VolTrend']:.2f}x</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:9px;color:#3D6050;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
+      </div>
+      <div style="color:#5EEAD4;font-size:11px;">{analyzed}</div>
     </div>''', unsafe_allow_html=True)
 
     # ── ZONE 3: VERDICT + SCORE + AI SUMMARY ────────────────
@@ -2021,7 +2025,7 @@ def render_hud():
     for i, k in enumerate(sig_keys):
         s = signals[k]
         with cols[i]:
-            st.markdown(sig_html(s['label'], s['val'], s['bull'], s.get('neut', False)), unsafe_allow_html=True)
+            st.markdown(sig_html(s['label'], s['val'], s['bull'], s.get('neut', False), s.get('subtitle', '')), unsafe_allow_html=True)
 
     # ── ZONE 5: KEY LEVELS + FUNDAMENTALS ───────────────────
     vwap    = float(a.get('vwap', close))
@@ -2172,8 +2176,8 @@ def render_hud():
     with vc1:
         st.markdown('<div class="vol-panel"><div class="data-header">Historical Volatility</div>', unsafe_allow_html=True)
         hv_rows = ''
-        hv_rows += f'<div class="vol-row"><span class="vol-lbl">HV 30d <a href="https://www.investopedia.com/terms/h/historicalvolatility.asp" target="_blank" style="color:#4A6080;text-decoration:none;font-size:10px;">ⓘ</a></span><span style="color:{hv_col};font-weight:700;font-family:monospace;">{hv_30:.1f}%</span></div>'
-        hv_rows += f'<div class="vol-row"><span class="vol-lbl">HV 90d</span><span style="color:{hv_col};font-weight:700;font-family:monospace;">{hv_90:.1f}%</span></div>'
+        hv_rows += f'<div class="vol-row"><span class="vol-lbl">Volatility 30d <a href="https://www.investopedia.com/terms/h/historicalvolatility.asp" target="_blank" style="color:#4A6080;text-decoration:none;font-size:10px;">ⓘ</a></span><span style="color:{hv_col};font-weight:700;font-family:monospace;">{hv_30:.1f}%</span></div>'
+        hv_rows += f'<div class="vol-row"><span class="vol-lbl">Volatility 90d</span><span style="color:{hv_col};font-weight:700;font-family:monospace;">{hv_90:.1f}%</span></div>'
         hv_rows += f'<div class="vol-row"><span class="vol-lbl">ATR (14) $</span><span style="color:#38BDF8;font-weight:700;font-family:monospace;">{cur}{float(row["ATR"]):.2f}</span></div>'
         hv_rows += f'<div class="vol-row"><span class="vol-lbl">ATR % price</span><span style="color:#38BDF8;font-weight:700;font-family:monospace;">{float(row["ATRPct"])*100:.1f}%</span></div>'
         st.markdown(hv_rows + '</div>', unsafe_allow_html=True)
@@ -2471,7 +2475,7 @@ def render_hud():
     rc1, rc2, rc3 = st.columns(3)
     with rc1:
         st.markdown(f'''<div class="earn-bar" style="border-left-color:{rr_col};margin-top:6px;">
-          <div class="earn-label">R:R Ratio — Risk vs Reward</div>
+          <div class="earn-label">Risk/Reward Ratio</div>
           <div class="earn-val" style="color:{rr_col};font-size:26px;letter-spacing:1px;">1 : {rr_ratio}</div>
           <div style="font-size:11px;color:{rr_col};margin-top:3px;font-weight:700;">{rr_label}</div>
           <div style="font-size:10px;color:#4A6080;margin-top:4px;">For every {cur}1 risked → potential {cur}{rr_ratio} gain</div>
@@ -2631,7 +2635,7 @@ def render_hud():
         st.markdown('<div class="panel-body"><div style="padding:12px 14px;font-size:12px;color:#4A6080;">No earnings history available</div></div>', unsafe_allow_html=True)
     else:
         eh_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;">'
-        eh_html += '<div class="earn-hist-row" style="background:#131F32;font-size:11px;color:#64748B;"><span>Quarter</span><span>Est EPS</span><span>Actual EPS</span><span>Surprise</span></div>'
+        eh_html += '<div class="earn-hist-row" style="background:#131F32;font-size:11px;color:#64748B;"><span>Quarter</span><span>EPS Estimate</span><span>EPS Actual</span><span>Surprise</span></div>'
         for e in reversed(earnings_hist):
             beat_cls = "earn-beat" if e["beat"] else "earn-miss"
             icon     = "▲" if e["beat"] else "▼"
@@ -2794,9 +2798,9 @@ def render_hud():
     # Trend context
     st.markdown('<div class="section-header">Trend Context</div>', unsafe_allow_html=True)
     trend_items = [
-        ("Short-term (5d)",  a.get('trend_short','N/A'),  a.get('trend_short_desc','')),
-        ("Medium-term (20d)",a.get('trend_medium','N/A'), a.get('trend_medium_desc','')),
-        ("Long-term (200d)", a.get('trend_long','N/A'),   a.get('trend_long_desc','')),
+        ("Short-term trend (5 days)",   a.get('trend_short','N/A'),  a.get('trend_short_desc','')),
+        ("Medium-term trend (20 days)", a.get('trend_medium','N/A'), a.get('trend_medium_desc','')),
+        ("Long-term trend (200 days)",  a.get('trend_long','N/A'),   a.get('trend_long_desc','')),
         ("Pattern Bias",     a.get('pattern_bias','N/A'), a.get('pattern_bias_desc','')),
     ]
     cols = st.columns(4)
