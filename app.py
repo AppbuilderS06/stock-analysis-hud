@@ -34,29 +34,94 @@ def _fmp_get(endpoint, api_key, params=""):
     except:
         return None
 
-def resolve_company_name(ticker):
-    """Last-resort name lookup via Yahoo Finance query API — free, no key, near-universal coverage.
-    Returns dict with name, exchange, currency or None if not found."""
+def resolve_all_matches(ticker):
+    """Yahoo Finance search — returns ALL exact symbol matches across all exchanges.
+    Maps Yahoo exchange codes to proper ticker suffixes so TSX/LSE etc work automatically.
+    Returns list of dicts: [{sym, name, exchange, currency, display_exch}]
+    Never returns a single confirmed result — always lets user pick if multiple exchanges."""
     import requests
+
+    # Yahoo exchange code → (ticker suffix, display name, currency)
+    EXCH_MAP = {
+        "TOR": (".TO",  "TSX",       "CAD"),
+        "TSX": (".TO",  "TSX",       "CAD"),
+        "CNQ": (".CN",  "TSXV",      "CAD"),
+        "VAN": (".V",   "TSXV",      "CAD"),
+        "LSE": (".L",   "LSE",       "GBP"),
+        "EPA": (".PA",  "Euronext",  "EUR"),
+        "ETR": (".DE",  "XETRA",     "EUR"),
+        "AMS": (".AS",  "AEX",       "EUR"),
+        "HKG": (".HK",  "HKEX",      "HKD"),
+        "ASX": (".AX",  "ASX",       "AUD"),
+        "NSE": (".NS",  "NSE",       "INR"),
+        "BSE": (".BO",  "BSE",       "INR"),
+        # US exchanges — no suffix needed
+        "NYQ": ("",    "NYSE",      "USD"),
+        "NMS": ("",    "NASDAQ",    "USD"),
+        "NCM": ("",    "NASDAQ",    "USD"),
+        "NGM": ("",    "NASDAQ",    "USD"),
+        "PCX": ("",    "NYSE Arca", "USD"),
+        "PNK": ("",    "OTC",       "USD"),
+        "OTC": ("",    "OTC",       "USD"),
+        "BTS": ("",    "BATS",      "USD"),
+        "CBO": ("",    "CBOE",      "USD"),
+    }
+
     try:
-        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={ticker}&quotesCount=5&newsCount=0"
+        url = (f"https://query1.finance.yahoo.com/v1/finance/search"
+               f"?q={ticker}&quotesCount=10&newsCount=0")
         r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
         if r.status_code != 200:
-            return None
-        data = r.json()
-        quotes = data.get("quotes", [])
+            return []
+        quotes = r.json().get("quotes", [])
         if not quotes:
-            return None
-        # Find exact symbol match first, then fall back to first result
-        match = next((q for q in quotes if q.get("symbol","").upper() == ticker.upper()), quotes[0])
-        name = match.get("longname") or match.get("shortname") or ""
-        exch = match.get("exchDisp") or match.get("exchange") or ""
-        curr = match.get("currency") or ("CAD" if ticker.endswith(".TO") else "USD")
-        if name:
-            return {"name": name, "exchange": exch, "currency": curr}
-        return None
+            return []
+
+        results = []
+        seen = set()
+        for q in quotes:
+            sym_raw  = q.get("symbol", "")
+            yexch    = q.get("exchange", "")
+            longname = q.get("longname") or q.get("shortname") or ""
+            if not longname:
+                continue
+
+            # Only exact base symbol matches
+            base = sym_raw.split(".")[0].upper()
+            if base != ticker.upper():
+                continue
+
+            # Map to our suffix
+            suffix, disp_exch, default_curr = EXCH_MAP.get(yexch, ("", yexch, "USD"))
+            proper_sym = ticker.upper() + suffix  # e.g. NPK → NPK.TO for TSX
+            currency   = q.get("currency") or default_curr
+
+            key = (proper_sym, disp_exch)
+            if key in seen:
+                continue
+            seen.add(key)
+
+            results.append({
+                "sym":      proper_sym,
+                "name":     longname[:52],
+                "exchange": disp_exch,
+                "currency": currency,
+            })
+
+        return results
+
     except:
+        return []
+
+
+def resolve_company_name(ticker):
+    """Single-result wrapper around resolve_all_matches for use in fetch_ticker_data name fallback."""
+    matches = resolve_all_matches(ticker)
+    if not matches:
         return None
+    # Prefer exact ticker match (no suffix added) if available, else first result
+    exact = next((m for m in matches if m["sym"].upper() == ticker.upper()), matches[0])
+    return {"name": exact["name"], "exchange": exact["exchange"], "currency": exact["currency"]}
 
 
 def search_ticker_fmp(query, fmp_key=""):
@@ -1493,40 +1558,65 @@ def main():
                                     selected_ticker = result
 
                         else:
-                            # PATH C: FMP unknown — auto-resolve via Yahoo Finance
-                            # Runs silently on every rerun, cached in session state
+                            # PATH C: FMP unknown — resolve via Yahoo Finance (all matches)
+                            # Runs silently, cached in session state
                             cache_key = f"_yf_{ticker_upper}"
                             if cache_key not in st.session_state:
-                                resolved = resolve_company_name(ticker_upper)
-                                st.session_state[cache_key] = resolved or {}
+                                matches = resolve_all_matches(ticker_upper)
+                                st.session_state[cache_key] = matches
 
-                            rinfo  = st.session_state.get(cache_key, {})
-                            rname  = rinfo.get("name", "")
-                            rexch  = rinfo.get("exchange", "")
-                            rcurr  = rinfo.get("currency", "")
-                            found  = bool(rname)
+                            matches = st.session_state.get(cache_key, [])
 
-                            render_identity_card(ticker_upper, rname, rexch, rcurr,
-                                                 name_found=found)
+                            if len(matches) > 1:
+                                # Multiple exchanges — show premium dropdown
+                                # TSX suffix (.TO) already embedded in sym by resolve_all_matches
+                                rows = [{"sym":  m["sym"],
+                                         "name": m["name"],
+                                         "exch": m["exchange"],
+                                         "curr": m["currency"],
+                                         "key":  f'yf_{m["sym"]}_{m["exchange"]}'}
+                                        for m in matches]
+                                result = render_dropdown(rows)
+                                if result:
+                                    selected_ticker = result
 
-                            if found:
+                            elif len(matches) == 1:
+                                # Single match — identity card + one Analyze button
+                                m     = matches[0]
+                                rname = m["name"]
+                                rexch = m["exchange"]
+                                rcurr = m["currency"]
+                                rsym  = m["sym"]  # may have .TO appended
+                                render_identity_card(rsym, rname, rexch, rcurr,
+                                                     name_found=True)
                                 st.session_state["_resolved_name"] = rname
                                 st.session_state["_resolved_exch"] = rexch
                                 st.session_state["_resolved_curr"] = rcurr
-                                btn_lbl = f"Analyze {rname} →"
-                            else:
-                                btn_lbl = f"Analyze {ticker_upper} →"
+                                c1, c2 = st.columns([3, 1])
+                                with c1:
+                                    if st.button(f"Analyze {rname} →", type="primary",
+                                                 use_container_width=True, key="analyze_yf"):
+                                        selected_ticker = rsym
+                                with c2:
+                                    if st.button("↩ Reset", use_container_width=True,
+                                                 key="analyze_reset"):
+                                        st.session_state.pop(cache_key, None)
+                                        st.rerun()
 
-                            c1, c2 = st.columns([3, 1])
-                            with c1:
-                                if st.button(btn_lbl, type="primary",
-                                             use_container_width=True, key="analyze_yf"):
-                                    selected_ticker = ticker_upper
-                            with c2:
-                                if st.button("↩ Reset", use_container_width=True,
-                                             key="analyze_reset"):
-                                    st.session_state.pop(cache_key, None)
-                                    st.rerun()
+                            else:
+                                # Nothing found anywhere — let user proceed with warning
+                                render_identity_card(ticker_upper, "", "", "",
+                                                     name_found=False)
+                                c1, c2 = st.columns([3, 1])
+                                with c1:
+                                    if st.button(f"Analyze {ticker_upper} →", type="primary",
+                                                 use_container_width=True, key="analyze_yf_unknown"):
+                                        selected_ticker = ticker_upper
+                                with c2:
+                                    if st.button("↩ Reset", use_container_width=True,
+                                                 key="analyze_reset_unknown"):
+                                        st.session_state.pop(cache_key, None)
+                                        st.rerun()
 
                     # PATH D: No FMP key — direct button, no resolution
                     else:
@@ -1538,7 +1628,7 @@ def main():
                 if selected_ticker:
                     run_analysis(selected_ticker)
 
-                st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:20px;">US: AAPL · NVDA · PLTR &nbsp;|&nbsp; TSX: add .TO (RY.TO) &nbsp;|&nbsp; London: add .L</div>', unsafe_allow_html=True)
+                st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:20px;">US · TSX · LSE · Euronext · HKEX · ASX — all major exchanges supported</div>', unsafe_allow_html=True)
 
                 render_disclaimer()
 
@@ -2132,12 +2222,12 @@ def render_hud():
     st.markdown(f'''
     <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Open']:.2f}</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['High']:.2f}</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">High</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Low']:.2f}</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['VolTrend']:.2f}x</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:9px;color:#64748B;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Open']:.2f}</div><div style="font-size:11px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['High']:.2f}</div><div style="font-size:11px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">High</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['Low']:.2f}</div><div style="font-size:11px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:11px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row['VolTrend']:.2f}x</div><div style="font-size:11px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:11px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
       </div>
       <div style="color:#5EEAD4;font-size:11px;">{analyzed}</div>
     </div>''', unsafe_allow_html=True)
