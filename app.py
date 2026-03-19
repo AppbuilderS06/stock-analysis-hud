@@ -34,6 +34,31 @@ def _fmp_get(endpoint, api_key, params=""):
     except:
         return None
 
+def resolve_company_name(ticker):
+    """Last-resort name lookup via Yahoo Finance query API — free, no key, near-universal coverage.
+    Returns dict with name, exchange, currency or None if not found."""
+    import requests
+    try:
+        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={ticker}&quotesCount=5&newsCount=0"
+        r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        quotes = data.get("quotes", [])
+        if not quotes:
+            return None
+        # Find exact symbol match first, then fall back to first result
+        match = next((q for q in quotes if q.get("symbol","").upper() == ticker.upper()), quotes[0])
+        name = match.get("longname") or match.get("shortname") or ""
+        exch = match.get("exchDisp") or match.get("exchange") or ""
+        curr = match.get("currency") or ("CAD" if ticker.endswith(".TO") else "USD")
+        if name:
+            return {"name": name, "exchange": exch, "currency": curr}
+        return None
+    except:
+        return None
+
+
 def search_ticker_fmp(query, fmp_key=""):
     """Search FMP. Uses session-state cache — never caches empty results."""
     if not fmp_key or not query:
@@ -368,6 +393,23 @@ def fetch_ticker_data(ticker, fmp_key="", _v=15):
             atm   = chain.calls.iloc[(chain.calls["strike"]-cp).abs().argsort()[:1]]
             iv    = float(atm["impliedVolatility"].values[0]) * 100
     except: pass
+
+    # ── NAME FALLBACK — Yahoo Finance query API if still missing ─────────
+    # Runs only when FMP profile and yfinance both failed to return a name
+    if not info.get('longName') or info.get('longName','').upper() == ticker.upper():
+        try:
+            import requests as _req
+            url = f"https://query1.finance.yahoo.com/v1/finance/search?q={ticker}&quotesCount=5&newsCount=0"
+            r = _req.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+            if r.status_code == 200:
+                quotes = r.json().get("quotes", [])
+                match = next((q for q in quotes if q.get("symbol","").upper() == ticker.upper()), None)
+                if match:
+                    name = match.get("longname") or match.get("shortname") or ""
+                    if name:
+                        info['longName']  = name
+                        info['shortName'] = name
+        except: pass
 
     return {"df":df,"info":info,"calendar":calendar,"rec_summary":rec_summary,
             "earn_hist":earn_hist,"earn_dates":earn_dates,"insider":insider,
@@ -1301,25 +1343,31 @@ def main():
                                           label_visibility="collapsed")
                 ticker_upper = ticker_in.strip().upper() if ticker_in else ""
 
-                analyze_clicked = st.button("Analyze →", type="primary",
-                                            use_container_width=True)
-
                 # ── Enter key detection ────────────────────────────
-                # Streamlit reruns on Enter but doesn't set analyze_clicked.
-                # If the ticker value is the same as the last rerun, Enter was pressed.
                 prev_val = st.session_state.get('_prev_ticker_val', '')
                 st.session_state['_prev_ticker_val'] = ticker_upper
-                enter_pressed = (ticker_upper != '' and ticker_upper == prev_val and not analyze_clicked)
-                should_analyze = analyze_clicked or enter_pressed
+                enter_pressed = (ticker_upper != '' and ticker_upper == prev_val)
+                should_analyze = enter_pressed
 
-                # ── Live dropdown ─────────────────────────────────
+                # ── Live dropdown + identity card ─────────────────
                 selected_ticker = None
 
                 def show_dropdown(rows):
-                    """Render a dropdown list. rows = list of dicts with sym/name/exch/curr/key."""
+                    """Render a dropdown list. rows = list of dicts with sym/name/exch/curr/key.
+                    Shows a multi-exchange warning when the same symbol maps to different companies."""
+                    # Check if multiple distinct company names exist — warn the user
+                    unique_names = list({r["name"] for r in rows if r["name"]})
+                    if len(unique_names) > 1:
+                        st.markdown(
+                            '<div style="background:#2D1500;border:1px solid #FACC15;'
+                            'border-radius:8px;padding:8px 14px;margin-top:6px;margin-bottom:4px;">'
+                            '<span style="font-size:12px;color:#FACC15;font-weight:700;">⚠️ This symbol trades as different companies on different exchanges — select carefully</span>'
+                            '</div>',
+                            unsafe_allow_html=True)
+
                     st.markdown(
                         '<div style="background:#0D1B2A;border:1px solid #14B8A6;'
-                        'border-radius:8px;margin-top:6px;overflow:hidden;">'
+                        'border-radius:8px;margin-top:4px;overflow:hidden;">'
                         '<div style="padding:5px 14px;font-size:10px;color:#5EEAD4;'
                         'letter-spacing:1.5px;background:#071420;">'
                         '▼ SELECT EXCHANGE / SHARE CLASS</div>',
@@ -1335,13 +1383,34 @@ def main():
                                 f'</div>', unsafe_allow_html=True)
                         with rr:
                             if st.button("▶ Analyze", key=row["key"]):
+                                st.session_state["_resolved_name"] = row["name"]
+                                st.session_state["_resolved_exch"] = row["exch"]
+                                st.session_state["_resolved_curr"] = row["curr"]
                                 return row["sym"]
                     st.markdown("</div>", unsafe_allow_html=True)
                     return None
 
+                def show_identity_card(ticker, name, exch, curr, name_found=True):
+                    """Show resolved company identity between input and Analyze button."""
+                    name_color  = "#E2E8F0" if name_found else "#FACC15"
+                    name_text   = name if name_found else "Name not found — verify this ticker is correct"
+                    exch_text   = f"{exch} · {curr}" if exch else ""
+                    border_col  = "#14B8A6" if name_found else "#FACC15"
+                    st.markdown(f"""
+                    <div style="background:#0A1828;border:1px solid {border_col};border-radius:8px;
+                                padding:10px 16px;margin:6px 0;display:flex;align-items:center;gap:14px;">
+                      <div style="font-family:monospace;font-size:22px;font-weight:800;
+                                  color:#00FF88;letter-spacing:2px;min-width:60px;">{ticker}</div>
+                      <div style="flex:1;">
+                        <div style="font-size:14px;font-weight:700;color:{name_color};
+                                    margin-bottom:2px;">{name_text}</div>
+                        <div style="font-size:11px;color:#5EEAD4;">{exch_text}</div>
+                      </div>
+                      <div style="font-size:10px;color:#4A6080;">✓ confirmed</div>
+                    </div>""", unsafe_allow_html=True)
+
                 if ticker_upper:
-                    # ── STEP 1: hardcoded MULTI_LISTED — always checked first ──
-                    # Handles BRK→BRK-A/BRK-B, RY→NYSE/TSX, SHOP→NYSE/TSX etc.
+                    # ── STEP 1: MULTI_LISTED — always checked first ────────
                     if ticker_upper in MULTI_LISTED:
                         rows = [{"sym": o["ticker"], "name": o["name"],
                                  "exch": o["exchange"], "curr": o["currency"],
@@ -1351,26 +1420,86 @@ def main():
                         if result:
                             selected_ticker = result
 
-                    # ── STEP 2: FMP live search for everything else ──
+                    # ── STEP 2: FMP live search ────────────────────────────
                     elif fmp_key_lp:
                         results = search_ticker_fmp(ticker_upper, fmp_key_lp)
                         if results:
-                            rows = [{"sym":  r.get("symbol",""),
-                                     "name": r.get("name","")[:42],
-                                     "exch": r.get("exchangeShortName",""),
-                                     "curr": r.get("currency","USD"),
-                                     "key":  f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
-                                    for r in results[:10] if r.get("symbol","")]
-                            result = show_dropdown(rows)
-                            if result:
-                                selected_ticker = result
-                        elif should_analyze:
-                            # FMP has nothing → try the ticker directly (e.g. NPK.TO typed in full)
-                            selected_ticker = ticker_upper
+                            # Find exact ticker match if it exists
+                            exact = next((r for r in results
+                                         if r.get("symbol","").upper() == ticker_upper), None)
 
-                    # ── STEP 3: No FMP key → direct run ──
+                            if exact and len(results) == 1:
+                                # Single unambiguous result — show identity card + Analyze button
+                                name = exact.get("name","")[:50]
+                                exch = exact.get("exchangeShortName","")
+                                curr = exact.get("currency","USD")
+                                show_identity_card(ticker_upper, name, exch, curr)
+                                st.session_state["_resolved_name"] = name
+                                st.session_state["_resolved_exch"] = exch
+                                st.session_state["_resolved_curr"] = curr
+                                btn_label = f"Analyze {name} →" if name else "Analyze →"
+                                if st.button(btn_label, type="primary",
+                                             use_container_width=True, key="analyze_single"):
+                                    selected_ticker = ticker_upper
+                            else:
+                                # Multiple results — show dropdown (with warning if different companies)
+                                rows = [{"sym":  r.get("symbol",""),
+                                         "name": r.get("name","")[:42],
+                                         "exch": r.get("exchangeShortName",""),
+                                         "curr": r.get("currency","USD"),
+                                         "key":  f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
+                                        for r in results[:10] if r.get("symbol","")]
+                                result = show_dropdown(rows)
+                                if result:
+                                    selected_ticker = result
+
+                        else:
+                            # FMP has nothing — show generic Analyze button
+                            # On click, resolve via Yahoo Finance then show identity card
+                            analyze_clicked = st.button("Analyze →", type="primary",
+                                                        use_container_width=True,
+                                                        key="analyze_unknown")
+                            should_analyze = analyze_clicked or enter_pressed
+
+                            if should_analyze:
+                                # Check if we already resolved this ticker
+                                cache_key = f"_yf_resolved_{ticker_upper}"
+                                if cache_key not in st.session_state:
+                                    with st.spinner(f"Looking up {ticker_upper}..."):
+                                        resolved = resolve_company_name(ticker_upper)
+                                    st.session_state[cache_key] = resolved or {}
+
+                                rinfo = st.session_state.get(cache_key, {})
+                                rname = rinfo.get("name", "")
+                                rexch = rinfo.get("exchange", "")
+                                rcurr = rinfo.get("currency", "")
+
+                                show_identity_card(ticker_upper, rname, rexch, rcurr,
+                                                   name_found=bool(rname))
+
+                                if rname:
+                                    st.session_state["_resolved_name"] = rname
+                                    st.session_state["_resolved_exch"] = rexch
+                                    st.session_state["_resolved_curr"] = rcurr
+
+                                c1, c2 = st.columns(2)
+                                with c1:
+                                    btn_label = f"Analyze {rname} →" if rname else f"Analyze {ticker_upper} →"
+                                    if st.button(btn_label, type="primary",
+                                                 use_container_width=True, key="analyze_confirmed"):
+                                        selected_ticker = ticker_upper
+                                with c2:
+                                    if st.button("🔍 Try a different ticker",
+                                                 use_container_width=True, key="analyze_retry"):
+                                        st.session_state.pop(cache_key, None)
+                                        st.rerun()
+
+                    # ── STEP 3: No FMP key — show Analyze button directly ──
                     else:
-                        if should_analyze:
+                        analyze_clicked = st.button("Analyze →", type="primary",
+                                                    use_container_width=True,
+                                                    key="analyze_nofmp")
+                        if analyze_clicked or enter_pressed:
                             selected_ticker = ticker_upper
 
                 # ── Run analysis on selection ─────────────────────
@@ -1883,12 +2012,17 @@ def render_hud():
                 if opt['ticker'].upper() == ticker.upper():
                     company = opt['name']
                     break
+    # Final fallback — use name resolved during verify screen or dropdown selection
+    if not company or company == ticker or company == ticker.replace('-','.'):
+        resolved = st.session_state.get("_resolved_name", "")
+        if resolved:
+            company = resolved
     sector  = info.get('sector', a.get('sector',''))
     exchange = 'TSX' if ticker.endswith('.TO') else 'LSE' if ticker.endswith('.L') else 'NYSE / NASDAQ'
 
     # Back button
     if st.button("← New ticker"):
-        for k in ['analysis','df','info','ticker','signals','score','fibs','row','prev','_prev_ticker_val','rr_mode','_rr_ticker']:
+        for k in ['analysis','df','info','ticker','signals','score','fibs','row','prev','_prev_ticker_val','rr_mode','_rr_ticker','_resolved_name','_resolved_exch','_resolved_curr','_verify_pending','_verify_ticker']:
             if k in st.session_state: del st.session_state[k]
         st.rerun()
 
