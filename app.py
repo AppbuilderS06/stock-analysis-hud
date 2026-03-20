@@ -492,42 +492,44 @@ st.markdown("""
   .stApp { background: #111827; }
   .block-container { padding: 1rem 2rem 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; transition: all 0.3s ease; }
 
+  /* Hide Streamlit branding — leave header alone so toggle works */
   #MainMenu { visibility: hidden; }
   footer { visibility: hidden; }
-  header { visibility: hidden; }
   .stDeployButton { display: none; }
+  /* Style the header dark — do NOT set height or visibility */
+  header[data-testid="stHeader"] {
+    background: #111827 !important;
+    border-bottom: 1px solid #1E2D42 !important;
+  }
+  /* Hide all children of header EXCEPT the sidebar toggle */
+  header[data-testid="stHeader"] > * {
+    visibility: hidden !important;
+  }
+  header[data-testid="stHeader"] [data-testid="collapsedControl"] {
+    visibility: visible !important;
+    background: #0D1525 !important;
+    border: 1px solid #1E2D42 !important;
+    border-radius: 0 6px 6px 0 !important;
+  }
+  header[data-testid="stHeader"] [data-testid="collapsedControl"] svg {
+    fill: #5EEAD4 !important;
+    color: #5EEAD4 !important;
+  }
 
-  /* ── Sidebar: collapsible ── */
+  /* ── Sidebar styling ── */
   section[data-testid="stSidebar"] {
+    background: #0D1525 !important;
+    border-right: 1px solid #1E2D42 !important;
     min-width: 300px !important;
     width: 300px !important;
   }
-  /* Toggle arrow — force visible at all times, even when header is hidden */
-  [data-testid="collapsedControl"],
-  [data-testid="collapsedControl"] button,
-  button[kind="header"][data-testid="baseButton-header"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    z-index: 9999 !important;
-    position: fixed !important;
-    top: 50vh !important;
-    left: 0px !important;
-    background: #0D1525 !important;
-    border: 1px solid #1E2D42 !important;
-    border-left: none !important;
-    border-radius: 0 8px 8px 0 !important;
-    color: #5EEAD4 !important;
-    padding: 12px 6px !important;
-    min-width: 24px !important;
-    transform: translateY(-50%) !important;
-  }
-  [data-testid="collapsedControl"] svg {
-    color: #5EEAD4 !important;
-    fill: #5EEAD4 !important;
+  section[data-testid="stSidebar"] > div {
+    padding: 1rem !important;
   }
   .main .block-container {
     transition: all 0.3s ease;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .identity-bar {
@@ -662,7 +664,9 @@ st.markdown("""
     padding: 12px !important;
   }
   .stTextInput input:focus { box-shadow: 0 0 0 3px #00FF8818 !important; }
-  .stButton button {
+  /* Main CTA button — scoped to avoid hijacking sidebar toggle */
+  .main .stButton button,
+  .block-container .stButton button {
     background: #00FF88 !important;
     color: #080E18 !important;
     border: none !important;
@@ -673,7 +677,8 @@ st.markdown("""
     width: 100% !important;
     padding: 14px !important;
   }
-  .stButton button:hover { opacity: 0.9 !important; }
+  .main .stButton button:hover,
+  .block-container .stButton button:hover { opacity: 0.9 !important; }
 
   div.screener-btn .stButton button,
   .screener-btn .stButton button {
@@ -891,14 +896,6 @@ st.markdown("""
     color: #94A3B8 !important;
   }
 
-  /* ── Sidebar styling ── */
-  section[data-testid="stSidebar"] {
-    background: #0D1525 !important;
-    border-right: 1px solid #1E2D42 !important;
-  }
-  section[data-testid="stSidebar"] > div {
-    padding: 1rem !important;
-  }
   section[data-testid="stSidebar"] .stExpander {
     border: 1px solid #1E2D42 !important;
     border-radius: 8px !important;
