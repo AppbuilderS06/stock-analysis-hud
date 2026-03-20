@@ -472,7 +472,7 @@ st.set_page_config(
     page_title="Stock Analysis HUD",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 VERDICT_COLORS = {
@@ -860,16 +860,25 @@ st.markdown("""
   section[data-testid="stSidebar"] {
     background: #0D1525 !important;
     border-right: 1px solid #1E2D42 !important;
+    min-width: 280px !important;
+    width: 320px !important;
+  }
+  section[data-testid="stSidebar"] > div {
+    padding: 1rem !important;
   }
   section[data-testid="stSidebar"] .stExpander {
     border: 1px solid #1E2D42 !important;
     border-radius: 8px !important;
     margin-bottom: 8px !important;
+    background: #111827 !important;
   }
   section[data-testid="stSidebar"] .stExpander summary {
     font-size: 13px !important;
     font-weight: 600 !important;
     color: #CBD5E1 !important;
+  }
+  section[data-testid="stSidebar"] .stExpander summary:hover {
+    color: #5EEAD4 !important;
   }
 
 </style>
