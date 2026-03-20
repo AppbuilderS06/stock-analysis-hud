@@ -492,8 +492,34 @@ st.markdown("""
   .stApp { background: #111827; }
   .block-container { padding: 1rem 2rem 2rem; max-width: 1200px; }
 
-  #MainMenu, footer, header { visibility: hidden; }
+  #MainMenu { visibility: hidden; }
+  footer { visibility: hidden; }
+  header { visibility: hidden; }
   .stDeployButton { display: none; }
+
+  /* ── Force sidebar toggle button to always show ── */
+  [data-testid="collapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background: #0D1525 !important;
+    border: 1px solid #1E2D42 !important;
+    border-radius: 0 6px 6px 0 !important;
+    color: #5EEAD4 !important;
+  }
+  /* Keep sidebar open and visible regardless of state */
+  section[data-testid="stSidebar"][aria-expanded="false"] {
+    display: flex !important;
+    min-width: 320px !important;
+    width: 320px !important;
+    transform: none !important;
+    margin-left: 0 !important;
+  }
+  section[data-testid="stSidebar"] {
+    display: flex !important;
+    min-width: 320px !important;
+    width: 320px !important;
+  }
 
   .identity-bar {
     background: linear-gradient(135deg, #112D20 0%, #112240 100%);
