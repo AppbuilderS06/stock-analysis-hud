@@ -490,14 +490,19 @@ st.markdown("""
 
   html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
   .stApp { background: #111827; }
-  .block-container { padding: 1rem 2rem 2rem; max-width: 1200px; }
+  .block-container { padding: 1rem 2rem 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; transition: all 0.3s ease; }
 
   #MainMenu { visibility: hidden; }
   footer { visibility: hidden; }
   header { visibility: hidden; }
   .stDeployButton { display: none; }
 
-  /* ── Force sidebar toggle button to always show ── */
+  /* ── Sidebar: collapsible, toggle always visible ── */
+  section[data-testid="stSidebar"] {
+    min-width: 300px !important;
+    width: 300px !important;
+  }
+  /* Toggle arrow — always visible, styled */
   [data-testid="collapsedControl"] {
     display: flex !important;
     visibility: visible !important;
@@ -506,19 +511,12 @@ st.markdown("""
     border: 1px solid #1E2D42 !important;
     border-radius: 0 6px 6px 0 !important;
     color: #5EEAD4 !important;
+    z-index: 999 !important;
   }
-  /* Keep sidebar open and visible regardless of state */
-  section[data-testid="stSidebar"][aria-expanded="false"] {
-    display: flex !important;
-    min-width: 320px !important;
-    width: 320px !important;
-    transform: none !important;
-    margin-left: 0 !important;
-  }
-  section[data-testid="stSidebar"] {
-    display: flex !important;
-    min-width: 320px !important;
-    width: 320px !important;
+  /* When sidebar is collapsed, center the main content */
+  section[data-testid="stSidebar"][aria-expanded="false"] + section,
+  .main .block-container {
+    transition: all 0.3s ease;
   }
 
   .identity-bar {
@@ -886,8 +884,6 @@ st.markdown("""
   section[data-testid="stSidebar"] {
     background: #0D1525 !important;
     border-right: 1px solid #1E2D42 !important;
-    min-width: 280px !important;
-    width: 320px !important;
   }
   section[data-testid="stSidebar"] > div {
     padding: 1rem !important;
@@ -1532,12 +1528,7 @@ def main():
                     font-family:'JetBrains Mono',monospace;">SYSTEM</div>
         """, unsafe_allow_html=True)
 
-        if st.button("🔄  Clear Cache & Refresh", use_container_width=True):
-            st.cache_data.clear()
-            for k in list(st.session_state.keys()):
-                del st.session_state[k]
-            st.success("Cache cleared!")
-            st.rerun()
+
 
         fmp_active = bool(st.secrets.get("FMP_API_KEY", ""))
         st.markdown(f"""
@@ -2228,6 +2219,17 @@ def render_hud():
         st.rerun()
 
     with st.expander("🔍 Data Sources Debug — click to inspect what was fetched", expanded=False):
+        # ── Dev tools ──
+        col_dev1, col_dev2 = st.columns(2)
+        with col_dev1:
+            if st.button("🔄 Clear Cache & Refresh", use_container_width=True):
+                st.cache_data.clear()
+                for k in list(st.session_state.keys()):
+                    del st.session_state[k]
+                st.rerun()
+        with col_dev2:
+            st.caption("Dev only — clears all cached data and session state")
+        st.divider()
         d = st.session_state
         fmp_ok = bool(st.secrets.get("FMP_API_KEY",""))
         col_a, col_b = st.columns(2)
