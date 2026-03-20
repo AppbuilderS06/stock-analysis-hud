@@ -492,28 +492,14 @@ st.markdown("""
   .stApp { background: #111827; }
   .block-container { padding: 1rem 2rem 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; transition: all 0.3s ease; }
 
-  /* Hide Streamlit branding — leave header alone so toggle works */
+  /* Hide Streamlit branding — header stays visible for toggle to work */
   #MainMenu { visibility: hidden; }
   footer { visibility: hidden; }
   .stDeployButton { display: none; }
-  /* Style the header dark — do NOT set height or visibility */
+  /* Header: same color as app background — invisible but toggle still works */
   header[data-testid="stHeader"] {
-    background: #111827 !important;
-    border-bottom: 1px solid #1E2D42 !important;
-  }
-  /* Hide all children of header EXCEPT the sidebar toggle */
-  header[data-testid="stHeader"] > * {
-    visibility: hidden !important;
-  }
-  header[data-testid="stHeader"] [data-testid="collapsedControl"] {
-    visibility: visible !important;
-    background: #0D1525 !important;
-    border: 1px solid #1E2D42 !important;
-    border-radius: 0 6px 6px 0 !important;
-  }
-  header[data-testid="stHeader"] [data-testid="collapsedControl"] svg {
-    fill: #5EEAD4 !important;
-    color: #5EEAD4 !important;
+    background-color: #111827 !important;
+    border-bottom: none !important;
   }
 
   /* ── Sidebar styling ── */
