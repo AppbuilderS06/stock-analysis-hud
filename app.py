@@ -497,24 +497,35 @@ st.markdown("""
   header { visibility: hidden; }
   .stDeployButton { display: none; }
 
-  /* ── Sidebar: collapsible, toggle always visible ── */
+  /* ── Sidebar: collapsible ── */
   section[data-testid="stSidebar"] {
     min-width: 300px !important;
     width: 300px !important;
   }
-  /* Toggle arrow — always visible, styled */
-  [data-testid="collapsedControl"] {
+  /* Toggle arrow — force visible at all times, even when header is hidden */
+  [data-testid="collapsedControl"],
+  [data-testid="collapsedControl"] button,
+  button[kind="header"][data-testid="baseButton-header"] {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+    z-index: 9999 !important;
+    position: fixed !important;
+    top: 50vh !important;
+    left: 0px !important;
     background: #0D1525 !important;
     border: 1px solid #1E2D42 !important;
-    border-radius: 0 6px 6px 0 !important;
+    border-left: none !important;
+    border-radius: 0 8px 8px 0 !important;
     color: #5EEAD4 !important;
-    z-index: 999 !important;
+    padding: 12px 6px !important;
+    min-width: 24px !important;
+    transform: translateY(-50%) !important;
   }
-  /* When sidebar is collapsed, center the main content */
-  section[data-testid="stSidebar"][aria-expanded="false"] + section,
+  [data-testid="collapsedControl"] svg {
+    color: #5EEAD4 !important;
+    fill: #5EEAD4 !important;
+  }
   .main .block-container {
     transition: all 0.3s ease;
   }
