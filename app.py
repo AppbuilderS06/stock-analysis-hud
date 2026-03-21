@@ -977,72 +977,187 @@ def calculate_indicators(df):
 
 def detect_weinstein_phase(df):
     """
-    Weinstein Phase detection using 150-day MA (≈ 30-week).
-    Returns: phase (1-4), label, color, confidence (0-3), description
+    Weinstein Phase detection — multi-MA + price structure + OBV + elasticity.
+
+    Signals used (from Weinstein & Investopedia source):
+    - MA20, MA50, MA150 alignment and slopes
+    - Higher highs / higher lows vs lower highs / lower lows
+    - Price bar elasticity (Stage 3: bars failing to reach upper half of range)
+    - OBV direction vs price direction (accumulation / distribution)
+    - Volume character (expanding up vs expanding down)
+    - Distance from 200-day peak
+
+    Returns: (phase, label, sublabel, color, conf_score, conf_text, desc)
     """
     import numpy as _np
+
     if len(df) < 160:
-        return 0, "Insufficient data", "#94A3B8", 0, ""
+        return (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', 'Insufficient data')
 
-    close    = df['Close']
-    ma150    = close.rolling(150).mean()
-    if ma150.iloc[-1] != ma150.iloc[-1]:  # NaN check
-        return 0, "N/A", "#94A3B8", 0, ""
+    close  = df['Close']
+    high   = df['High']
+    low    = df['Low']
+    volume = df['Volume']
 
-    c        = float(close.iloc[-1])
-    ma       = float(ma150.iloc[-1])
-    ma_prev  = float(ma150.iloc[-11]) if len(ma150) > 11 else ma
+    # ── Moving Averages ───────────────────────────────────────
+    ma20  = close.rolling(20).mean()
+    ma50  = close.rolling(50).mean()
+    ma150 = close.rolling(150).mean()
 
-    # Slope: rate of change over 10 days normalized
-    slope    = (ma - ma_prev) / ma_prev if ma_prev != 0 else 0
+    c      = float(close.iloc[-1])
+    m20    = float(ma20.iloc[-1])
+    m50    = float(ma50.iloc[-1])
+    m150   = float(ma150.iloc[-1])
 
-    # Higher highs / lower lows over 20-day windows
-    recent_high = float(close.tail(20).max())
-    prior_high  = float(close.iloc[-40:-20].max()) if len(close) >= 40 else recent_high
-    recent_low  = float(close.tail(20).min())
-    prior_low   = float(close.iloc[-40:-20].min()) if len(close) >= 40 else recent_low
+    # Slopes (10-day rate of change, normalized)
+    def _slope(series, n=10):
+        cur  = float(series.iloc[-1])
+        prev = float(series.iloc[-(n+1)]) if len(series) > n else cur
+        return (cur - prev) / prev if prev != 0 else 0
+
+    slope_20  = _slope(ma20,  10)
+    slope_50  = _slope(ma50,  10)
+    slope_150 = _slope(ma150, 10)
+
+    # ── Price Structure (20-day windows) ──────────────────────
+    recent_high = float(high.tail(20).max())
+    prior_high  = float(high.iloc[-40:-20].max()) if len(high) >= 40 else recent_high
+    recent_low  = float(low.tail(20).min())
+    prior_low   = float(low.iloc[-40:-20].min()) if len(low) >= 40 else recent_low
 
     higher_highs = recent_high > prior_high * 1.01
+    higher_lows  = recent_low  > prior_low  * 1.01
+    lower_highs  = recent_high < prior_high * 0.99
     lower_lows   = recent_low  < prior_low  * 0.99
-    above_ma     = c > ma
-    below_ma     = c < ma
-    slope_up     = slope >  0.0005
-    slope_down   = slope < -0.0005
-    slope_flat   = abs(slope) <= 0.0005
 
-    # MA50 as tiebreaker
-    ma50 = float(df['MA50'].iloc[-1]) if 'MA50' in df.columns else c
+    # ── MA Alignment ─────────────────────────────────────────
+    # Stage 2 ideal: price > MA20 > MA50 > MA150, all rising
+    # Stage 4 ideal: price < MA20 < MA50 < MA150, all falling
+    mas_bullish_aligned = (c > m20 > m50 > m150) and slope_150 > 0
+    mas_bearish_aligned = (c < m20 < m50 < m150) and slope_150 < 0
+    above_150 = c > m150
+    below_150 = c < m150
 
-    # Phase decision tree — count confirming conditions
-    if above_ma and slope_up and higher_highs:
-        phase, conf = 2, 3
-    elif above_ma and slope_up and not higher_highs:
-        phase, conf = 2, 2
-    elif above_ma and slope_flat:
-        phase, conf = 3, 2  # topping
-    elif above_ma and slope_down:
-        phase, conf = 3, 3  # confirmed top
-    elif below_ma and slope_down and lower_lows:
-        phase, conf = 4, 3
-    elif below_ma and slope_down and not lower_lows:
-        phase, conf = 4, 2
-    elif below_ma and slope_flat:
-        phase, conf = 1, 2  # basing
-    elif below_ma and slope_up:
-        phase, conf = 1, 3  # late base / early breakout
+    # ── Price Bar Elasticity (Weinstein Stage 3 signal) ───────
+    # "Mature top: bars failing to reach upper half of range"
+    # Measure: how often close is in upper half of day's range (last 15 days)
+    recent_bars = df.tail(15)
+    bar_range   = (recent_bars['High'] - recent_bars['Low']).replace(0, 0.001)
+    close_pct   = (recent_bars['Close'] - recent_bars['Low']) / bar_range
+    elasticity  = float(close_pct.mean())  # 0=always at low, 1=always at high
+    # < 0.45 = limp bars (Stage 3/4 signal), > 0.55 = strong closes (Stage 2)
+    limp_bars   = elasticity < 0.45
+    strong_bars = elasticity > 0.55
+
+    # ── OBV vs Price (accumulation / distribution) ────────────
+    obv = df.get('OBV', None)
+    if obv is not None and len(obv) >= 20:
+        obv_slope  = _slope(obv, 20)
+        price_slope_20 = _slope(close, 20)
+        obv_rising      = obv_slope > 0
+        obv_falling     = obv_slope < 0
+        # Divergence: OBV going opposite to price
+        bullish_div = price_slope_20 < -0.001 and obv_slope > 0.001   # accumulation
+        bearish_div = price_slope_20 >  0.001 and obv_slope < -0.001  # distribution
     else:
-        phase, conf = 0, 0
+        obv_rising = obv_falling = bullish_div = bearish_div = False
+
+    # ── Volume Character ─────────────────────────────────────
+    # Expanding volume on up days vs down days (last 20 sessions)
+    recent_20 = df.tail(20)
+    up_days   = recent_20[recent_20['Close'] > recent_20['Open']]
+    dn_days   = recent_20[recent_20['Close'] < recent_20['Open']]
+    avg_up_vol = float(up_days['Volume'].mean()) if len(up_days) > 0 else 0
+    avg_dn_vol = float(dn_days['Volume'].mean()) if len(dn_days) > 0 else 0
+    vol_bullish = avg_up_vol > avg_dn_vol * 1.1   # up days on bigger volume
+    vol_bearish = avg_dn_vol > avg_up_vol * 1.1   # down days on bigger volume
+
+    # ── Distance from peak ────────────────────────────────────
+    peak_200 = float(close.tail(200).max())
+    pct_off  = (peak_200 - c) / peak_200 if peak_200 > 0 else 0
+
+    # ── Phase Scoring System ──────────────────────────────────
+    # Each phase has a score based on confirming signals
+    # Highest score wins, with minimum threshold
+
+    s1 = s2 = s3 = s4 = 0
+
+    # PHASE 1 signals (basing below flat MA)
+    if below_150 and abs(slope_150) < 0.002:  s1 += 2  # flat MA below
+    if higher_lows and not higher_highs:       s1 += 2  # higher lows = base
+    if bullish_div:                            s1 += 2  # OBV leading price
+    if obv_rising and not higher_highs:        s1 += 1  # accumulation
+    if pct_off > 0.30:                         s1 += 1  # well off peak
+
+    # PHASE 2 signals (uptrend, higher highs + higher lows)
+    if mas_bullish_aligned:                    s2 += 3  # all MAs aligned up
+    elif above_150 and slope_150 > 0.0005:     s2 += 2  # above rising MA150
+    if higher_highs and higher_lows:           s2 += 2  # classic uptrend structure
+    elif higher_highs and not lower_lows:      s2 += 1  # highs up at minimum
+    if strong_bars and not limp_bars:          s2 += 1  # strong closes = elasticity
+    if vol_bullish:                            s2 += 1  # volume confirms
+    if obv_rising:                             s2 += 1  # OBV trending up
+
+    # PHASE 3 signals (distribution topping)
+    if above_150 and slope_150 < 0.001 and lower_highs:  s3 += 3  # core signal
+    if limp_bars:                              s3 += 2  # Weinstein's elasticity
+    if bearish_div or (obv_falling and above_150): s3 += 2  # OBV distribution
+    if vol_bearish and above_150:             s3 += 1  # heavy down volume
+    if lower_highs and not lower_lows:        s3 += 1  # lower highs forming
+    if pct_off > 0.08 and above_150:          s3 += 1  # 8%+ off peak above MA
+
+    # PHASE 4 signals (downtrend, lower lows)
+    if mas_bearish_aligned:                    s4 += 3  # all MAs aligned down
+    elif below_150 and slope_150 < -0.0005:    s4 += 2  # below declining MA
+    if lower_highs and lower_lows:             s4 += 2  # classic downtrend
+    if vol_bearish:                            s4 += 1  # heavy selling
+    if obv_falling:                            s4 += 1  # OBV declining
+    if limp_bars:                              s4 += 1  # weak closes
+    if pct_off > 0.20:                         s4 += 1  # well off peak
+
+    # ── Phase Decision ────────────────────────────────────────
+    scores = {1: s1, 2: s2, 3: s3, 4: s4}
+    phase  = max(scores, key=scores.get)
+    best   = scores[phase]
+
+    # Minimum threshold — if max score is very low, unclear
+    if best < 3:
+        phase = 0
+
+    # Confidence = how far ahead of second-best
+    sorted_scores = sorted(scores.values(), reverse=True)
+    gap   = sorted_scores[0] - sorted_scores[1] if len(sorted_scores) > 1 else 0
+    conf  = 3 if gap >= 4 else 2 if gap >= 2 else 1 if gap >= 1 else 0
+
+    # Sub-classification for Phase 2 (early vs late)
+    if phase == 2:
+        if slope_20 < slope_50 and pct_off < 0.05 and not strong_bars:
+            sublabel = "Late Uptrend"
+            desc2    = "Momentum slowing, higher highs tightening — early Phase 3 watch"
+        else:
+            sublabel = "Uptrend"
+            desc2    = "Price above rising MA, higher highs/lows — the only phase to buy"
+    else:
+        sublabel = ""
+        desc2    = ""
 
     PHASE_MAP = {
-        1: ("PHASE 1", "Basing",    "#38BDF8",  "Price consolidating below flat MA — wait for Phase 2 breakout"),
-        2: ("PHASE 2", "Uptrend",   "#00FF88",  "Price above rising MA — the only phase to buy"),
-        3: ("PHASE 3", "Topping",   "#FACC15",  "MA flattening after uptrend — tighten stops, avoid new entries"),
-        4: ("PHASE 4", "Downtrend", "#FF6B6B",  "Price below declining MA — avoid, no long positions"),
-        0: ("PHASE ?", "Unclear",   "#94A3B8",  "Mixed signals — needs more data"),
+        0: ("PHASE ?", "Unclear",      "#94A3B8",
+            "Mixed signals — not enough confirmation for a clear phase"),
+        1: ("PHASE 1", "Basing",       "#38BDF8",
+            "Consolidating below flat MA — OBV accumulating, wait for volume breakout"),
+        2: ("PHASE 2", sublabel or "Uptrend", "#00FF88",
+            desc2 or "Price above rising MA, higher highs/lows — buy zone"),
+        3: ("PHASE 3", "Topping",      "#FACC15",
+            "Distribution underway — lower highs, limp bars, OBV falling. Tighten stops"),
+        4: ("PHASE 4", "Downtrend",    "#FF6B6B",
+            "Price below declining MAs, lower lows — avoid all longs"),
     }
-    label, sublabel, color, desc = PHASE_MAP[phase]
-    conf_text = ["", "Low confidence", "Moderate confidence", "High confidence"][conf]
-    return phase, label, sublabel, color, conf, conf_text, desc
+
+    label, sub, color, desc = PHASE_MAP[phase]
+    conf_text = ["", "Low confidence", "Moderate confidence", "High confidence"][min(conf, 3)]
+
+    return (phase, label, sub, color, conf, conf_text, desc)
 
 
 def calc_signals(row):
@@ -1402,6 +1517,55 @@ def range_bar_html(low, high, current, cur):
       </div>
       <div style="text-align:center;font-size:11px;color:#94A3B8;">{cur}{current:.2f} — {pct}% of 52W range</div>
     </div>'''
+
+
+# ── Weinstein Phase Support — module level (cached properly) ─
+SECTOR_ETF_MAP = {
+    # yfinance sector strings (exact match required)
+    "Technology":                  "XLK",
+    "Healthcare":                  "XLV",
+    "Financials":                  "XLF",
+    "Financial Services":          "XLF",
+    "Energy":                      "XLE",
+    "Consumer Cyclical":           "XLY",
+    "Consumer Defensive":          "XLP",
+    "Industrials":                 "XLI",
+    "Utilities":                   "XLU",
+    "Real Estate":                 "XLRE",
+    "Basic Materials":             "XLB",
+    "Communication Services":      "XLC",
+    # FMP sector strings (may differ)
+    "Information Technology":      "XLK",
+    "Consumer Discretionary":      "XLY",
+    "Consumer Staples":            "XLP",
+    "Materials":                   "XLB",
+    "Health Care":                 "XLV",
+    "Telecommunication Services":  "XLC",
+    "Electronic Components":       "XLK",
+    "Semiconductors":              "XLK",
+}
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_market_phase():
+    try:
+        spy_df = yf.Ticker("SPY").history(period="2y")
+        spy_df['MA20']  = spy_df['Close'].rolling(20).mean()
+        spy_df['MA50']  = spy_df['Close'].rolling(50).mean()
+        spy_df['MA200'] = spy_df['Close'].rolling(200).mean()
+        return detect_weinstein_phase(spy_df)
+    except:
+        return (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', '')
+
+@st.cache_data(ttl=900, show_spinner=False)
+def get_sector_phase(sector_etf):
+    try:
+        s_df = yf.Ticker(sector_etf).history(period="2y")
+        s_df['MA20']  = s_df['Close'].rolling(20).mean()
+        s_df['MA50']  = s_df['Close'].rolling(50).mean()
+        s_df['MA200'] = s_df['Close'].rolling(200).mean()
+        return detect_weinstein_phase(s_df)
+    except:
+        return (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', '')
 
 
 # ── Main App ──────────────────────────────────────────────────
@@ -2510,36 +2674,6 @@ def render_hud():
     # ── WEINSTEIN PHASE + THREE TAILWINDS ────────────────────
     ph_num, ph_label, ph_sub, ph_col, ph_conf, ph_conf_text, ph_desc = phase_result
 
-    # Market phase (SPY)
-    @st.cache_data(ttl=900, show_spinner=False)
-    def get_market_phase():
-        try:
-            import yfinance as _yf
-            spy_df = _yf.Ticker("SPY").history(period="2y")
-            spy_df['MA20'] = spy_df['Close'].rolling(20).mean()
-            spy_df['MA50'] = spy_df['Close'].rolling(50).mean()
-            spy_df['MA200']= spy_df['Close'].rolling(200).mean()
-            return detect_weinstein_phase(spy_df)
-        except: return (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', '')
-
-    @st.cache_data(ttl=900, show_spinner=False)
-    def get_sector_phase(sector_etf):
-        try:
-            import yfinance as _yf
-            s_df = _yf.Ticker(sector_etf).history(period="2y")
-            s_df['MA20'] = s_df['Close'].rolling(20).mean()
-            s_df['MA50'] = s_df['Close'].rolling(50).mean()
-            s_df['MA200']= s_df['Close'].rolling(200).mean()
-            return detect_weinstein_phase(s_df)
-        except: return (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', '')
-
-    SECTOR_ETF_MAP = {
-        "Technology": "XLK", "Healthcare": "XLV", "Financials": "XLF",
-        "Energy": "XLE", "Consumer Cyclical": "XLY", "Consumer Defensive": "XLP",
-        "Industrials": "XLI", "Utilities": "XLU", "Real Estate": "XLRE",
-        "Basic Materials": "XLB", "Communication Services": "XLC",
-        "Financial Services": "XLF", "Consumer Electronics": "XLK",
-    }
     sector_name = info.get('sector', '')
     sector_etf  = SECTOR_ETF_MAP.get(sector_name, '')
 
