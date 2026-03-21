@@ -513,9 +513,15 @@ st.markdown("""
     padding: 1rem !important;
   }
   .main .block-container {
-    transition: all 0.3s ease;
+    transition: margin 0.3s ease;
     margin-left: auto;
     margin-right: auto;
+  }
+  /* Recenter content when sidebar is collapsed */
+  section[data-testid="stSidebar"][aria-expanded="false"] ~ section .block-container,
+  section[data-testid="stSidebar"][aria-expanded="false"] ~ .main .block-container {
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 
   .identity-bar {
