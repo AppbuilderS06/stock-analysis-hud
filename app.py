@@ -2477,38 +2477,6 @@ def render_hud():
             if k in st.session_state: del st.session_state[k]
         st.rerun()
 
-    with st.expander("🔍 Data Sources Debug — click to inspect what was fetched", expanded=False):
-        # ── Dev tools ──
-        col_dev1, col_dev2 = st.columns(2)
-        with col_dev1:
-            if st.button("🔄 Clear Cache & Refresh", use_container_width=True):
-                st.cache_data.clear()
-                for k in list(st.session_state.keys()):
-                    del st.session_state[k]
-                st.rerun()
-        with col_dev2:
-            st.caption("Dev only — clears all cached data and session state")
-        st.divider()
-        d = st.session_state
-        fmp_ok = bool(st.secrets.get("FMP_API_KEY",""))
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.markdown("**Company Name**")
-            st.code(f"longName:  {info.get('longName','❌ missing')}\nshortName: {info.get('shortName','❌ missing')}")
-            st.markdown("**Earnings Date**")
-            st.code(f"earn_date_str: {d.get('earn_date_str','❌')}\ndays_to_earn:  {d.get('days_to_earn',0)}\nearningsDate in info: {info.get('earningsDate','❌')}")
-            st.markdown("**Earnings History**")
-            eh = d.get('earnings_hist',[])
-            st.code(f"{len(eh)} quarters loaded\n{eh[:2] if eh else 'EMPTY — check FMP earnings-surprises'}")
-        with col_b:
-            st.markdown("**Analyst Data**")
-            ad = d.get('analyst_data',{})
-            st.code(f"target: {ad.get('target',0)}\nbuy: {ad.get('buy',0)} hold: {ad.get('hold',0)} sell: {ad.get('sell',0)}\nnum_analysts: {ad.get('num_analysts',0)}\nrec_key: {ad.get('rec_key','❌')}")
-            st.markdown("**Insider Transactions**")
-            ins = d.get('insider_data',[])
-            st.code(f"{len(ins)} transactions loaded\n{ins[:1] if ins else 'EMPTY'}")
-            st.markdown(f"**FMP key active:** {'✅ Yes' if fmp_ok else '❌ No — add FMP_API_KEY to secrets'}")
-
     chg_badge = f'<span class="price-change-up">▲ {sign}{chg:.2f} ({sign}{chg_pct:.2f}%)</span>' if chg >= 0 else \
                 f'<span class="price-change-dn">▼ {chg:.2f} ({chg_pct:.2f}%)</span>'
     st.markdown(f'''
