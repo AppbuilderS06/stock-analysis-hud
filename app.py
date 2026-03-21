@@ -1106,17 +1106,18 @@ def detect_weinstein_phase(df):
     return (phase, label, sub, color, conf, conf_text, desc)
 
 
-def calc_signals(row):
+def calc_signals(row, prev=None):
     close = row['Close']
+    obv_rising = (float(row['OBV']) > float(prev['OBV'])) if prev is not None else (row['OBV'] > 0)
     sigs = {
-        'MA20':  {'bull': close > row['MA20'],         'label': '20 MA',  'subtitle': 'short-term trend',  'val': 'Above' if close > row['MA20']  else 'Below'},
-        'MA50':  {'bull': close > row['MA50'],         'label': '50 MA',  'subtitle': 'mid-term trend',     'val': 'Above' if close > row['MA50']  else 'Below'},
-        'MA200': {'bull': close > row['MA200'],        'label': '200 MA', 'subtitle': 'long-term trend',    'val': 'Above' if close > row['MA200'] else 'Below'},
-        'RSI':   {'bull': 40 < row['RSI'] < 70,       'label': 'RSI',    'subtitle': 'momentum',           'val': f"{row['RSI']:.1f}", 'neut': True},
-        'MACD':  {'bull': row['MACD'] > row['MACDSig'],'label': 'MACD',  'subtitle': 'trend crossover',    'val': 'Bullish' if row['MACD'] > row['MACDSig'] else 'Bearish'},
-        'OBV':   {'bull': row['OBV'] > 0,             'label': 'OBV',    'subtitle': 'volume flow',        'val': 'Rising' if row['OBV'] > 0 else 'Falling'},
-        'Vol':   {'bull': row['VolTrend'] > 0.8,      'label': 'Volume', 'subtitle': 'vs average',         'val': f"{row['VolTrend']:.2f}x"},
-        'ATR':   {'bull': row['ATRPct'] < 0.04,       'label': 'ATR',    'subtitle': 'volatility',         'val': f"${row['ATR']:.2f} ({row['ATRPct']*100:.1f}%)"},
+        'MA20':  {'bull': close > row['MA20'],          'label': '20 MA',  'subtitle': 'short-term trend',  'val': 'Above' if close > row['MA20']  else 'Below'},
+        'MA50':  {'bull': close > row['MA50'],          'label': '50 MA',  'subtitle': 'mid-term trend',     'val': 'Above' if close > row['MA50']  else 'Below'},
+        'MA200': {'bull': close > row['MA200'],         'label': '200 MA', 'subtitle': 'long-term trend',    'val': 'Above' if close > row['MA200'] else 'Below'},
+        'RSI':   {'bull': 40 < row['RSI'] < 70,        'label': 'RSI',    'subtitle': 'momentum',           'val': f"{row['RSI']:.1f}", 'neut': True},
+        'MACD':  {'bull': row['MACD'] > row['MACDSig'], 'label': 'MACD',  'subtitle': 'trend crossover',    'val': 'Bullish' if row['MACD'] > row['MACDSig'] else 'Bearish'},
+        'OBV':   {'bull': obv_rising,                   'label': 'OBV',    'subtitle': 'volume flow',        'val': 'Rising' if obv_rising else 'Falling'},
+        'Vol':   {'bull': row['VolTrend'] > 0.8,       'label': 'Volume', 'subtitle': 'vs average',         'val': f"{row['VolTrend']:.2f}x"},
+        'ATR':   {'bull': row['ATRPct'] < 0.04,        'label': 'ATR',    'subtitle': 'volatility',         'val': f"${row['ATR']:.2f} ({row['ATRPct']*100:.1f}%)"},
     }
     bull_count = sum(1 for k, v in sigs.items() if v['bull'])
     return sigs, round((bull_count / 8) * 10)
@@ -1235,7 +1236,7 @@ def fundamental_screen(info, verdict):
                 'verdict_color': '#64748B', 'score_pct': 0,
                 'bucket': bucket, 'detail': 'Hard stop: negative operating cash flow'}
 
-    if verdict == 'AVOID':
+    if str(verdict).strip().upper() == 'AVOID':
         return {'verdict_text': 'Technical setup only',
                 'verdict_color': '#64748B', 'score_pct': 0,
                 'bucket': bucket, 'detail': 'Hard stop: AI verdict is AVOID'}
@@ -1505,7 +1506,10 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         "OTHER:\n"
         "- Classify each news headline as bullish/bearish/neutral\n"
         "- ALWAYS return trend_short/medium/long — NEVER return N/A\n"
-        "- Use market context for business cycle phase\n\n"
+        "- Use market context for business cycle phase\n"
+        "- IMPORTANT: For Technology, Communication Services, Semiconductors, and high-growth sectors "
+        "do NOT use P/E ratio as a risk reason. High P/E is structurally normal for growth companies. "
+        "Use revenue growth, margins, cash flow, and debt instead to assess risk.\n\n"
         "Return ONLY this JSON:\n"
         '{"verdict":"DAY TRADE|TECHNICAL SETUP|INVEST|AVOID|WATCH",'
         '"confidence":"Low|Medium|High",'
@@ -2031,7 +2035,7 @@ def run_analysis(ticker):
 
         row  = df.iloc[-1]
         prev = df.iloc[-2]
-        signals, score = calc_signals(row)
+        signals, score = calc_signals(row, prev)
         phase_result = detect_weinstein_phase(df)
         st.session_state.phase_result = phase_result
 
@@ -2542,7 +2546,8 @@ def render_hud():
         '🟡' if fs['verdict_text'] == 'Mixed fundamental picture' else
         'ℹ️'
     )
-    fs_score_str  = f" · {fs['score_pct']:.0f}%" if fs['score_pct'] is not None else ''
+    fs_score_str  = f" · {fs['score_pct']:.0f}%" if (fs['score_pct'] is not None and fs['score_pct'] > 0) else ''
+    fs_detail_str = f" · {fs['detail']}" if fs.get('detail') and fs['score_pct'] == 0 else ''
     fs_bucket_str = f" · Evaluated as: {fs['bucket']}" if fs['bucket'] else ''
 
     c1, c2 = st.columns([1.2, 0.8])
@@ -2557,7 +2562,7 @@ def render_hud():
             <span style="font-size:12px;color:{fs['verdict_color']};font-weight:700;">
               {fs_icon} {fs['verdict_text']}{fs_score_str}
             </span>
-            <span style="font-size:10px;color:#64748B;">{fs_bucket_str}</span>
+            <span style="font-size:10px;color:#64748B;">{fs_bucket_str}{fs_detail_str}</span>
           </div>
         </div>""", unsafe_allow_html=True)
     with c2:
