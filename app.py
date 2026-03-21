@@ -490,7 +490,7 @@ st.markdown("""
 
   html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
   .stApp { background: #111827; }
-  .block-container { padding: 1rem 2rem 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; transition: all 0.3s ease; }
+  .block-container { padding: 3.5rem 2rem 2rem; max-width: 1200px; margin-left: auto; margin-right: auto; transition: all 0.3s ease; }
 
   /* Hide Streamlit branding — header stays visible for toggle to work */
   #MainMenu { visibility: hidden; }
@@ -650,9 +650,10 @@ st.markdown("""
     padding: 12px !important;
   }
   .stTextInput input:focus { box-shadow: 0 0 0 3px #00FF8818 !important; }
-  /* Main CTA button — scoped to avoid hijacking sidebar toggle */
-  .main .stButton button,
-  .block-container .stButton button {
+  /* Main CTA button — only the analyze button, not dev tools */
+  [data-testid="stForm"] .stButton button,
+  .stTextInput + div .stButton button,
+  button[kind="primary"] {
     background: #00FF88 !important;
     color: #080E18 !important;
     border: none !important;
@@ -663,8 +664,6 @@ st.markdown("""
     width: 100% !important;
     padding: 14px !important;
   }
-  .main .stButton button:hover,
-  .block-container .stButton button:hover { opacity: 0.9 !important; }
 
   div.screener-btn .stButton button,
   .screener-btn .stButton button {
