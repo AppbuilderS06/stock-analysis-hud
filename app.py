@@ -480,7 +480,7 @@ VERDICT_COLORS = {
     "INVEST":          {"bg": "#0A1E12", "border": "#00FF88", "color": "#00FF88"},
     "DAY TRADE":       {"bg": "#1A1000", "border": "#FACC15", "color": "#FACC15"},
     "AVOID":           {"bg": "#1E0A0A", "border": "#FF6B6B", "color": "#FF6B6B"},
-    "MULTI-TIMEFRAME": {"bg": "#0A1E12", "border": "#00FF88", "color": "#00FF88"},
+    "WATCH": {"bg": "#0A1E12", "border": "#00FF88", "color": "#00FF88"},
 }
 
 # ── CSS ───────────────────────────────────────────────────────
@@ -950,7 +950,99 @@ def calculate_indicators(df):
     df['VolMA20']   = vol.rolling(20).mean()
     df['VolTrend']  = vol / df['VolMA20'].replace(0, 1)
 
+    # OBV divergence — linear regression slope comparison (20-day)
+    import numpy as _np
+    def _slope(series, n=20):
+        if len(series) < n: return 0.0
+        y = series.tail(n).values.astype(float)
+        x = _np.arange(n)
+        try: return float(_np.polyfit(x, y, 1)[0])
+        except: return 0.0
+
+    price_slope = _slope(close, 20)
+    obv_slope   = _slope(df['OBV'], 20)
+    price_mean  = float(close.tail(20).mean()) or 1
+    obv_mean    = float(df['OBV'].tail(20).abs().mean()) or 1
+    p_norm = price_slope / price_mean
+    o_norm = obv_slope   / obv_mean
+    thresh = 0.001
+    df['OBV_div'] = 0  # 1=bullish div, -1=bearish div, 0=none
+    if p_norm < -thresh and o_norm > thresh:
+        df.loc[df.index[-1], 'OBV_div'] = 1   # price falling, OBV rising = accumulation
+    elif p_norm > thresh and o_norm < -thresh:
+        df.loc[df.index[-1], 'OBV_div'] = -1  # price rising, OBV falling = distribution
+
     return df.dropna(subset=['MA20','MA50','RSI','MACD'])
+
+
+def detect_weinstein_phase(df):
+    """
+    Weinstein Phase detection using 150-day MA (≈ 30-week).
+    Returns: phase (1-4), label, color, confidence (0-3), description
+    """
+    import numpy as _np
+    if len(df) < 160:
+        return 0, "Insufficient data", "#94A3B8", 0, ""
+
+    close    = df['Close']
+    ma150    = close.rolling(150).mean()
+    if ma150.iloc[-1] != ma150.iloc[-1]:  # NaN check
+        return 0, "N/A", "#94A3B8", 0, ""
+
+    c        = float(close.iloc[-1])
+    ma       = float(ma150.iloc[-1])
+    ma_prev  = float(ma150.iloc[-11]) if len(ma150) > 11 else ma
+
+    # Slope: rate of change over 10 days normalized
+    slope    = (ma - ma_prev) / ma_prev if ma_prev != 0 else 0
+
+    # Higher highs / lower lows over 20-day windows
+    recent_high = float(close.tail(20).max())
+    prior_high  = float(close.iloc[-40:-20].max()) if len(close) >= 40 else recent_high
+    recent_low  = float(close.tail(20).min())
+    prior_low   = float(close.iloc[-40:-20].min()) if len(close) >= 40 else recent_low
+
+    higher_highs = recent_high > prior_high * 1.01
+    lower_lows   = recent_low  < prior_low  * 0.99
+    above_ma     = c > ma
+    below_ma     = c < ma
+    slope_up     = slope >  0.0005
+    slope_down   = slope < -0.0005
+    slope_flat   = abs(slope) <= 0.0005
+
+    # MA50 as tiebreaker
+    ma50 = float(df['MA50'].iloc[-1]) if 'MA50' in df.columns else c
+
+    # Phase decision tree — count confirming conditions
+    if above_ma and slope_up and higher_highs:
+        phase, conf = 2, 3
+    elif above_ma and slope_up and not higher_highs:
+        phase, conf = 2, 2
+    elif above_ma and slope_flat:
+        phase, conf = 3, 2  # topping
+    elif above_ma and slope_down:
+        phase, conf = 3, 3  # confirmed top
+    elif below_ma and slope_down and lower_lows:
+        phase, conf = 4, 3
+    elif below_ma and slope_down and not lower_lows:
+        phase, conf = 4, 2
+    elif below_ma and slope_flat:
+        phase, conf = 1, 2  # basing
+    elif below_ma and slope_up:
+        phase, conf = 1, 3  # late base / early breakout
+    else:
+        phase, conf = 0, 0
+
+    PHASE_MAP = {
+        1: ("PHASE 1", "Basing",    "#38BDF8",  "Price consolidating below flat MA — wait for Phase 2 breakout"),
+        2: ("PHASE 2", "Uptrend",   "#00FF88",  "Price above rising MA — the only phase to buy"),
+        3: ("PHASE 3", "Topping",   "#FACC15",  "MA flattening after uptrend — tighten stops, avoid new entries"),
+        4: ("PHASE 4", "Downtrend", "#FF6B6B",  "Price below declining MA — avoid, no long positions"),
+        0: ("PHASE ?", "Unclear",   "#94A3B8",  "Mixed signals — needs more data"),
+    }
+    label, sublabel, color, desc = PHASE_MAP[phase]
+    conf_text = ["", "Low confidence", "Moderate confidence", "High confidence"][conf]
+    return phase, label, sublabel, color, conf, conf_text, desc
 
 
 def calc_signals(row):
@@ -1083,7 +1175,7 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         "- ALWAYS return trend_short/medium/long — NEVER return N/A\n"
         "- Use market context for business cycle phase\n\n"
         "Return ONLY this JSON (no markdown, no extra text):\n"
-        '{"verdict":"DAY TRADE|SWING TRADE|INVEST|AVOID|MULTI-TIMEFRAME",'
+        '{"verdict":"DAY TRADE|SWING TRADE|INVEST|AVOID|WATCH",'
         '"confidence":"Low|Medium|High",'
         '"risk":"Low|Medium|High|Very High",'
         '"risk_reason":"one sentence",'
@@ -1881,6 +1973,9 @@ def run_analysis(ticker):
         row  = df.iloc[-1]
         prev = df.iloc[-2]
         signals, score = calc_signals(row)
+        # Weinstein phase
+        phase_result = detect_weinstein_phase(df)
+        st.session_state.phase_result = phase_result
 
         h52  = float(info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()))
         l52  = float(info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min()))
@@ -2172,6 +2267,7 @@ def render_hud():
     vol_data      = st.session_state.get('vol_data', {})
     earn_date_str = st.session_state.get('earn_date_str', 'Unknown')
     days_to_earn  = st.session_state.get('days_to_earn', 0)
+    phase_result  = st.session_state.get('phase_result', (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', ''))
 
     close    = float(row['Close'])
     prev_c   = float(prev['Close'])
@@ -2266,7 +2362,10 @@ def render_hud():
       <div style="text-align:right;">
         <div class="price-display">{cur}{close:.2f}</div>
         <div style="text-align:right;margin-top:6px;">{chg_badge}</div>
-        <div style="margin-top:5px;">{"<span style='background:#0A3020;border:1px solid #00FF88;border-radius:4px;padding:2px 8px;font-size:10px;color:#00FF88;letter-spacing:1px;'>&#x26A1; FMP</span>" if st.secrets.get("FMP_API_KEY","") else "<span style='background:#2A1500;border:1px solid #FACC15;border-radius:4px;padding:2px 8px;font-size:10px;color:#FACC15;letter-spacing:1px;'>&#x26A0; yfinance — add FMP key</span>"}</div>
+        <div style="margin-top:5px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+          {"<span style='background:#0A3020;border:1px solid #00FF88;border-radius:4px;padding:2px 8px;font-size:10px;color:#00FF88;letter-spacing:1px;'>&#x26A1; FMP</span>" if st.secrets.get("FMP_API_KEY","") else "<span style='background:#2A1500;border:1px solid #FACC15;border-radius:4px;padding:2px 8px;font-size:10px;color:#FACC15;letter-spacing:1px;'>&#x26A0; yfinance</span>"}
+          <span style="background:{phase_result[3]}18;border:1px solid {phase_result[3]};border-radius:4px;padding:2px 10px;font-size:10px;color:{phase_result[3]};letter-spacing:1px;font-weight:800;font-family:'JetBrains Mono',monospace;">{phase_result[1]} · {phase_result[2]}</span>
+        </div>
       </div>
     </div>''', unsafe_allow_html=True)
 
@@ -2305,6 +2404,67 @@ def render_hud():
       </div>
       <div style="color:#5EEAD4;font-size:11px;">{analyzed}</div>
     </div>''', unsafe_allow_html=True)
+
+    # ── Volume Breakout Flag ─────────────────────────────────
+    vol_ratio    = float(row['VolTrend'])
+    price_20d_high = float(df['Close'].rolling(20).max().iloc[-2])  # yesterday's 20d max
+    price_break  = close > price_20d_high
+    vol_confirm  = vol_ratio >= 1.5
+    vol_surge    = vol_ratio >= 2.0
+
+    if price_break and vol_confirm:
+        st.markdown(f'''<div style="background:#052A14;border:1px solid #00FF88;border-radius:8px;
+            padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">⚡</span>
+          <div>
+            <span style="color:#00FF88;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+              BREAKOUT CONFIRMED</span>
+            <span style="color:#86EFAC;font-size:12px;margin-left:10px;">
+              Price broke 20-day high on {vol_ratio:.1f}× average volume — institutional participation confirmed</span>
+          </div></div>''', unsafe_allow_html=True)
+    elif price_break and not vol_confirm:
+        st.markdown(f'''<div style="background:#251800;border:1px solid #FACC15;border-radius:8px;
+            padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">⚠️</span>
+          <div>
+            <span style="color:#FACC15;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+              BREAKOUT UNCONFIRMED</span>
+            <span style="color:#FDE68A;font-size:12px;margin-left:10px;">
+              Price broke 20-day high but volume only {vol_ratio:.1f}× average — wait for volume confirmation</span>
+          </div></div>''', unsafe_allow_html=True)
+    elif vol_surge and not price_break:
+        st.markdown(f'''<div style="background:#0A1525;border:1px solid #38BDF8;border-radius:8px;
+            padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📊</span>
+          <div>
+            <span style="color:#38BDF8;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+              VOLUME SURGE</span>
+            <span style="color:#BAE6FD;font-size:12px;margin-left:10px;">
+              {vol_ratio:.1f}× average volume — unusual activity, watch for a price move</span>
+          </div></div>''', unsafe_allow_html=True)
+
+    # ── OBV Divergence Flag ──────────────────────────────────
+    obv_div = int(df['OBV_div'].iloc[-1]) if 'OBV_div' in df.columns else 0
+    if obv_div == 1:
+        st.markdown('''<div style="background:#052A14;border:1px solid #00FF88;border-left:4px solid #00FF88;
+            border-radius:8px;padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📈</span>
+          <div>
+            <span style="color:#00FF88;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+              BULLISH OBV DIVERGENCE</span>
+            <span style="color:#86EFAC;font-size:12px;margin-left:10px;">
+              Price declining but OBV rising — institutions accumulating quietly. Phase 2 breakout may be loading.</span>
+          </div></div>''', unsafe_allow_html=True)
+    elif obv_div == -1:
+        st.markdown('''<div style="background:#2D1015;border:1px solid #FF6B6B;border-left:4px solid #FF6B6B;
+            border-radius:8px;padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📉</span>
+          <div>
+            <span style="color:#FF6B6B;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+              BEARISH OBV DIVERGENCE</span>
+            <span style="color:#FCA5A5;font-size:12px;margin-left:10px;">
+              Price rising but OBV falling — smart money distributing. Phase 3 topping signal — tighten stops.</span>
+          </div></div>''', unsafe_allow_html=True)
 
     bull_count = sum(1 for k,v in signals.items() if v['bull'])
     score_meaning = ("Strong bullish setup" if score >= 8 else
@@ -2347,6 +2507,105 @@ def render_hud():
       <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{a.get('summary','')}</div>
     </div>""", unsafe_allow_html=True)
 
+    # ── WEINSTEIN PHASE + THREE TAILWINDS ────────────────────
+    ph_num, ph_label, ph_sub, ph_col, ph_conf, ph_conf_text, ph_desc = phase_result
+
+    # Market phase (SPY)
+    @st.cache_data(ttl=900, show_spinner=False)
+    def get_market_phase():
+        try:
+            import yfinance as _yf
+            spy_df = _yf.Ticker("SPY").history(period="2y")
+            spy_df['MA20'] = spy_df['Close'].rolling(20).mean()
+            spy_df['MA50'] = spy_df['Close'].rolling(50).mean()
+            spy_df['MA200']= spy_df['Close'].rolling(200).mean()
+            return detect_weinstein_phase(spy_df)
+        except: return (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', '')
+
+    @st.cache_data(ttl=900, show_spinner=False)
+    def get_sector_phase(sector_etf):
+        try:
+            import yfinance as _yf
+            s_df = _yf.Ticker(sector_etf).history(period="2y")
+            s_df['MA20'] = s_df['Close'].rolling(20).mean()
+            s_df['MA50'] = s_df['Close'].rolling(50).mean()
+            s_df['MA200']= s_df['Close'].rolling(200).mean()
+            return detect_weinstein_phase(s_df)
+        except: return (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', '')
+
+    SECTOR_ETF_MAP = {
+        "Technology": "XLK", "Healthcare": "XLV", "Financials": "XLF",
+        "Energy": "XLE", "Consumer Cyclical": "XLY", "Consumer Defensive": "XLP",
+        "Industrials": "XLI", "Utilities": "XLU", "Real Estate": "XLRE",
+        "Basic Materials": "XLB", "Communication Services": "XLC",
+        "Financial Services": "XLF", "Consumer Electronics": "XLK",
+    }
+    sector_name = info.get('sector', '')
+    sector_etf  = SECTOR_ETF_MAP.get(sector_name, '')
+
+    mkt_phase    = get_market_phase()
+    sec_phase    = get_sector_phase(sector_etf) if sector_etf else (0,'N/A','No ETF','#94A3B8',0,'','')
+
+    # Three Tailwinds score
+    tw_market = 1 if mkt_phase[0] == 2 else 0
+    tw_sector = 1 if sec_phase[0] == 2 else 0
+    tw_stock  = 1 if ph_num == 2 else 0
+    tw_score  = tw_market + tw_sector + tw_stock
+    tw_col    = "#00FF88" if tw_score == 3 else "#FACC15" if tw_score == 2 else "#F97316" if tw_score == 1 else "#FF6B6B"
+    tw_label  = {3: "All tailwinds aligned ✓", 2: "2 of 3 aligned", 1: "1 of 3 aligned", 0: "No tailwinds"}[tw_score]
+
+    phase_conf_colors = ["#94A3B8", "#F97316", "#FACC15", "#00FF88"]
+    ph_conf_col = phase_conf_colors[min(ph_conf, 3)]
+
+    st.markdown(f'''
+    <div style="background:#0D1525;border:1px solid #1E2D42;border-radius:10px;
+                padding:14px 18px;margin:8px 0;display:grid;
+                grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">MARKET · SPY</div>
+        <div style="font-size:16px;font-weight:800;color:{mkt_phase[3]};
+                    font-family:'JetBrains Mono',monospace;">{mkt_phase[1]}</div>
+        <div style="font-size:11px;color:{mkt_phase[3]};margin-top:2px;">{mkt_phase[2]}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:4px;line-height:1.4;">{mkt_phase[6][:55]}</div>
+      </div>
+
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">SECTOR · {sector_etf or "N/A"}</div>
+        <div style="font-size:16px;font-weight:800;color:{sec_phase[3]};
+                    font-family:'JetBrains Mono',monospace;">{sec_phase[1]}</div>
+        <div style="font-size:11px;color:{sec_phase[3]};margin-top:2px;">{sec_phase[2]}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:4px;line-height:1.4;">{sec_phase[6][:55]}</div>
+      </div>
+
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">STOCK · {ticker}</div>
+        <div style="font-size:16px;font-weight:800;color:{ph_col};
+                    font-family:'JetBrains Mono',monospace;">{ph_label}</div>
+        <div style="font-size:11px;color:{ph_col};margin-top:2px;">{ph_sub}</div>
+        <div style="font-size:10px;color:{ph_conf_col};margin-top:4px;">{ph_conf_text}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:2px;line-height:1.4;">{ph_desc[:55]}</div>
+      </div>
+
+      <div>
+        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">THREE TAILWINDS</div>
+        <div style="font-size:36px;font-weight:800;color:{tw_col};
+                    font-family:'JetBrains Mono',monospace;line-height:1;">{tw_score}<span style="font-size:18px;color:#4A6080;">/3</span></div>
+        <div style="font-size:11px;color:{tw_col};margin-top:4px;font-weight:700;">{tw_label}</div>
+        <div style="display:flex;gap:4px;margin-top:8px;">
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_market else "#243348"};"></div>
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_sector else "#243348"};"></div>
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_stock else "#243348"};"></div>
+        </div>
+        <div style="font-size:9px;color:#374151;margin-top:4px;">Market · Sector · Stock</div>
+      </div>
+
+    </div>''', unsafe_allow_html=True)
+
     sig_keys = ['MA20','MA50','MA200','RSI','MACD','OBV','Vol','ATR']
     cols = st.columns(8)
     for i, k in enumerate(sig_keys):
@@ -2366,7 +2625,18 @@ def render_hud():
         atr_low    = round(close - atr_dollar, 2)
         atr_high   = round(close + atr_dollar, 2)
         levels_html += data_row("Entry zone", f"{cur}{a.get('entry_low',0):.2f} – {cur}{a.get('entry_high',0):.2f}", "val-y")
-        levels_html += data_row("ATR (14)",   f"{cur}{atr_dollar:.2f}  →  expected range {cur}{atr_low:.2f} – {cur}{atr_high:.2f}", "val-b", True)
+        # ADR% — Average Daily Range as % of price (ebook: selection filter)
+        adr_pct = (atr_dollar / close) * 100
+        if adr_pct < 1.5:
+            adr_label = "Too slow"; adr_cls = "val-r"
+        elif adr_pct <= 4.0:
+            adr_label = "Sweet spot ✓"; adr_cls = "val-g"
+        elif adr_pct <= 6.0:
+            adr_label = "High momentum"; adr_cls = "val-y"
+        else:
+            adr_label = "Dangerous"; adr_cls = "val-r"
+        levels_html += data_row("ATR (14)",   f"{cur}{atr_dollar:.2f}  →  range {cur}{atr_low:.2f} – {cur}{atr_high:.2f}", "val-b", True)
+        levels_html += data_row("ADR %",      f"{adr_pct:.1f}%  —  {adr_label}", adr_cls)
         levels_html += data_row("VWAP",    f"{cur}{vwap:.2f}",   "val-g" if close > vwap  else "val-r")
         levels_html += data_row("100 EMA", f"{cur}{ema100:.2f}", "val-g" if close > ema100 else "val-r")
         levels_html += data_row("38.2% Fib", f"{cur}{fib382:.2f}", "val-m", show_info=True)
@@ -2613,7 +2883,7 @@ def render_hud():
             tgt = r2 if r2 > entry_mid else round(entry_mid + 6 * atr_val, 2)
         return max(0.01, stp), max(entry_mid + 0.01, tgt)
 
-    verdict_to_mode = {'DAY TRADE':'Day Trade','SWING TRADE':'Swing Trade','INVEST':'Invest','MULTI-TIMEFRAME':'Swing Trade','AVOID':'Swing Trade'}
+    verdict_to_mode = {'DAY TRADE':'Day Trade','SWING TRADE':'Swing Trade','INVEST':'Invest','WATCH':'Swing Trade','AVOID':'Swing Trade'}
     default_mode = verdict_to_mode.get(verdict, 'Swing Trade')
 
     if st.session_state.get('_rr_ticker') != ticker:
