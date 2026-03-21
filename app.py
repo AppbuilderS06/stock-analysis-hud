@@ -1996,47 +1996,6 @@ def main():
 
 
 
-# ── Disclaimer ────────────────────────────────────────────────
-def render_disclaimer():
-    st.markdown("""
-    <div style="background:#1A1000;border:1px solid #FACC1544;border-radius:8px;
-                padding:12px 18px;margin-top:24px;margin-bottom:8px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span style="font-size:15px;">&#9888;&#65039;</span>
-        <span style="font-size:12px;color:#FACC15;font-weight:700;">Educational tool only - not financial advice</span>
-      </div>
-      <div style="font-size:11px;color:#CBD5E1;line-height:1.7;">
-        AI-generated analysis does not guarantee any outcome. Always conduct your own research before
-        making any investment decision. Never risk more than you can afford to lose. This tool is not
-        registered with the AMF or any other securities regulator.
-      </div>
-    </div>""", unsafe_allow_html=True)
-    col1, col2 = st.columns(2)
-    with col1:
-        with st.expander("Terms of Use"):
-            st.markdown(
-                "**Last updated: March 2026**\n\n"
-                "**1. Educational Purpose Only** - Nothing constitutes financial, investment, or trading advice.\n\n"
-                "**2. No Warranty** - Provided as-is. AI analysis may be inaccurate or out of date.\n\n"
-                "**3. Limitation of Liability** - The operator shall not be liable for any financial losses.\n\n"
-                "**4. No Fiduciary Relationship** - Use does not create an advisory relationship.\n\n"
-                "**5. Regulatory Notice (Canada)** - Not registered with the AMF or any securities regulator.\n\n"
-                "**6. Third-Party Services** - Uses Anthropic Claude API, yfinance, and FMP.\n\n"
-                "**7. Changes** - Terms may be updated at any time."
-            )
-    with col2:
-        with st.expander("Privacy Policy"):
-            st.markdown(
-                "**Last updated: March 2026**\n\n"
-                "**What we collect** - We do not collect, store, or sell any personal information.\n\n"
-                "**Third-party logging:** Streamlit Cloud, Anthropic API, and FMP may log usage.\n\n"
-                "**Cookies** - We do not set cookies. Streamlit may use session cookies.\n\n"
-                "**Contact** - Since we store no personal data, there is nothing to access or delete."
-            )
-    st.markdown('<div style="text-align:center;font-size:10px;color:#374151;padding:8px 0;letter-spacing:1px;">AI-GENERATED - NOT FINANCIAL ADVICE - EDUCATIONAL PURPOSES ONLY</div>',
-                unsafe_allow_html=True)
-
-
 def run_analysis(ticker):
     prog = st.empty()
     analyst_data  = {'buy':0,'hold':0,'sell':0,'target':0,'target_low':0,
@@ -2329,3 +2288,1303 @@ def run_analysis(ticker):
             import traceback
             st.error(f"Error: {err_str}")
             st.code(traceback.format_exc())
+
+
+# ── Disclaimer ────────────────────────────────────────────────
+def render_disclaimer():
+    st.markdown("""
+    <div style="background:#1A1000;border:1px solid #FACC1544;border-radius:8px;
+                padding:12px 18px;margin-top:24px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:15px;">&#9888;&#65039;</span>
+        <span style="font-size:12px;color:#FACC15;font-weight:700;letter-spacing:0.03em;">
+          Educational tool only - not financial advice
+        </span>
+      </div>
+      <div style="font-size:11px;color:#CBD5E1;line-height:1.7;">
+        AI-generated analysis does not guarantee any outcome. Always conduct your own
+        research before making any investment decision. Never risk more than you can
+        afford to lose. This tool is not registered with the AMF or any other
+        securities regulator.
+      </div>
+    </div>""", unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        with st.expander("Terms of Use"):
+            st.markdown(
+                "**Last updated: March 2026**\n\n"
+                "**1. Educational Purpose Only** - This tool provides AI-generated stock "
+                "analysis for educational purposes only. Nothing constitutes financial, "
+                "investment, or trading advice.\n\n"
+                "**2. No Warranty** - Provided as-is without warranty.\n\n"
+                "**3. Limitation of Liability** - The operator shall not be liable for any "
+                "financial losses arising from use of this platform.\n\n"
+                "**4. No Fiduciary Relationship** - Use of this tool does not create an "
+                "advisory or professional relationship of any kind.\n\n"
+                "**5. Regulatory Notice (Canada)** - This tool is not registered with the "
+                "Autorite des marches financiers (AMF) or any other securities regulator.\n\n"
+                "**6. Third-Party Services** - This platform uses Anthropic Claude API, "
+                "yfinance, and Financial Modeling Prep (FMP).\n\n"
+                "**7. Changes** - Terms may be updated at any time."
+            )
+    with col2:
+        with st.expander("Privacy Policy"):
+            st.markdown(
+                "**Last updated: March 2026**\n\n"
+                "**What we collect** - We do not collect, store, or sell any personal information.\n\n"
+                "**Third-party logging:**\n"
+                "- Streamlit Cloud may log usage metadata\n"
+                "- Anthropic processes ticker queries via Claude API\n"
+                "- Financial Modeling Prep provides market data\n\n"
+                "**Cookies** - We do not set cookies."
+            )
+
+    st.markdown(
+        '<div style="text-align:center;font-size:10px;color:#374151;padding:8px 0;letter-spacing:1px;">'
+        'AI-GENERATED - NOT FINANCIAL ADVICE - EDUCATIONAL PURPOSES ONLY'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+
+def render_hud():
+    a             = st.session_state.analysis
+    df            = st.session_state.df
+    info          = st.session_state.info
+    ticker        = st.session_state.ticker
+    signals       = st.session_state.signals
+    score         = st.session_state.score
+    fibs          = st.session_state.fibs
+    row           = st.session_state.row
+    prev          = st.session_state.prev
+    analyst_data  = st.session_state.get('analyst_data', {})
+    earnings_hist = st.session_state.get('earnings_hist', [])
+    insider_data  = st.session_state.get('insider_data', [])
+    news_items    = st.session_state.get('news_items', [])
+    vol_data      = st.session_state.get('vol_data', {})
+    earn_date_str = st.session_state.get('earn_date_str', 'Unknown')
+    days_to_earn  = st.session_state.get('days_to_earn', 0)
+    phase_result  = st.session_state.get('phase_result', (0, 'PHASE ?', 'Unclear', '#94A3B8', 0, '', ''))
+
+    close    = float(row['Close'])
+    prev_c   = float(prev['Close'])
+    chg      = close - prev_c
+    chg_pct  = (chg / prev_c) * 100 if prev_c else 0
+    if ticker.endswith('.TO') or ticker.endswith('.CN'):
+        cur = "CA$"; cur_code = "CAD"
+    elif ticker.endswith('.L'):
+        cur = "£"; cur_code = "GBP"
+    elif ticker.endswith('.PA') or ticker.endswith('.DE') or ticker.endswith('.AS'):
+        cur = "€"; cur_code = "EUR"
+    elif ticker.endswith('.HK'):
+        cur = "HK$"; cur_code = "HKD"
+    else:
+        cur = "$"; cur_code = "USD"
+
+    sign      = "+" if chg >= 0 else ""
+    vc        = VERDICT_COLORS.get(a.get('verdict','TECHNICAL SETUP'), VERDICT_COLORS['TECHNICAL SETUP'])
+    score_col = "#00FF88" if score >= 7 else "#FACC15" if score >= 4 else "#FF6B6B"
+
+    h52 = float(info.get('fiftyTwoWeekHigh', df['High'].tail(252).max()))
+    l52 = float(info.get('fiftyTwoWeekLow',  df['Low'].tail(252).min()))
+    vol = float(row['Volume'])
+    atr_pct = float(row['ATRPct'])
+
+    company = info.get('longName', info.get('shortName', ticker))
+    if not company or company == ticker or company == ticker.replace('-','.'):
+        resolved = st.session_state.get("_resolved_name", "")
+        if resolved:
+            company = resolved
+    sector   = info.get('sector', a.get('sector',''))
+    exchange = 'TSX' if ticker.endswith('.TO') else 'LSE' if ticker.endswith('.L') else 'NYSE / NASDAQ'
+
+    if st.button("← New ticker"):
+        for k in ['analysis','df','info','ticker','signals','score','fibs','row','prev',
+                  '_prev_ticker_val','rr_mode','_rr_ticker','_resolved_name',
+                  '_resolved_exch','_resolved_curr']:
+            if k in st.session_state: del st.session_state[k]
+        st.rerun()
+
+    chg_badge = (f'<span class="price-change-up">▲ {sign}{chg:.2f} ({sign}{chg_pct:.2f}%)</span>'
+                 if chg >= 0 else
+                 f'<span class="price-change-dn">▼ {chg:.2f} ({chg_pct:.2f}%)</span>')
+
+    st.markdown(f'''
+    <div class="identity-bar" style="border-top:3px solid {vc["border"]};">
+      <div style="display:flex;align-items:center;gap:18px;">
+        <div class="ticker-name">{ticker}</div>
+        <div>
+          <div class="company-name">{company}</div>
+          <div style="margin-top:4px;">
+            <span class="exchange-pill">{exchange}</span>
+            <span style="font-size:11px;color:#4B5563;margin-left:8px;">{sector}</span>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div class="price-display">{cur}{close:.2f}</div>
+        <div style="text-align:right;margin-top:6px;">{chg_badge}</div>
+        <div style="margin-top:5px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
+          {"<span style='background:#0A3020;border:1px solid #00FF88;border-radius:4px;padding:2px 8px;font-size:10px;color:#00FF88;letter-spacing:1px;'>&#x26A1; FMP</span>" if st.secrets.get("FMP_API_KEY","") else "<span style='background:#2A1500;border:1px solid #FACC15;border-radius:4px;padding:2px 8px;font-size:10px;color:#FACC15;letter-spacing:1px;'>&#x26A0; yfinance</span>"}
+          <span style="background:{phase_result[3]}18;border:1px solid {phase_result[3]};border-radius:4px;padding:2px 10px;font-size:10px;color:{phase_result[3]};letter-spacing:1px;font-weight:800;font-family:'JetBrains Mono',monospace;">{phase_result[1]} · {phase_result[2]}</span>
+        </div>
+      </div>
+    </div>''', unsafe_allow_html=True)
+
+    import zoneinfo, streamlit.components.v1 as components
+    try:
+        params  = st.query_params
+        user_tz = params.get("tz", "")
+        if not user_tz:
+            components.html("""
+                <script>
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const url = new URL(window.parent.location.href);
+                if (!url.searchParams.get('tz')) {
+                    url.searchParams.set('tz', tz);
+                    window.parent.location.replace(url.toString());
+                }
+                </script>
+            """, height=0)
+            user_tz = "UTC"
+        try:
+            tz_obj   = zoneinfo.ZoneInfo(user_tz)
+            analyzed = datetime.now(tz_obj).strftime("%b %d · %I:%M %p")
+        except:
+            analyzed = datetime.now().strftime("%b %d · %I:%M %p")
+    except:
+        analyzed = datetime.now().strftime("%b %d · %I:%M %p")
+
+    st.markdown(f'''
+    <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["Open"]:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["High"]:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">High</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["Low"]:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["VolTrend"]:.2f}x</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
+      </div>
+      <div style="color:#5EEAD4;font-size:11px;">{analyzed}</div>
+    </div>''', unsafe_allow_html=True)
+
+    # ── Volume Breakout Flag ─────────────────────────────────
+    vol_ratio      = float(row['VolTrend'])
+    price_20d_high = float(df['Close'].rolling(20).max().iloc[-2])
+    price_break    = close > price_20d_high
+    vol_confirm    = vol_ratio >= 1.5
+    vol_surge      = vol_ratio >= 2.0
+
+    if price_break and vol_confirm:
+        st.markdown(f'''<div style="background:#052A14;border:1px solid #00FF88;border-radius:8px;
+            padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">⚡</span>
+          <div><span style="color:#00FF88;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+            BREAKOUT CONFIRMED</span>
+          <span style="color:#86EFAC;font-size:12px;margin-left:10px;">
+            Price broke 20-day high on {vol_ratio:.1f}x average volume — institutional participation confirmed</span>
+          </div></div>''', unsafe_allow_html=True)
+    elif price_break and not vol_confirm:
+        st.markdown(f'''<div style="background:#251800;border:1px solid #FACC15;border-radius:8px;
+            padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">⚠️</span>
+          <div><span style="color:#FACC15;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+            BREAKOUT UNCONFIRMED</span>
+          <span style="color:#FDE68A;font-size:12px;margin-left:10px;">
+            Price broke 20-day high but volume only {vol_ratio:.1f}x average — wait for volume confirmation</span>
+          </div></div>''', unsafe_allow_html=True)
+    elif vol_surge and not price_break:
+        st.markdown(f'''<div style="background:#0A1525;border:1px solid #38BDF8;border-radius:8px;
+            padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📊</span>
+          <div><span style="color:#38BDF8;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+            VOLUME SURGE</span>
+          <span style="color:#BAE6FD;font-size:12px;margin-left:10px;">
+            {vol_ratio:.1f}x average volume — unusual activity, watch for a price move</span>
+          </div></div>''', unsafe_allow_html=True)
+
+    # ── OBV Divergence Flag ──────────────────────────────────
+    obv_div = int(df['OBV_div'].iloc[-1]) if 'OBV_div' in df.columns else 0
+    if obv_div == 1:
+        st.markdown('''<div style="background:#052A14;border:1px solid #00FF88;border-left:4px solid #00FF88;
+            border-radius:8px;padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📈</span>
+          <div><span style="color:#00FF88;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+            BULLISH OBV DIVERGENCE</span>
+          <span style="color:#86EFAC;font-size:12px;margin-left:10px;">
+            Price declining but OBV rising — institutions accumulating quietly.</span>
+          </div></div>''', unsafe_allow_html=True)
+    elif obv_div == -1:
+        st.markdown('''<div style="background:#2D1015;border:1px solid #FF6B6B;border-left:4px solid #FF6B6B;
+            border-radius:8px;padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">📉</span>
+          <div><span style="color:#FF6B6B;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
+            BEARISH OBV DIVERGENCE</span>
+          <span style="color:#FCA5A5;font-size:12px;margin-left:10px;">
+            Price rising but OBV falling — smart money distributing. Tighten stops.</span>
+          </div></div>''', unsafe_allow_html=True)
+
+    bull_count = sum(1 for k,v in signals.items() if v['bull'])
+    score_meaning = ("Strong bullish setup" if score >= 8 else
+                     "Moderately bullish"   if score >= 6 else
+                     "Mixed signals"        if score >= 4 else
+                     "Moderately bearish"   if score >= 2 else
+                     "Strong bearish setup")
+    bull_names = " · ".join(signals[k]["label"] for k in signals if signals[k]["bull"]) or "None"
+    bear_names = " · ".join(signals[k]["label"] for k in signals if not signals[k]["bull"]) or "None"
+
+    # Run fundamental screen
+    fs = fundamental_screen(info, a.get('verdict', ''))
+    fs_icon = (
+        '📊' if fs['verdict_text'] == 'Passes fundamental screens' else
+        '⚡' if fs['verdict_text'] == 'Technical setup only' else
+        '🟡' if fs['verdict_text'] == 'Mixed fundamental picture' else
+        'ℹ️'
+    )
+    fs_score_str  = f" · {fs['score_pct']:.0f}%" if fs['score_pct'] is not None else ''
+    fs_bucket_str = f" · Evaluated as: {fs['bucket']}" if fs['bucket'] else ''
+
+    c1, c2 = st.columns([1.2, 0.8])
+    with c1:
+        st.markdown(f"""
+        <div class="verdict-card" style="background:{vc['bg']};border-left-color:{vc['border']};">
+          <div class="verdict-label" style="color:{vc['color']};">AI Verdict</div>
+          <div class="verdict-value" style="color:{vc['color']};">{a.get('verdict','')}</div>
+          <div class="verdict-meta">Confidence: {a.get('confidence','')} &nbsp;·&nbsp; Risk: {a.get('risk','')}</div>
+          <div class="verdict-note" style="color:{vc['color']};">{a.get('risk_reason','')}</div>
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid {vc['border']}33;">
+            <span style="font-size:12px;color:{fs['verdict_color']};font-weight:700;">
+              {fs_icon} {fs['verdict_text']}{fs_score_str}
+            </span>
+            <span style="font-size:10px;color:#64748B;">{fs_bucket_str}</span>
+          </div>
+        </div>""", unsafe_allow_html=True)
+    with c2:
+        st.markdown(f"""
+        <div class="score-card">
+          <div class="score-label">Signal Score</div>
+          <div><span class="score-num" style="color:{score_col};">{score}</span><span class="score-denom">/10</span></div>
+          <div class="score-bar-wrap">
+            <div class="score-bar-track"></div>
+            <div class="score-bar-fill" style="width:{score*10}%;"></div>
+          </div>
+          <div class="score-markers"><span>AVOID</span><span>NEUTRAL</span><span>STRONG</span></div>
+          <div style="font-size:12px;color:{score_col};font-weight:700;margin-top:7px;">{score_meaning}</div>
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid #243348;">
+            <div style="font-size:10px;color:#00FF88;margin-bottom:3px;line-height:1.5;">&#9650; {bull_names}</div>
+            <div style="font-size:10px;color:#FF6B6B;line-height:1.5;">&#9660; {bear_names}</div>
+          </div>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
+                border-radius:8px;padding:14px 18px;margin-top:6px;">
+      <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                  margin-bottom:8px;font-weight:600;">AI Summary</div>
+      <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{a.get('summary','')}</div>
+    </div>""", unsafe_allow_html=True)
+
+    # ── WEINSTEIN PHASE + THREE TAILWINDS ────────────────────
+    ph_num, ph_label, ph_sub, ph_col, ph_conf, ph_conf_text, ph_desc = phase_result
+    sector_name = info.get('sector', '')
+    sector_etf  = SECTOR_ETF_MAP.get(sector_name, '')
+
+    mkt_phase = get_market_phase()
+    sec_phase = get_sector_phase(sector_etf) if sector_etf else (0,'N/A','No ETF','#94A3B8',0,'','')
+
+    tw_market = 1 if mkt_phase[0] == 2 else 0
+    tw_sector = 1 if sec_phase[0] == 2 else 0
+    tw_stock  = 1 if ph_num == 2 else 0
+    tw_score  = tw_market + tw_sector + tw_stock
+    tw_col    = "#00FF88" if tw_score == 3 else "#FACC15" if tw_score == 2 else "#F97316" if tw_score == 1 else "#FF6B6B"
+    tw_label  = {3:"All tailwinds aligned ✓", 2:"2 of 3 aligned", 1:"1 of 3 aligned", 0:"No tailwinds"}[tw_score]
+
+    phase_conf_colors = ["#94A3B8","#F97316","#FACC15","#00FF88"]
+    ph_conf_col = phase_conf_colors[min(ph_conf, 3)]
+
+    st.markdown(f'''
+    <div style="background:#0D1525;border:1px solid #1E2D42;border-radius:10px;
+                padding:14px 18px;margin:8px 0;display:grid;
+                grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">MARKET · SPY</div>
+        <div style="font-size:16px;font-weight:800;color:{mkt_phase[3]};font-family:'JetBrains Mono',monospace;">{mkt_phase[1]}</div>
+        <div style="font-size:11px;color:{mkt_phase[3]};margin-top:2px;">{mkt_phase[2]}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:4px;line-height:1.4;">{mkt_phase[6][:55]}</div>
+      </div>
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">SECTOR · {sector_etf or "N/A"}</div>
+        <div style="font-size:16px;font-weight:800;color:{sec_phase[3]};font-family:'JetBrains Mono',monospace;">{sec_phase[1]}</div>
+        <div style="font-size:11px;color:{sec_phase[3]};margin-top:2px;">{sec_phase[2]}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:4px;line-height:1.4;">{sec_phase[6][:55]}</div>
+      </div>
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">STOCK · {ticker}</div>
+        <div style="font-size:16px;font-weight:800;color:{ph_col};font-family:'JetBrains Mono',monospace;">{ph_label}</div>
+        <div style="font-size:11px;color:{ph_col};margin-top:2px;">{ph_sub}</div>
+        <div style="font-size:10px;color:{ph_conf_col};margin-top:4px;">{ph_conf_text}</div>
+        <div style="font-size:10px;color:#64748B;margin-top:2px;line-height:1.4;">{ph_desc[:55]}</div>
+      </div>
+      <div>
+        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">THREE TAILWINDS</div>
+        <div style="font-size:36px;font-weight:800;color:{tw_col};font-family:'JetBrains Mono',monospace;line-height:1;">
+          {tw_score}<span style="font-size:18px;color:#4A6080;">/3</span></div>
+        <div style="font-size:11px;color:{tw_col};margin-top:4px;font-weight:700;">{tw_label}</div>
+        <div style="display:flex;gap:4px;margin-top:8px;">
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_market else "#243348"};"></div>
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_sector else "#243348"};"></div>
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_stock else "#243348"};"></div>
+        </div>
+        <div style="font-size:9px;color:#374151;margin-top:4px;">Market · Sector · Stock</div>
+      </div>
+    </div>''', unsafe_allow_html=True)
+
+    sig_keys = ['MA20','MA50','MA200','RSI','MACD','OBV','Vol','ATR']
+    cols = st.columns(8)
+    for i, k in enumerate(sig_keys):
+        s = signals[k]
+        with cols[i]:
+            st.markdown(sig_html(s['label'], s['val'], s['bull'], s.get('neut', False), s.get('subtitle', '')), unsafe_allow_html=True)
+
+    vwap   = float(a.get('vwap', close))
+    ema100 = float(a.get('ema100', float(row['MA100'])))
+    fib382, fib500, fib618 = fibs
+
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown('<div class="section-header">Key Levels & Technical Indicators</div>', unsafe_allow_html=True)
+        levels_html = '<div class="panel-body">'
+        atr_dollar = float(row['ATR'])
+        atr_low    = round(close - atr_dollar, 2)
+        atr_high   = round(close + atr_dollar, 2)
+        levels_html += data_row("Entry zone", f"{cur}{a.get('entry_low',0):.2f} – {cur}{a.get('entry_high',0):.2f}", "val-y")
+        adr_pct = (atr_dollar / close) * 100
+        if adr_pct < 1.5:
+            adr_label = "Too slow"; adr_cls = "val-r"
+        elif adr_pct <= 4.0:
+            adr_label = "Sweet spot ✓"; adr_cls = "val-g"
+        elif adr_pct <= 6.0:
+            adr_label = "High momentum"; adr_cls = "val-y"
+        else:
+            adr_label = "Dangerous"; adr_cls = "val-r"
+        levels_html += data_row("ATR (14)", f"{cur}{atr_dollar:.2f}  →  range {cur}{atr_low:.2f} – {cur}{atr_high:.2f}", "val-b", True)
+        levels_html += data_row("ADR %", f"{adr_pct:.1f}%  —  {adr_label}", adr_cls)
+        levels_html += data_row("VWAP",    f"{cur}{vwap:.2f}",   "val-g" if close > vwap  else "val-r")
+        levels_html += data_row("100 EMA", f"{cur}{ema100:.2f}", "val-g" if close > ema100 else "val-r")
+        levels_html += data_row("38.2% Fib", f"{cur}{fib382:.2f}", "val-m", show_info=True)
+        levels_html += data_row("50.0% Fib", f"{cur}{fib500:.2f}", "val-m", show_info=True)
+        levels_html += data_row("61.8% Fib", f"{cur}{fib618:.2f}", "val-m", show_info=True)
+        levels_html += data_row(a.get('support1_label','Support 1'),      f"{cur}{a.get('support1',0):.2f}",    "val-g")
+        levels_html += data_row(a.get('resistance1_label','Resistance 1'), f"{cur}{a.get('resistance1',0):.2f}", "val-r")
+        levels_html += data_row(a.get('support2_label','Support 2'),      f"{cur}{a.get('support2',0):.2f}",    "val-g")
+        levels_html += data_row(a.get('resistance2_label','Resistance 2'), f"{cur}{a.get('resistance2',0):.2f}", "val-r")
+        levels_html += range_bar_html(l52, h52, close, cur)
+        rsi_val = float(row['RSI'])
+        rsi_col = "#FF6B6B" if rsi_val > 70 else "#00FF88" if rsi_val < 30 else "#FACC15"
+        rsi_lbl = "Overbought" if rsi_val > 70 else "Oversold" if rsi_val < 30 else "Neutral"
+        rsi_pct = int(rsi_val)
+        levels_html += (
+            '<div class="data-row" style="flex-direction:column;gap:6px;">'
+            '<div style="display:flex;justify-content:space-between;width:100%;font-size:13px;">'
+            f'<span class="data-lbl">RSI (14){info_icon("RSI (14)")}</span>'
+            f'<span style="color:{rsi_col};font-weight:700;font-family:monospace;">{rsi_val:.1f} — {rsi_lbl}</span>'
+            '</div>'
+            '<div style="display:flex;align-items:center;gap:8px;width:100%;">'
+            '<span style="font-size:11px;color:#00FF88;">0</span>'
+            '<div style="flex:1;position:relative;height:6px;background:#243348;border-radius:3px;">'
+            '<div style="position:absolute;left:0;top:0;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#00FF88 0%,#FACC15 30%,#FF6B6B 70%,#FF6B6B 100%);"></div>'
+            f'<div style="position:absolute;left:{min(max(rsi_pct,2),98)}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>'
+            '</div>'
+            '<span style="font-size:11px;color:#FF6B6B;">100</span>'
+            '</div>'
+            f'<div style="text-align:center;font-size:11px;color:#94A3B8;">RSI {rsi_val:.1f} · Oversold &lt;30 · Overbought &gt;70</div>'
+            '</div>'
+        )
+        levels_html += '</div>'
+        st.markdown(levels_html, unsafe_allow_html=True)
+
+    with c2:
+        st.markdown('<div class="section-header">Fundamentals & Growth</div>', unsafe_allow_html=True)
+        def _get(keys, default=0):
+            for k in (keys if isinstance(keys, list) else [keys]):
+                v = info.get(k)
+                if v is not None and v != 0 and v != '':
+                    return v
+            return default
+        def _pct(keys, claude_key, default=0):
+            v = _get(keys, None)
+            if v is None:
+                v = a.get(claude_key, 0) or 0
+                return float(v)
+            v = float(v)
+            return v * 100 if abs(v) <= 2 else v
+        pe     = float(info.get('trailingPE') or 0)
+        fwd_pe = float(info.get('forwardPE')  or 0)
+        pb     = float(_get(['priceToBook', 'bookValue'], 0) or a.get('pb_ratio', 0) or 0)
+        peg    = float(_get(['pegRatio', 'trailingPegRatio'], 0) or a.get('peg_ratio', 0) or 0)
+        mc     = float(_get(['marketCap', 'enterpriseValue'], 0) or 0)
+        eps_g  = _pct(['earningsGrowth', 'earningsQuarterlyGrowth'], 'eps_growth_yoy')
+        rev_g  = _pct(['revenueGrowth',  'revenueQuarterlyGrowth'], 'rev_growth_yoy')
+        op_margin  = float(_get(['operatingMargins', 'operatingMargin'], 0) or 0) * (100 if abs(float(_get(['operatingMargins'], 0) or 0)) <= 1 else 1)
+        profit_m   = float(_get(['profitMargins', 'netMargin'], 0) or 0) * (100 if abs(float(_get(['profitMargins'], 0) or 0)) <= 1 else 1)
+        roe        = float(_get(['returnOnEquity', 'returnOnAssets'], 0) or 0) * (100 if abs(float(_get(['returnOnEquity'], 0) or 0)) <= 1 else 1)
+        debt_eq    = float(_get(['debtToEquity', 'totalDebt'], 0) or 0)
+        curr_ratio = float(_get(['currentRatio'], 0) or 0)
+        quick_ratio    = float(_get(['quickRatio'], 0) or 0)
+        debt_to_assets = float(_get(['debtToAssets'], 0) or 0)
+        int_coverage   = float(_get(['interestCoverage'], 0) or 0)
+        asset_turn     = float(_get(['assetTurnover'], 0) or 0)
+        inv_turn       = float(_get(['inventoryTurnover'], 0) or 0)
+        div_yield  = float(_get(['dividendYield', 'trailingAnnualDividendYield'], 0) or 0) * (100 if float(_get(['dividendYield'], 0) or 0) < 1 else 1)
+        short_pct  = float(_get(['shortPercentOfFloat', 'shortRatio'], 0) or 0) * (100 if float(_get(['shortPercentOfFloat'], 0) or 0) < 1 else 1)
+        float_sh   = float(_get(['floatShares', 'sharesOutstanding'], 0) or 0)
+        if mc == 0:
+            shares = float(_get(['sharesOutstanding','impliedSharesOutstanding'], 0) or 0)
+            if shares > 0: mc = shares * close
+        funds_html = '<div class="panel-body">'
+        funds_html += data_row("Market Cap",       fmt_cap(mc) if mc else "—",              "val-w",  True)
+        funds_html += data_row("P/E (Trailing)",   f"{pe:.1f}" if pe else "—",              "val-r" if pe > 40 else "val-y" if pe > 20 else "val-g" if pe else "val-m", True)
+        funds_html += data_row("P/E (Forward)",    f"{fwd_pe:.1f}" if fwd_pe else "—",      "val-r" if fwd_pe > 35 else "val-y" if fwd_pe > 18 else "val-g" if fwd_pe else "val-m", True)
+        funds_html += data_row("P/B Ratio",        f"{pb:.1f}" if pb else "—",              "val-r" if pb > 5 else "val-g" if pb else "val-m", True)
+        funds_html += data_row("PEG Ratio",        f"{peg:.2f}" if peg else "—",            "val-r" if peg > 3 else "val-y" if peg > 1.5 else "val-g" if peg else "val-m", True)
+        funds_html += data_row("EPS Growth YoY",   f"{eps_g:+.1f}%" if eps_g else "—",     "val-g" if eps_g > 0 else "val-r", True)
+        funds_html += data_row("Rev Growth YoY",   f"{rev_g:+.1f}%" if rev_g else "—",     "val-g" if rev_g > 0 else "val-r", True)
+        funds_html += data_row("Operating Margin", f"{op_margin:.1f}%" if op_margin else "—", "val-g" if op_margin > 15 else "val-y" if op_margin > 0 else "val-r", True)
+        funds_html += data_row("Profit Margin",    f"{profit_m:.1f}%" if profit_m else "—",   "val-g" if profit_m > 10 else "val-y" if profit_m > 0 else "val-r", True)
+        funds_html += data_row("Return on Equity", f"{roe:.1f}%" if roe else "—",             "val-g" if roe > 15 else "val-y" if roe > 0 else "val-r", True)
+        funds_html += data_row("Debt / Equity",    f"{debt_eq:.2f}" if debt_eq else "—",      "val-r" if debt_eq > 2 else "val-y" if debt_eq > 1 else "val-g", True)
+        funds_html += data_row("Debt-to-Assets",   f"{debt_to_assets:.2f}" if debt_to_assets else "—", "val-r" if debt_to_assets > 0.6 else "val-y" if debt_to_assets > 0.4 else "val-g" if debt_to_assets else "val-m", True)
+        funds_html += data_row("Interest Coverage",f"{int_coverage:.1f}x" if int_coverage else "—",    "val-r" if 0 < int_coverage < 1.5 else "val-y" if 0 < int_coverage < 3 else "val-g" if int_coverage >= 3 else "val-m", True)
+        funds_html += data_row("Current Ratio",    f"{curr_ratio:.2f}" if curr_ratio else "—",  "val-g" if curr_ratio > 1.5 else "val-y" if curr_ratio > 1 else "val-r", True)
+        funds_html += data_row("Quick Ratio",      f"{quick_ratio:.2f}" if quick_ratio else "—","val-g" if quick_ratio > 1.0 else "val-y" if quick_ratio > 0.7 else "val-r" if quick_ratio else "val-m", True)
+        funds_html += data_row("Asset Turnover",   f"{asset_turn:.2f}x" if asset_turn else "—", "val-g" if asset_turn > 1.0 else "val-y" if asset_turn > 0.5 else "val-m" if asset_turn else "val-m", True)
+        funds_html += data_row("Inventory Turnover",f"{inv_turn:.1f}x" if inv_turn else "—",    "val-g" if inv_turn > 6 else "val-y" if inv_turn > 3 else "val-m" if inv_turn else "val-m", True)
+        funds_html += data_row("Dividend Yield",   f"{div_yield:.2f}%" if div_yield else "None", "val-g" if div_yield > 2 else "val-m", True)
+        funds_html += data_row("Short % Float",    f"{short_pct:.1f}%" if short_pct else "—",   "val-r" if short_pct > 20 else "val-y" if short_pct > 10 else "val-g", True)
+        funds_html += data_row("Float Shares",     fmt_cap(float_sh).replace("$","") if float_sh else "—", "val-m", True)
+        funds_html += '</div>'
+        st.markdown(funds_html, unsafe_allow_html=True)
+
+    # ── VOLATILITY ───────────────────────────────────────────
+    cur_close = float(row['Close'])
+    bb_upper  = vol_data.get('bb_upper', 0)
+    bb_lower  = vol_data.get('bb_lower', 0)
+    bb_mid    = vol_data.get('bb_mid', 0)
+    bb_pct    = vol_data.get('bb_pct', 50)
+    hv_30     = vol_data.get('hv_30', 0)
+    hv_90     = vol_data.get('hv_90', 0)
+    iv        = vol_data.get('iv', 0)
+    iv_vs_hv  = vol_data.get('iv_vs_hv', 0)
+    bb_col    = "#FF6B6B" if bb_pct > 80 else "#00FF88" if bb_pct < 20 else "#FACC15"
+    hv_col    = "#FF6B6B" if hv_30 > 50 else "#FACC15" if hv_30 > 25 else "#00FF88"
+    iv_col    = "#FF6B6B" if iv > 60 else "#FACC15" if iv > 30 else "#00FF88"
+    iv_label  = ("No options data" if iv == 0 else
+                 "IV > HV — big move expected" if iv_vs_hv > 1.3 else
+                 "IV < HV — calm expected" if iv_vs_hv < 0.7 else
+                 "IV ≈ HV — normal")
+    st.markdown('<div class="section-header">Volatility Analysis</div>', unsafe_allow_html=True)
+    vc1, vc2, vc3 = st.columns(3)
+    with vc1:
+        st.markdown('<div class="vol-panel"><div class="data-header">Historical Volatility</div>', unsafe_allow_html=True)
+        hv_rows  = f'<div class="vol-row"><span class="vol-lbl">Volatility 30d</span><span style="color:{hv_col};font-weight:700;font-family:monospace;">{hv_30:.1f}%</span></div>'
+        hv_rows += f'<div class="vol-row"><span class="vol-lbl">Volatility 90d</span><span style="color:{hv_col};font-weight:700;font-family:monospace;">{hv_90:.1f}%</span></div>'
+        hv_rows += f'<div class="vol-row"><span class="vol-lbl">ATR (14) $</span><span style="color:#38BDF8;font-weight:700;font-family:monospace;">{cur}{float(row["ATR"]):.2f}</span></div>'
+        hv_rows += f'<div class="vol-row"><span class="vol-lbl">ATR % price</span><span style="color:#38BDF8;font-weight:700;font-family:monospace;">{float(row["ATRPct"])*100:.1f}%</span></div>'
+        st.markdown(hv_rows + '</div>', unsafe_allow_html=True)
+    with vc2:
+        st.markdown('<div class="vol-panel"><div class="data-header">Bollinger Bands (20,2)</div>', unsafe_allow_html=True)
+        bb_rows  = f'<div class="vol-row"><span class="vol-lbl">Upper Band</span><span style="color:#FF6B6B;font-weight:700;font-family:monospace;">{cur}{bb_upper:.2f}</span></div>'
+        bb_rows += f'<div class="vol-row"><span class="vol-lbl">Middle (20MA)</span><span style="color:#94A3B8;font-weight:700;font-family:monospace;">{cur}{bb_mid:.2f}</span></div>'
+        bb_rows += f'<div class="vol-row"><span class="vol-lbl">Lower Band</span><span style="color:#00FF88;font-weight:700;font-family:monospace;">{cur}{bb_lower:.2f}</span></div>'
+        bb_rows += f'<div class="vol-row"><span class="vol-lbl">BB Width</span><span style="color:#A78BFA;font-weight:700;font-family:monospace;">{vol_data.get("bb_width",0):.1f}%</span></div>'
+        bb_rows += (
+            '<div class="vol-row" style="flex-direction:column;gap:6px;">'
+            f'<div style="display:flex;justify-content:space-between;width:100%;font-size:13px;">'
+            f'<span class="vol-lbl">Price in Band</span>'
+            f'<span style="color:{bb_col};font-weight:700;font-family:monospace;">{bb_pct:.0f}% — {"Oversold" if bb_pct < 20 else "Overbought" if bb_pct > 80 else "Neutral"}</span>'
+            '</div>'
+            '<div style="display:flex;align-items:center;gap:8px;width:100%;">'
+            f'<span style="font-size:11px;color:#00FF88;">{cur}{bb_lower:.0f}</span>'
+            '<div style="flex:1;position:relative;height:6px;background:#243348;border-radius:3px;">'
+            '<div style="position:absolute;left:0;top:0;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#00FF88,#FACC15,#FF6B6B);"></div>'
+            f'<div style="position:absolute;left:{min(max(int(bb_pct),2),98)}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>'
+            '</div>'
+            f'<span style="font-size:11px;color:#FF6B6B;">{cur}{bb_upper:.0f}</span>'
+            '</div>'
+            f'<div style="text-align:center;font-size:11px;color:#94A3B8;">{cur}{cur_close:.2f} · Mid {cur}{bb_mid:.2f}</div>'
+            '</div>'
+        )
+        st.markdown(bb_rows + '</div>', unsafe_allow_html=True)
+    with vc3:
+        st.markdown('<div class="vol-panel"><div class="data-header">Implied Volatility</div>', unsafe_allow_html=True)
+        iv_rows  = f'<div class="vol-row"><span class="vol-lbl">IV</span><span style="color:{iv_col};font-weight:700;font-family:monospace;">{iv:.1f}%</span></div>'
+        iv_rows += f'<div class="vol-row"><span class="vol-lbl">IV vs HV 30d</span><span style="color:{"#FF6B6B" if iv_vs_hv > 1.3 else "#00FF88"};font-weight:700;font-family:monospace;">{iv_vs_hv:.2f}x</span></div>'
+        iv_rows += f'<div class="vol-row" style="flex-direction:column;"><span class="vol-lbl" style="margin-bottom:4px;">Signal</span><span style="color:{"#FF6B6B" if iv_vs_hv > 1.3 else "#00FF88" if iv > 0 else "#94A3B8"};font-size:12px;">{iv_label}</span></div>'
+        iv_rows += f'<div class="vol-row"><span class="vol-lbl">Day range est.</span><span style="color:#38BDF8;font-family:monospace;">{cur}{cur_close - float(row["ATR"]):.2f} – {cur}{cur_close + float(row["ATR"]):.2f}</span></div>'
+        st.markdown(iv_rows + '</div>', unsafe_allow_html=True)
+
+    # ── ANALYST RATINGS ──────────────────────────────────────
+    buy   = analyst_data.get('buy', 0)
+    hold  = analyst_data.get('hold', 0)
+    sell  = analyst_data.get('sell', 0)
+    total_analysts = buy + hold + sell
+    target      = analyst_data.get('target', 0)
+    target_low  = analyst_data.get('target_low', 0)
+    target_high = analyst_data.get('target_high', 0)
+    rec_key     = analyst_data.get('rec_key', 'N/A').replace('-',' ').title()
+    num_analysts = analyst_data.get('num_analysts', 0)
+    upside  = ((target / cur_close) - 1) * 100 if target > 0 and cur_close > 0 else 0
+    up_col  = "#00FF88" if upside > 10 else "#FACC15" if upside > 0 else "#FF6B6B"
+    cons_col = "#00FF88" if 'Buy' in rec_key or 'Strong' in rec_key else "#FF6B6B" if 'Sell' in rec_key else "#FACC15"
+    st.markdown('<div class="section-header">Analyst Ratings</div>', unsafe_allow_html=True)
+    ac1, ac2, ac3, ac4, ac5 = st.columns(5)
+    for acol, lbl, val, col in [
+        (ac1, "Consensus",    rec_key if rec_key != 'N/A' else "N/A", cons_col),
+        (ac2, "# Analysts",   str(num_analysts) if num_analysts else "N/A", "#94A3B8"),
+        (ac3, "Price Target", f"{cur}{target:.2f}" if target else "N/A", up_col),
+        (ac4, "Upside",       f"{upside:+.1f}%" if target else "N/A", up_col),
+        (ac5, "Target Range", f"{cur}{target_low:.0f}–{cur}{target_high:.0f}" if target_low else "N/A", "#94A3B8"),
+    ]:
+        with acol:
+            st.markdown(f'<div class="earn-bar" style="border-left-color:{col};"><div class="earn-label">{lbl}</div><div class="earn-val" style="color:{col};">{val}</div></div>', unsafe_allow_html=True)
+    if total_analysts > 0:
+        buy_pct  = int(buy  / total_analysts * 100)
+        hold_pct = int(hold / total_analysts * 100)
+        sell_pct = 100 - buy_pct - hold_pct
+        st.markdown(f'''<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:10px 16px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">
+            <span style="color:#00FF88;font-weight:700;">Buy {buy} ({buy_pct}%)</span>
+            <span style="color:#FACC15;font-weight:700;">Hold {hold} ({hold_pct}%)</span>
+            <span style="color:#FF6B6B;font-weight:700;">Sell {sell} ({sell_pct}%)</span>
+          </div>
+          <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;">
+            <div style="width:{buy_pct}%;background:#00FF88;"></div>
+            <div style="width:{hold_pct}%;background:#FACC15;"></div>
+            <div style="width:{sell_pct}%;background:#FF6B6B;"></div>
+          </div>
+        </div>''', unsafe_allow_html=True)
+
+    # ── REASONS ───────────────────────────────────────────────
+    bulls = a.get('reasons_bull', [])
+    bears = a.get('reasons_bear', [])
+    c1, c2 = st.columns(2)
+    with c1:
+        for b in bulls:
+            st.markdown(f'<div class="reason-bull">+ &nbsp;{b}</div>', unsafe_allow_html=True)
+    with c2:
+        for b in bears:
+            st.markdown(f'<div class="reason-bear">− &nbsp;{b}</div>', unsafe_allow_html=True)
+
+    # ── TIMEFRAMES ────────────────────────────────────────────
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown(f'<div class="tf-day"><div class="tf-label" style="color:#FACC15;">Day Trade</div><div class="tf-note">{a.get("day_trade_note","")}</div></div>', unsafe_allow_html=True)
+    with c2:
+        st.markdown(f'<div class="tf-swing"><div class="tf-label" style="color:#38BDF8;">Swing Trade</div><div class="tf-note">{a.get("swing_note","")}</div></div>', unsafe_allow_html=True)
+    with c3:
+        st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">Invest</div><div class="tf-note">{a.get("invest_note","")}</div></div>', unsafe_allow_html=True)
+
+    # ── R/R CALCULATOR — tabs removed ────────────────────────
+    st.markdown('<div class="section-header" style="margin-top:8px;">⚡ Risk / Reward Calculator</div>', unsafe_allow_html=True)
+    st.markdown("""
+    <div style="background:#1A1000;border:1px solid #FACC1544;border-radius:0;border-top:none;
+                padding:7px 14px;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:13px;">⚠️</span>
+      <span style="font-size:11px;color:#FACC15;font-weight:700;">NOT FINANCIAL ADVICE</span>
+      <span style="font-size:11px;color:#CBD5E1;">These numbers are for educational position-sizing practice only.</span>
+    </div>""", unsafe_allow_html=True)
+
+    atr_val   = float(row['ATR'])
+    verdict   = a.get('verdict', 'TECHNICAL SETUP')
+    s1        = float(a.get('support1', 0) or 0)
+    s2        = float(a.get('support2', 0) or 0)
+    r1        = float(a.get('resistance1', 0) or 0)
+    r2        = float(a.get('resistance2', 0) or 0)
+    ma200     = float(row.get('MA200', close))
+    entry_mid = round((float(a.get('entry_low', close)) + float(a.get('entry_high', close))) / 2, 2)
+    if entry_mid == 0: entry_mid = round(close, 2)
+
+    def calc_presets(mode):
+        if mode == "Day Trade":
+            stp = round(entry_mid - 0.5 * atr_val, 2)
+            tgt = round(entry_mid + 1.5 * atr_val, 2)
+        elif mode == "Swing Trade":
+            stp = round(entry_mid - 1.5 * atr_val, 2)
+            if s1 > 0 and s1 < entry_mid and s1 > stp:
+                stp = round(s1 - 0.01, 2)
+            tgt = r1 if r1 > entry_mid else round(entry_mid + 3 * atr_val, 2)
+        else:
+            stp = round(entry_mid - 3 * atr_val, 2)
+            deep = min(ma200, s2 if s2 > 0 else ma200)
+            if deep > 0 and deep < entry_mid and deep > stp:
+                stp = round(deep - 0.01, 2)
+            tgt = r2 if r2 > entry_mid else round(entry_mid + 6 * atr_val, 2)
+        return max(0.01, stp), max(entry_mid + 0.01, tgt)
+
+    vc_mode       = VERDICT_COLORS.get(verdict, VERDICT_COLORS['TECHNICAL SETUP'])
+    ai_label_html = f'<span style="background:{vc_mode["bg"]};border:1px solid {vc_mode["border"]};border-radius:4px;padding:2px 8px;font-size:10px;color:{vc_mode["color"]};font-weight:700;letter-spacing:1px;">AI: {verdict}</span>'
+    cur_badge     = f'<span style="background:#1C2A3A;border:1px solid #38BDF8;border-radius:4px;padding:2px 8px;font-size:10px;color:#38BDF8;font-weight:700;letter-spacing:1px;margin-left:6px;">💱 {cur_code}</span>'
+
+    st.markdown(f'''
+    <div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 16px 10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;color:#94A3B8;">Pre-filled from AI analysis · Adjust any value to recalculate</div>
+        <div>{ai_label_html}{cur_badge}</div>
+      </div>
+    </div>''', unsafe_allow_html=True)
+
+    stop_preset, target_preset = calc_presets("Swing Trade")
+
+    rr_c1, rr_c2, rr_c3, rr_c4, rr_c5 = st.columns(5)
+    with rr_c1:
+        position_size_input = st.number_input(f"Position Size ({cur})", min_value=1.0, max_value=10000000.0, value=5000.0, step=500.0, key="rr_position")
+    with rr_c2:
+        risk_pct = st.number_input("Risk (%)", min_value=0.1, max_value=100.0, value=5.0, step=0.5, key="rr_risk_pct")
+    with rr_c3:
+        entry_price = st.number_input(f"Entry ({cur})", min_value=0.01, value=float(entry_mid), step=0.01, key="rr_entry", format="%.2f")
+
+    shares_derived = int(position_size_input / entry_price) if entry_price > 0 else 0
+    dollar_risk    = round(position_size_input * (risk_pct / 100), 2)
+    derived_stop   = round(entry_price - (dollar_risk / shares_derived), 2) if shares_derived > 0 else stop_preset
+    derived_stop   = max(0.01, derived_stop)
+
+    with rr_c4:
+        stop_price = st.number_input(f"Stop Loss ({cur})", min_value=0.01, value=float(derived_stop), step=0.01, key=f"rr_stop_{round(derived_stop,2)}", format="%.2f")
+    with rr_c5:
+        target_price = st.number_input(f"Target ({cur})", min_value=0.01, value=float(target_preset), step=0.01, key="rr_target", format="%.2f")
+
+    risk_per_share   = round(abs(entry_price - stop_price), 2)
+    reward_per_share = round(abs(target_price - entry_price), 2)
+    rr_ratio         = round(reward_per_share / risk_per_share, 2) if risk_per_share > 0 else 0
+    position_size    = shares_derived
+    actual_loss      = round(position_size * risk_per_share, 2)
+    actual_gain      = round(position_size * reward_per_share, 2)
+    loss_pct         = round((actual_loss / position_size_input) * 100, 1) if position_size_input > 0 else 0
+    stop_pct         = round((risk_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
+    target_pct       = round((reward_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
+    rr_col           = "#00FF88" if rr_ratio >= 2 else "#FACC15" if rr_ratio >= 1 else "#FF6B6B"
+    rr_label         = "Excellent" if rr_ratio >= 3 else "Good" if rr_ratio >= 2 else "Acceptable" if rr_ratio >= 1 else "Poor — avoid"
+
+    rc1, rc2, rc3 = st.columns(3)
+    with rc1:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:{rr_col};margin-top:6px;">
+          <div class="earn-label">Risk/Reward Ratio</div>
+          <div class="earn-val" style="color:{rr_col};font-size:26px;letter-spacing:1px;">1 : {rr_ratio}</div>
+          <div style="font-size:11px;color:{rr_col};margin-top:3px;font-weight:700;">{rr_label}</div>
+        </div>''', unsafe_allow_html=True)
+    with rc2:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:#38BDF8;margin-top:6px;">
+          <div class="earn-label">Shares to Buy</div>
+          <div class="earn-val" style="color:#38BDF8;font-size:22px;">{position_size:,} <span style="font-size:13px;">shares</span></div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px;">{cur}{position_size_input:,.0f} position · {position_size:,} × {cur}{entry_price:.2f}</div>
+        </div>''', unsafe_allow_html=True)
+    with rc3:
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:#818CF8;margin-top:6px;">
+          <div class="earn-label">Worst Case / Best Case</div>
+          <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{actual_loss:,.0f} <span style="font-size:10px;color:#FF6B6B88;">({loss_pct:.1f}% of position)</span></div>
+          <div style="font-size:16px;color:#00FF88;font-weight:700;font-family:monospace;margin-top:4px;">+{cur}{actual_gain:,.0f} <span style="font-size:10px;color:#00FF8888;">if target hit</span></div>
+        </div>''', unsafe_allow_html=True)
+
+    try:
+        all_prices  = sorted([stop_price, entry_price, target_price])
+        price_min   = all_prices[0]
+        price_max   = all_prices[-1]
+        price_range = price_max - price_min if price_max != price_min else 1
+        SVG_W, SVG_H = 900, 160
+        PAD_L, PAD_R = 110, 110
+        BAR_Y, BAR_H = 72, 20
+        usable_w = SVG_W - PAD_L - PAD_R
+        def px(price):
+            return PAD_L + (price - price_min) / price_range * usable_w
+        stop_x   = px(stop_price)
+        entry_x  = px(entry_price)
+        target_x = px(target_price)
+        loss_x   = min(stop_x, entry_x)
+        loss_w   = abs(entry_x - stop_x)
+        gain_x   = min(entry_x, target_x)
+        gain_w   = abs(target_x - entry_x)
+        svg = f'''<svg viewBox="0 0 {SVG_W} {SVG_H}" xmlns="http://www.w3.org/2000/svg"
+             style="width:100%;height:auto;background:#0E1828;border-radius:10px;
+                    border:1px solid #243348;display:block;margin-top:8px;">
+          <rect x="{loss_x:.1f}" y="{BAR_Y}" width="{loss_w:.1f}" height="{BAR_H}" fill="#FF6B6B" fill-opacity="0.25" rx="2"/>
+          <rect x="{gain_x:.1f}" y="{BAR_Y}" width="{gain_w:.1f}" height="{BAR_H}" fill="#00FF88" fill-opacity="0.25" rx="2"/>
+          <text x="{(entry_x + target_x)/2:.1f}" y="{BAR_Y - 32}" text-anchor="middle" fill="{rr_col}" font-size="11" font-family="monospace" font-weight="700">R:R  1:{rr_ratio}  {rr_label}</text>
+          <line x1="{stop_x:.1f}" y1="{BAR_Y-8}" x2="{stop_x:.1f}" y2="{BAR_Y+BAR_H+8}" stroke="#FF6B6B" stroke-width="2" stroke-dasharray="4,3"/>
+          <text x="{stop_x:.1f}" y="{BAR_Y-16}" text-anchor="middle" fill="#FF6B6B" font-size="10" font-family="monospace" font-weight="700">STOP</text>
+          <text x="{stop_x:.1f}" y="{BAR_Y+BAR_H+20}" text-anchor="middle" fill="#FF6B6B" font-size="11" font-family="monospace">{cur}{stop_price:.2f}</text>
+          <text x="{stop_x:.1f}" y="{BAR_Y+BAR_H+34}" text-anchor="middle" fill="#FF6B6B" font-size="10" font-family="monospace" opacity="0.7">−{stop_pct:.1f}%</text>
+          <line x1="{entry_x:.1f}" y1="{BAR_Y-8}" x2="{entry_x:.1f}" y2="{BAR_Y+BAR_H+8}" stroke="#FACC15" stroke-width="2.5"/>
+          <text x="{entry_x:.1f}" y="{BAR_Y-16}" text-anchor="middle" fill="#FACC15" font-size="10" font-family="monospace" font-weight="700">ENTRY</text>
+          <text x="{entry_x:.1f}" y="{BAR_Y+BAR_H+20}" text-anchor="middle" fill="#FACC15" font-size="12" font-family="monospace" font-weight="700">{cur}{entry_price:.2f}</text>
+          <line x1="{target_x:.1f}" y1="{BAR_Y-8}" x2="{target_x:.1f}" y2="{BAR_Y+BAR_H+8}" stroke="#00FF88" stroke-width="2" stroke-dasharray="4,3"/>
+          <text x="{target_x:.1f}" y="{BAR_Y-16}" text-anchor="middle" fill="#00FF88" font-size="10" font-family="monospace" font-weight="700">TARGET</text>
+          <text x="{target_x:.1f}" y="{BAR_Y+BAR_H+20}" text-anchor="middle" fill="#00FF88" font-size="11" font-family="monospace">{cur}{target_price:.2f}</text>
+          <text x="{target_x:.1f}" y="{BAR_Y+BAR_H+34}" text-anchor="middle" fill="#00FF88" font-size="10" font-family="monospace" opacity="0.7">+{target_pct:.1f}%</text>
+          <text x="{(stop_x + entry_x)/2:.1f}" y="{BAR_Y + BAR_H/2 + 4}" text-anchor="middle" fill="#FF6B6B" font-size="11" font-family="monospace" font-weight="700">−{cur}{risk_per_share:.2f}</text>
+          <text x="{(entry_x + target_x)/2:.1f}" y="{BAR_Y + BAR_H/2 + 4}" text-anchor="middle" fill="#00FF88" font-size="11" font-family="monospace" font-weight="700">+{cur}{reward_per_share:.2f}</text>
+        </svg>'''
+        import streamlit.components.v1 as components
+        components.html(f'<div style="background:#0E1828;border-radius:10px;border:1px solid #243348;padding:4px;margin-top:8px;">{svg}</div>', height=180)
+    except: pass
+
+    st.markdown(f'''
+    <div style="background:#111827;border:1px solid #243348;border-radius:8px;
+                padding:8px 16px;margin-top:6px;display:flex;gap:20px;flex-wrap:wrap;
+                font-size:11px;font-family:'JetBrains Mono',monospace;align-items:center;">
+      <span style="color:#64748B;">Position <span style="color:#38BDF8;">{cur}{position_size_input:,.0f}</span></span>
+      <span style="color:#64748B;">Entry <span style="color:#FACC15;">{cur}{entry_price:.2f}</span></span>
+      <span style="color:#64748B;">Stop <span style="color:#FF6B6B;">{cur}{stop_price:.2f} (−{stop_pct:.1f}%)</span></span>
+      <span style="color:#64748B;">Target <span style="color:#00FF88;">{cur}{target_price:.2f} (+{target_pct:.1f}%)</span></span>
+      <span style="color:#64748B;">Max loss <span style="color:#FF6B6B;">{cur}{actual_loss:,.0f} ({loss_pct:.1f}% of position)</span></span>
+    </div>''', unsafe_allow_html=True)
+
+    # ── EARNINGS ──────────────────────────────────────────────
+    beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
+    if earnings_hist:
+        last_e   = earnings_hist[-1]
+        s        = last_e.get('surprise', 0) or 0
+        beat_str = f"Beat +{s:.1f}%" if s > 0 else f"Missed {s:.1f}%"
+    earn_days = days_to_earn
+    earn_col  = "#FF6B6B" if 0 < earn_days < 14 else "#FACC15" if 0 < earn_days < 30 else "#94A3B8"
+    beat_col  = "#00FF88" if "Beat" in beat_str else "#FF6B6B" if "Miss" in beat_str else "#FACC15"
+    c1,c2,c3,c4 = st.columns(4)
+    for col, lbl, val, col2 in [
+        (c1,"Next Earnings",  earn_date_str, "#94A3B8"),
+        (c2,"Countdown",      f"{earn_days} days" if earn_days > 0 else "Unknown", earn_col),
+        (c3,"Last Result",    beat_str, beat_col),
+        (c4,"Sector",         info.get('sector', a.get('sector','N/A')), "#6B7280"),
+    ]:
+        with col:
+            st.markdown(f'<div class="earn-bar"><div class="earn-label">{lbl}</div><div class="earn-val" style="color:{col2};">{val}</div></div>', unsafe_allow_html=True)
+
+    # ── EARNINGS HISTORY ──────────────────────────────────────
+    st.markdown('<div class="section-header">Earnings History — Last 4 Quarters</div>', unsafe_allow_html=True)
+    if not earnings_hist:
+        st.markdown('<div class="panel-body"><div style="padding:12px 14px;font-size:12px;color:#4A6080;">No earnings history available</div></div>', unsafe_allow_html=True)
+    else:
+        eh_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;">'
+        eh_html += '<div class="earn-hist-row" style="background:#131F32;font-size:11px;color:#64748B;"><span>Quarter</span><span>EPS Estimate</span><span>EPS Actual</span><span>Surprise</span></div>'
+        for e in reversed(earnings_hist):
+            beat_cls = "earn-beat" if e["beat"] else "earn-miss"
+            icon     = "▲" if e["beat"] else "▼"
+            surp_str = f'{icon} {e["surprise"]:+.1f}%'
+            eh_html += f'<div class="earn-hist-row"><span style="color:#E2E8F0;">{e["quarter"]}</span><span style="color:#94A3B8;font-family:monospace;">{cur}{e["estimate"]:.2f}</span><span style="color:#E2E8F0;font-family:monospace;">{cur}{e["actual"]:.2f}</span><span class="{beat_cls};">{surp_str}</span></div>'
+        st.markdown(eh_html + '</div>', unsafe_allow_html=True)
+
+    # ── INSIDER TRADING ───────────────────────────────────────
+    st.markdown('<div class="section-header">Insider Transactions</div>', unsafe_allow_html=True)
+    if not insider_data:
+        st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:12px;color:#4A6080;">No recent insider transactions found</div>', unsafe_allow_html=True)
+    else:
+        ins_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;">'
+        ins_html += '<div class="insider-row" style="background:#131F32;"><span style="font-size:11px;color:#64748B;flex:1;">Insider</span><span style="font-size:11px;color:#64748B;flex:1;">Role</span><span style="font-size:11px;color:#64748B;width:60px;text-align:center;">Type</span><span style="font-size:11px;color:#64748B;text-align:right;">Shares / Value</span></div>'
+        for ins in insider_data:
+            t_col = "#00FF88" if ins["type"]=="BUY" else "#FF6B6B"
+            val_str = f'${ins["value"]:,.0f}' if ins["value"] > 0 else "N/A"
+            ins_html += f'<div class="insider-row"><span class="insider-name">{ins["name"]}</span><span class="insider-role">{ins["role"]}</span><span style="color:{t_col};font-weight:700;font-size:11px;width:60px;text-align:center;">{ins["type"]}</span><span class="insider-shares">{ins["shares"]:,} / {val_str}</span></div>'
+        st.markdown(ins_html + '</div>', unsafe_allow_html=True)
+
+    # ── NEWS SENTIMENT ────────────────────────────────────────
+    news_sentiment = a.get('news_sentiment', [])
+    st.markdown('<div class="section-header">News & Sentiment</div>', unsafe_allow_html=True)
+    if not news_items:
+        st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:12px;color:#4A6080;">No recent news available</div>', unsafe_allow_html=True)
+    else:
+        news_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;">'
+        for i, news in enumerate(news_items):
+            title     = news.get('title','')
+            pub       = news.get('publisher','')
+            link      = news.get('link','')
+            sent_data = next((s for s in news_sentiment if title[:20] in s.get('headline','') or s.get('headline','')[:20] in title), None)
+            sent      = sent_data.get('sentiment','neutral') if sent_data else 'neutral'
+            reason    = sent_data.get('reason','') if sent_data else ''
+            sent_col  = "#00FF88" if sent=='bullish' else "#FF6B6B" if sent=='bearish' else "#FACC15"
+            sent_icon = "▲" if sent=='bullish' else "▼" if sent=='bearish' else "↔"
+            sent_lbl  = sent.capitalize()
+            news_html += f'<div class="news-row">'
+            if link:
+                news_html += f'<div class="news-headline"><a href="{link}" target="_blank" style="color:#E2E8F0;text-decoration:none;">{title}</a></div>'
+            else:
+                news_html += f'<div class="news-headline">{title}</div>'
+            news_html += f'<div class="news-meta"><span style="color:#4A6080;">{pub}</span><span style="color:{sent_col};font-weight:700;">{sent_icon} {sent_lbl}</span></div>'
+            if reason:
+                news_html += f'<div style="font-size:11px;color:#64748B;margin-top:3px;">{reason}</div>'
+            news_html += '</div>'
+        st.markdown(news_html + '</div>', unsafe_allow_html=True)
+
+    # ── MARKET CONTEXT ────────────────────────────────────────
+    mctx      = st.session_state.get('market_ctx', {})
+    cycle     = a.get('cycle_phase','')
+    cycle_col = "#00FF88" if cycle=="Early" else "#38BDF8" if cycle=="Mid" else "#FACC15" if cycle=="Late" else "#FF6B6B"
+    mkt_risk  = a.get('market_risk','')
+    risk_col  = "#00FF88" if mkt_risk=="Low" else "#38BDF8" if mkt_risk=="Moderate" else "#FACC15" if mkt_risk=="High" else "#FF6B6B"
+    st.markdown('<div class="section-header" style="margin-top:8px;">Market Context & Business Cycle</div>', unsafe_allow_html=True)
+    mc1,mc2,mc3,mc4,mc5 = st.columns(5)
+    for mcol, lbl, idx_key_chg, idx_key_sig in [
+        (mc1, "S&P 500", "spy_1m",  "spy_signal"),
+        (mc2, "NASDAQ",  "qqq_1m",  "qqq_signal"),
+        (mc3, "DOW",     "dia_1m",  "dia_signal"),
+    ]:
+        chg  = mctx.get(idx_key_chg, 0) or 0
+        sig  = mctx.get(idx_key_sig, "Unknown")
+        vcol = "#00FF88" if chg >= 0 else "#FF6B6B"
+        sign = "+" if chg >= 0 else ""
+        with mcol:
+            st.markdown(f'''<div class="earn-bar" style="border-left-color:{vcol};">
+              <div class="earn-label">{lbl}</div>
+              <div class="earn-val" style="color:{vcol};font-size:14px;">{sign}{chg:.1f}%</div>
+              <div style="font-size:10px;color:#6B7280;margin-top:2px;">Last month · {sig}</div>
+            </div>''', unsafe_allow_html=True)
+    for mcol2, lbl2, val2, col2, desc2 in [
+        (mc4, "Cycle Phase", cycle,    cycle_col, a.get("cycle_desc","")),
+        (mc5, "Market Risk", mkt_risk, risk_col,  a.get("market_risk_desc","")),
+    ]:
+        with mcol2:
+            st.markdown(f'''<div class="earn-bar" style="border-left-color:{col2};">
+              <div class="earn-label">{lbl2}</div>
+              <div class="earn-val" style="color:{col2};font-size:13px;">{val2 or "—"}</div>
+              <div style="font-size:10px;color:#6B7280;margin-top:2px;">{desc2[:60]}</div>
+            </div>''', unsafe_allow_html=True)
+
+    # ── LIVE CHART ────────────────────────────────────────────
+    st.markdown('<div class="section-header" style="margin-top:12px;">Live Chart · Daily Candles · 1 Year</div>', unsafe_allow_html=True)
+    chart_df = df.tail(252).copy()
+    st.plotly_chart(build_chart(chart_df, ticker), use_container_width=True, config={'displayModeBar': True})
+
+    # ── CHART PATTERNS ────────────────────────────────────────
+    chart_pats = a.get('chart_patterns', [])
+    st.markdown('<div class="section-header">Chart Patterns Detected</div>', unsafe_allow_html=True)
+    if not chart_pats:
+        st.markdown('<div class="panel-body"><div style="padding:14px;text-align:center;font-size:12px;color:#4A6080;">No significant chart patterns detected in current price action</div></div>', unsafe_allow_html=True)
+    else:
+        cols = st.columns(min(len(chart_pats), 3))
+        for i, p in enumerate(chart_pats[:3]):
+            ptype = p.get('type','neutral')
+            pcls  = "pat-bull" if ptype=="bullish" else "pat-bear" if ptype=="bearish" else "pat-neut"
+            pcol  = "#00FF88" if ptype=="bullish" else "#FF6B6B" if ptype=="bearish" else "#FACC15"
+            conf  = min(100, max(0, int(p.get('confidence', 0))))
+            with cols[i]:
+                pat_name    = p.get("name","")
+                inv_url     = f"https://www.investopedia.com/search?q={pat_name.replace(' ','+')}"
+                bias_label  = "▲ Bullish" if ptype=="bullish" else "▼ Bearish" if ptype=="bearish" else "↔ Neutral"
+                target_html = f'<div class="pat-target" style="color:{pcol};">Target: {p.get("target_pct",0):+.1f}% → {cur}{p.get("target_price",0):.2f}</div>' if p.get('target_price') else ''
+                conf_reason  = p.get("confidence_reason", "")
+                still_valid  = p.get("still_valid", True)
+                validity_note= p.get("validity_note", "")
+                valid_col    = "#00FF88" if still_valid else "#FF6B6B"
+                valid_label  = "✓ Pattern still valid" if still_valid else "✗ Pattern broken/resolved"
+                st.markdown(f"""
+                <div class="{pcls}">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+                    <div class="pat-name" style="color:{pcol};">{pat_name}</div>
+                    <a href="{inv_url}" target="_blank" style="font-size:10px;color:#4A6080;text-decoration:none;">ⓘ</a>
+                  </div>
+                  <div style="font-size:11px;font-weight:700;color:{pcol};margin-bottom:6px;">{bias_label}</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <div style="font-size:10px;color:#6B7280;">Confidence: {conf}%</div>
+                    <div style="flex:1;height:3px;background:#243348;border-radius:2px;">
+                      <div style="width:{conf}%;height:3px;background:{pcol};border-radius:2px;"></div>
+                    </div>
+                  </div>
+                  {f'<div style="font-size:11px;color:#64748B;font-style:italic;margin-bottom:5px;">{conf_reason}</div>' if conf_reason else ''}
+                  <div class="pat-desc" style="margin-bottom:6px;">{p.get("description","")}</div>
+                  <div style="font-size:11px;color:{valid_col};font-weight:600;margin-bottom:3px;">{valid_label}</div>
+                  {f'<div style="font-size:11px;color:#64748B;">{validity_note}</div>' if validity_note else ''}
+                  {target_html}
+                </div>""", unsafe_allow_html=True)
+
+    candle_pats = a.get('candle_patterns', [])
+    st.markdown('<div class="section-header">Candlestick Patterns · Last 5 Sessions</div>', unsafe_allow_html=True)
+    if not candle_pats:
+        st.markdown('<div class="panel-body"><div style="padding:14px;text-align:center;font-size:12px;color:#4A6080;">No significant candlestick patterns in the last 5 sessions</div></div>', unsafe_allow_html=True)
+    else:
+        cols = st.columns(min(len(candle_pats), 4))
+        for i, c in enumerate(candle_pats[:4]):
+            ctype  = c.get('type','neutral')
+            ccol   = "#00FF88" if ctype=="bullish" else "#FF6B6B" if ctype=="bearish" else "#FACC15"
+            ccls   = "candle-card-bull" if ctype=="bullish" else "candle-card-bear" if ctype=="bearish" else "candle-card-neut"
+            clabel = "▲ Bullish" if ctype=="bullish" else "▼ Bearish" if ctype=="bearish" else "↔ Neutral"
+            inv_c  = f"https://www.investopedia.com/search?q={c.get('name','').replace(' ','+')}"
+            with cols[i]:
+                st.markdown(f'''
+                <div class="{ccls}">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                    <div style="font-size:13px;font-weight:700;color:{ccol};">{c.get("name","")}</div>
+                    <a href="{inv_c}" target="_blank" style="font-size:10px;color:#4A6080;text-decoration:none;">ⓘ</a>
+                  </div>
+                  <div style="font-size:11px;color:{ccol};font-weight:700;margin-bottom:5px;">{clabel} · {c.get("session","")}</div>
+                  <div style="font-size:12px;color:#CBD5E1;line-height:1.5;">{c.get("meaning","")}</div>
+                </div>''', unsafe_allow_html=True)
+
+    st.markdown('<div class="section-header">Trend Context</div>', unsafe_allow_html=True)
+    trend_items = [
+        ("Short-term trend (5 days)",   a.get('trend_short','N/A'),  a.get('trend_short_desc','')),
+        ("Medium-term trend (20 days)", a.get('trend_medium','N/A'), a.get('trend_medium_desc','')),
+        ("Long-term trend (200 days)",  a.get('trend_long','N/A'),   a.get('trend_long_desc','')),
+        ("Pattern Bias", a.get('pattern_bias','N/A'), a.get('pattern_bias_desc','')),
+    ]
+    cols = st.columns(4)
+    for i, (lbl, val, desc) in enumerate(trend_items):
+        tcol  = "#00FF88" if val=="Uptrend" or val=="Bullish" else "#FF6B6B" if val in ["Downtrend","Bearish"] else "#FACC15"
+        arrow = " ↗" if val in ["Uptrend","Bullish"] else " ↘" if val in ["Downtrend","Bearish"] else " ↔"
+        with cols[i]:
+            st.markdown(f'''
+            <div class="trend-tile">
+              <div class="trend-tile-label">{lbl}</div>
+              <div class="trend-tile-val" style="color:{tcol};">{val}{arrow}</div>
+              <div class="trend-tile-desc">{desc}</div>
+            </div>''', unsafe_allow_html=True)
+
+    render_disclaimer()
+
+
+def render_earnings_analyzer():
+    st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Earnings Call Analyzer</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:16px;">Paste any earnings call transcript → get an instant AI teardown</div>', unsafe_allow_html=True)
+    transcript = st.text_area("Paste transcript here", height=280, placeholder="Q3 2024 Earnings Call Transcript...", key="ea_transcript")
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        ticker_ea = st.text_input("Ticker (optional)", placeholder="NVDA", key="ea_ticker")
+    with col2:
+        quarter_ea = st.selectbox("Quarter", ["Q1","Q2","Q3","Q4"], key="ea_quarter")
+
+    if st.button("🎙️ Analyze Transcript", type="primary", use_container_width=True, key="ea_analyze"):
+        if not transcript or len(transcript.strip()) < 200:
+            st.warning("Please paste a full transcript (at least 200 characters)")
+        else:
+            with st.spinner("Analyzing earnings call..."):
+                try:
+                    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+                    msg = client.messages.create(
+                        model="claude-sonnet-4-20250514",
+                        max_tokens=1000,
+                        messages=[{
+                            "role": "user",
+                            "content": (
+                                f"Analyze this earnings call transcript for {ticker_ea or 'the company'}.\n\n"
+                                "Return ONLY raw JSON:\n"
+                                '{"tone":"Bullish|Neutral|Bearish","management_confidence":"High|Medium|Low",'
+                                '"key_wins":["w1","w2","w3"],"key_risks":["r1","r2"],'
+                                '"guidance":"","analyst_reception":"","surprise_factors":["s1"],'
+                                '"verdict":"","summary":""}\n\n'
+                                f"TRANSCRIPT:\n{transcript[:6000]}"
+                            )
+                        }]
+                    )
+                    raw = msg.content[0].text.strip()
+                    if raw.startswith("```"):
+                        raw = raw.split("```")[1]
+                        if raw.startswith("json"): raw = raw[4:]
+                    ea = json.loads(raw.strip())
+                    tone_col = "#00FF88" if ea.get("tone")=="Bullish" else "#FF6B6B" if ea.get("tone")=="Bearish" else "#FACC15"
+                    conf_col = "#00FF88" if ea.get("management_confidence")=="High" else "#FF6B6B" if ea.get("management_confidence")=="Low" else "#FACC15"
+                    c1,c2,c3 = st.columns(3)
+                    c1.markdown(f'<div class="earn-bar" style="border-left-color:{tone_col};"><div class="earn-label">Overall Tone</div><div class="earn-val" style="color:{tone_col};">{ea.get("tone","")}</div></div>', unsafe_allow_html=True)
+                    c2.markdown(f'<div class="earn-bar" style="border-left-color:{conf_col};"><div class="earn-label">Mgmt Confidence</div><div class="earn-val" style="color:{conf_col};">{ea.get("management_confidence","")}</div></div>', unsafe_allow_html=True)
+                    c3.markdown(f'<div class="earn-bar" style="border-left-color:#818CF8;"><div class="earn-label">Analyst Reception</div><div class="earn-val" style="color:#818CF8;font-size:12px;">{ea.get("analyst_reception","")[:60]}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="background:#1A2232;border:1px solid #14B8A6;border-radius:8px;padding:14px 18px;margin:8px 0;"><div style="font-size:10px;color:#5EEAD4;margin-bottom:6px;">VERDICT</div><div style="font-size:14px;color:#E2E8F0;line-height:1.6;">{ea.get("verdict","")}</div></div>', unsafe_allow_html=True)
+                    c1,c2 = st.columns(2)
+                    with c1:
+                        st.markdown('<div class="section-header">Key Wins</div>', unsafe_allow_html=True)
+                        for w in ea.get("key_wins",[]):
+                            st.markdown(f'<div class="reason-bull">+ {w}</div>', unsafe_allow_html=True)
+                    with c2:
+                        st.markdown('<div class="section-header">Key Risks</div>', unsafe_allow_html=True)
+                        for r in ea.get("key_risks",[]):
+                            st.markdown(f'<div class="reason-bear">- {r}</div>', unsafe_allow_html=True)
+                    if ea.get("guidance"):
+                        st.markdown(f'<div style="background:#251800;border-left:3px solid #FACC15;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:#E2E8F0;"><b style="color:#FACC15;">Guidance:</b> {ea["guidance"]}</div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="summary-box"><div style="font-size:10px;color:#5EEAD4;margin-bottom:6px;">FULL ANALYSIS</div><div class="summary-text">{ea.get("summary","")}</div></div>', unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"Analysis error: {e}")
+
+
+SNS_UNIVERSES = {
+    "S&P 500 Core":   ["AAPL","MSFT","NVDA","AMZN","GOOGL","META","TSLA","BRK-B","AVGO","JPM","V","UNH","LLY","XOM","MA","JNJ","PG","HD","MRK","ABBV","CVX","PEP","KO","COST","ADBE","WMT","BAC","TMO","MCD","NFLX"],
+    "High-Growth Tech":["NVDA","SMCI","META","MSFT","PLTR","CRWD","DDOG","SNOW","NET","ZS","OKTA","HUBS","MDB","TTD","BILL","SQ","SHOP","RBLX","COIN","IOT"],
+    "Dividend Kings": ["KO","PG","JNJ","MMM","CLX","GPC","ABT","MCD","WMT","CINF","LOW","SWK","LANC","NWN","CBSH","SCL","MSEX","YORW","AWR","ARTNA"],
+    "Biotech/Health": ["LLY","UNH","ABBV","JNJ","MRK","TMO","AMGN","GILD","BIIB","REGN","VRTX","BMY","ISRG","MDT","BSX","DXCM","MRNA","BNTX","SGEN","ILMN"],
+    "Energy":         ["XOM","CVX","COP","SLB","MPC","PSX","EOG","PXD","OXY","DVN","FANG","HAL","BKR","VLO","HES","APA","LNG","AR","NOG","CIVI"],
+    "TSX Canada":     ["RY.TO","TD.TO","BNS.TO","BMO.TO","CM.TO","CNR.TO","ENB.TO","TRP.TO","SU.TO","CP.TO","T.TO","BCE.TO","MFC.TO","SLF.TO","POW.TO","ATD.TO","NTR.TO","TRI.TO","WSP.TO","BAM.TO"],
+    "Small Cap Momentum": ["IONQ","ARQT","ACHR","JOBY","RKLB","ASTS","LUNR","RDW","SPIR","TPVG","BWMN","IIPR","SMAR","CEVA","SONO"],
+}
+
+SNS_TEMPLATES = {
+    "🔥 Breakout Hunters":    {"score_min": 7, "rsi_min": 50, "rsi_max": 70,  "vol_min": 1.2, "chg_min": 0.5,  "chg_max": 10,  "desc": "RSI 50-70 · volume surge · positive momentum"},
+    "💰 Deep Value":          {"score_min": 5, "pe_max": 15,  "pb_max": 1.5,  "eps_pos": True,"chg_max": 100, "desc": "Low P/E & P/B · positive earnings · undervalued"},
+    "📈 Trend Following":     {"score_min": 7, "above_200": True, "above_50": True, "vol_min": 0.8, "desc": "Above 50 & 200 MA · confirmed uptrend"},
+    "⚡ Momentum Surge":      {"score_min": 8, "rsi_min": 55, "vol_min": 1.5, "chg_min": 1.0, "chg_max": 15,  "desc": "Score 8+ · RSI 55+ · volume 1.5x+"},
+    "🛡️ Dividend + Growth":   {"score_min": 5, "div_min": 1.5,"eps_pos": True, "above_50": True,"desc": "Dividend yield 1.5%+ · EPS positive · uptrend"},
+    "🌙 Oversold Bounces":    {"score_min": 3, "rsi_min": 20, "rsi_max": 35, "above_200": True, "desc": "RSI oversold · long-term uptrend · potential bounce"},
+}
+
+def translate_theme_to_filter(theme):
+    theme_lower = theme.lower().strip()
+    if any(k in theme_lower for k in ("breakout","break out","momentum","surge","squeeze")):
+        return SNS_TEMPLATES["⚡ Momentum Surge"]
+    if any(k in theme_lower for k in ("value","cheap","undervalued","discount","low pe")):
+        return SNS_TEMPLATES["💰 Deep Value"]
+    if any(k in theme_lower for k in ("trend","uptrend","moving average","ma200","above 200")):
+        return SNS_TEMPLATES["📈 Trend Following"]
+    if any(k in theme_lower for k in ("dividend","yield","income","payout","distribution")):
+        return SNS_TEMPLATES["🛡️ Dividend + Growth"]
+    if any(k in theme_lower for k in ("oversold","bounce","reversal","bottom","dip")):
+        return SNS_TEMPLATES["🌙 Oversold Bounces"]
+    return SNS_TEMPLATES["🔥 Breakout Hunters"]
+
+def compute_composite_score(info, df, row):
+    close = float(row.get('Close', 0))
+    if close == 0: return 0
+    score = 0
+    if close > float(row.get('MA20', close)): score += 1
+    if close > float(row.get('MA50', close)): score += 2
+    if close > float(row.get('MA200', close)): score += 2
+    rsi = float(row.get('RSI', 50))
+    if 40 < rsi < 70: score += 1
+    macd = float(row.get('MACD', 0)); sig = float(row.get('MACDSig', 0))
+    if macd > sig: score += 1
+    if float(row.get('OBV', 0)) > 0: score += 1
+    if float(row.get('VolTrend', 1)) > 0.8: score += 1
+    if float(row.get('ATRPct', 0.05)) < 0.04: score += 1
+    return min(score, 10)
+
+def passes_filter(info, df, row, flt):
+    close   = float(row.get('Close', 0))
+    if close == 0: return False
+    score   = compute_composite_score(info, df, row)
+    rsi     = float(row.get('RSI', 50))
+    vol_t   = float(row.get('VolTrend', 1))
+    ma50    = float(row.get('MA50', close))
+    ma200   = float(row.get('MA200', close))
+    prev_close = float(df['Close'].iloc[-2]) if len(df) > 1 else close
+    chg_pct = ((close - prev_close) / prev_close * 100) if prev_close > 0 else 0
+    pe      = float(info.get('trailingPE') or 0)
+    pb      = float(info.get('priceToBook') or 0)
+    eps_g   = float(info.get('earningsGrowth') or 0)
+    div_y   = float(info.get('dividendYield') or 0) * (100 if float(info.get('dividendYield') or 0) < 1 else 1)
+    if score < flt.get("score_min", 0): return False
+    if rsi < flt.get("rsi_min", 0):    return False
+    if rsi > flt.get("rsi_max", 100):  return False
+    if vol_t < flt.get("vol_min", 0):  return False
+    if chg_pct < flt.get("chg_min", -999): return False
+    if chg_pct > flt.get("chg_max",  999): return False
+    if flt.get("above_200") and close < ma200: return False
+    if flt.get("above_50")  and close < ma50:  return False
+    if flt.get("eps_pos")   and eps_g <= 0:    return False
+    if pe  > 0 and pe  > flt.get("pe_max",  9999): return False
+    if pb  > 0 and pb  > flt.get("pb_max",  9999): return False
+    if flt.get("div_min", 0) > 0 and div_y <= 0:    return False
+    return True
+
+def sns_one_liner(ticker, score, row, flt):
+    rsi   = float(row.get('RSI', 50))
+    vol_t = float(row.get('VolTrend', 1))
+    lines = []
+    if score >= 8: lines.append(f"Score {score}/10")
+    if rsi < 35:   lines.append(f"RSI oversold {rsi:.0f}")
+    elif rsi > 65: lines.append(f"RSI hot {rsi:.0f}")
+    if vol_t > 1.5: lines.append(f"{vol_t:.1f}x vol surge")
+    return " · ".join(lines[:3]) if lines else f"Score {score}/10 · RSI {rsi:.0f}"
+
+def render_screener():
+    fmp_key_sc = st.secrets.get("FMP_API_KEY", "")
+    tab1, tab2 = st.tabs(["🔍 AI Theme Screener", "⭐ Watchlist"])
+
+    with tab1:
+        st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Signal & Score Screener</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:16px;">Select a universe, pick a theme or describe one — get ranked results instantly</div>', unsafe_allow_html=True)
+
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            selected_universe = st.selectbox("Universe", list(SNS_UNIVERSES.keys()), key="sns_universe")
+        with c2:
+            ai_theme = st.text_input("Theme (AI)", placeholder="e.g. oversold small caps with high volume surge", key="sns_theme")
+
+        st.markdown('<div style="font-size:11px;color:#4A6080;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Quick Templates</div>', unsafe_allow_html=True)
+        tpl_cols = st.columns(len(SNS_TEMPLATES))
+        chosen_filter = None
+
+        template_colors = {
+            "🔥 Breakout Hunters":   ("red",   "#2D1015", "#FF6B6B"),
+            "💰 Deep Value":         ("gold",  "#251800", "#FACC15"),
+            "📈 Trend Following":    ("green", "#0D2818", "#00FF88"),
+            "⚡ Momentum Surge":     ("green", "#0D2818", "#00FF88"),
+            "🛡️ Dividend + Growth":  ("blue",  "#0A1525", "#38BDF8"),
+            "🌙 Oversold Bounces":   ("blue",  "#0A1525", "#A78BFA"),
+        }
+
+        for i, (tname, tdata) in enumerate(SNS_TEMPLATES.items()):
+            with tpl_cols[i]:
+                color_key, bg_col, txt_col = template_colors.get(tname, ("blue", "#0A1525", "#38BDF8"))
+                st.markdown(f'''
+                <div class="tpl-wrap-{color_key}">
+                  <div class="tpl-card" style="background:{bg_col};border:1px solid {txt_col}44;">
+                    <div style="font-size:11px;font-weight:800;color:{txt_col};margin-bottom:3px;">{tname}</div>
+                    <div style="font-size:10px;color:#64748B;line-height:1.5;">{tdata["desc"]}</div>
+                  </div>
+                </div>''', unsafe_allow_html=True)
+                st.markdown(f'<div class="tpl-select tpl-select-{color_key}">', unsafe_allow_html=True)
+                if st.button("Select", key=f"tpl_{i}", use_container_width=True):
+                    st.session_state['sns_chosen_filter'] = tdata
+                    st.session_state['sns_chosen_name']   = tname
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        if 'sns_chosen_filter' in st.session_state:
+            chosen_filter = st.session_state['sns_chosen_filter']
+
+        if ai_theme:
+            chosen_filter = translate_theme_to_filter(ai_theme)
+            st.session_state['sns_chosen_filter'] = chosen_filter
+            st.session_state['sns_chosen_name']   = f'AI: "{ai_theme}"'
+
+        if chosen_filter:
+            chosen_name = st.session_state.get('sns_chosen_name', '')
+            st.markdown(f'''
+            <div style="background:#0A1E2C;border:1px solid #38BDF8;border-radius:8px;
+                        padding:8px 16px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;">
+              <div style="font-size:12px;color:#38BDF8;font-weight:700;">{chosen_name}</div>
+              <div style="font-size:11px;color:#64748B;">{chosen_filter.get("desc","")}</div>
+              <div style="font-size:11px;color:#4A6080;">Universe: <span style="color:#5EEAD4;font-weight:600;">{selected_universe} ({len(SNS_UNIVERSES[selected_universe])} stocks)</span></div>
+            </div>''', unsafe_allow_html=True)
+
+            if st.button("▶ Run Screener", type="primary", use_container_width=True, key="sns_run"):
+                tickers = SNS_UNIVERSES[selected_universe]
+                results = []
+                prog = st.progress(0, text="Scanning universe...")
+                for i, sym in enumerate(tickers):
+                    try:
+                        d  = fetch_ticker_data(sym, fmp_key_sc, _v=17)
+                        df = d['df']
+                        if df.empty or len(df) < 50: continue
+                        df = calculate_indicators(df)
+                        if df.empty: continue
+                        row = df.iloc[-1]
+                        inf = d['info']
+                        sc  = compute_composite_score(inf, df, row)
+                        if passes_filter(inf, df, row, chosen_filter):
+                            close     = float(row['Close'])
+                            prev_c    = float(df['Close'].iloc[-2]) if len(df)>1 else close
+                            chg_pct   = (close - prev_c) / prev_c * 100 if prev_c else 0
+                            results.append({
+                                "ticker": sym,
+                                "name":   inf.get('longName', inf.get('shortName', sym))[:28],
+                                "score":  sc,
+                                "rsi":    float(row.get('RSI', 0)),
+                                "close":  close,
+                                "chg":    chg_pct,
+                                "vol_t":  float(row.get('VolTrend', 1)),
+                                "one_liner": sns_one_liner(sym, sc, row, chosen_filter),
+                            })
+                        prog.progress((i+1)/len(tickers), text=f"Scanning {sym}...")
+                    except: continue
+                prog.empty()
+                results.sort(key=lambda x: x["score"], reverse=True)
+                st.session_state['sns_results'] = results
+
+        if 'sns_results' in st.session_state:
+            results = st.session_state['sns_results']
+            if not results:
+                st.warning("No stocks matched the filter in this universe. Try a different template or universe.")
+            else:
+                st.markdown(f'<div style="font-size:12px;color:#5EEAD4;font-weight:700;margin:8px 0;">{len(results)} stocks passed the filter</div>', unsafe_allow_html=True)
+                for r in results[:15]:
+                    sc_col  = "#00FF88" if r["score"]>=7 else "#FACC15" if r["score"]>=4 else "#FF6B6B"
+                    chg_col = "#00FF88" if r["chg"] >= 0 else "#FF6B6B"
+                    sign    = "+" if r["chg"] >= 0 else ""
+                    vol_col = "#FACC15" if r["vol_t"] >= 1.5 else "#94A3B8"
+                    cur_sym = "CA$" if r["ticker"].endswith(".TO") else "$"
+                    st.markdown(f'''
+                    <div style="background:#1A2232;border:1px solid #243348;border-radius:8px;
+                                padding:10px 16px;margin-bottom:6px;display:flex;align-items:center;gap:16px;">
+                      <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#00FF88;min-width:80px;">{r["ticker"]}</div>
+                      <div style="flex:1;min-width:0;">
+                        <div style="font-size:12px;font-weight:600;color:#E2E8F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{r["name"]}</div>
+                        <div style="font-size:11px;color:#64748B;margin-top:2px;">{r["one_liner"]}</div>
+                      </div>
+                      <div style="text-align:center;min-width:50px;">
+                        <div style="font-size:18px;font-weight:800;color:{sc_col};font-family:'JetBrains Mono',monospace;">{r["score"]}</div>
+                        <div style="font-size:9px;color:#64748B;">SCORE</div>
+                      </div>
+                      <div style="text-align:right;min-width:90px;">
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#F1F5F9;">{cur_sym}{r["close"]:.2f}</div>
+                        <div style="font-size:12px;color:{chg_col};font-weight:600;">{sign}{r["chg"]:.2f}%</div>
+                      </div>
+                      <div style="text-align:center;min-width:60px;">
+                        <div style="font-size:13px;color:#A78BFA;font-family:monospace;font-weight:700;">{r["rsi"]:.0f}</div>
+                        <div style="font-size:9px;color:#64748B;">RSI</div>
+                      </div>
+                      <div style="text-align:center;min-width:50px;">
+                        <div style="font-size:13px;color:{vol_col};font-family:monospace;font-weight:700;">{r["vol_t"]:.1f}x</div>
+                        <div style="font-size:9px;color:#64748B;">VOL</div>
+                      </div>
+                    </div>''', unsafe_allow_html=True)
+                    if st.button(f"📊 Full Analysis → {r['ticker']}", key=f"sns_analyze_{r['ticker']}", use_container_width=False):
+                        run_analysis(r['ticker'])
+
+    with tab2:
+        st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Watchlist</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:16px;">Track your tickers — scores and signals refresh every 60 min</div>', unsafe_allow_html=True)
+
+        wl_raw = st.text_input("Add tickers (comma separated)", placeholder="AAPL, MSFT, NVDA, RY.TO", key="wl_input")
+        if st.button("Add to Watchlist", key="wl_add"):
+            new = [t.strip().upper() for t in wl_raw.split(",") if t.strip()]
+            current = st.session_state.get('watchlist', [])
+            combined = list(dict.fromkeys(current + new))
+            st.session_state['watchlist'] = combined
+            st.rerun()
+
+        watchlist = st.session_state.get('watchlist', [])
+        if watchlist:
+            if st.button("🔄 Refresh Scores", key="wl_refresh"):
+                for k in list(st.session_state.keys()):
+                    if k.startswith("_ticker_cache_"):
+                        del st.session_state[k]
+                st.rerun()
+
+            for sym in watchlist:
+                try:
+                    d   = fetch_ticker_data(sym, fmp_key_sc, _v=17)
+                    df  = d['df']
+                    if df.empty or len(df) < 50: continue
+                    df  = calculate_indicators(df)
+                    row = df.iloc[-1]
+                    inf = d['info']
+                    sc  = compute_composite_score(inf, df, row)
+                    close   = float(row['Close'])
+                    prev_c  = float(df['Close'].iloc[-2]) if len(df) > 1 else close
+                    chg_pct = (close - prev_c) / prev_c * 100 if prev_c else 0
+                    sc_col  = "#00FF88" if sc >= 7 else "#FACC15" if sc >= 4 else "#FF6B6B"
+                    chg_col = "#00FF88" if chg_pct >= 0 else "#FF6B6B"
+                    sign    = "+" if chg_pct >= 0 else ""
+                    cur_w   = "CA$" if sym.endswith(".TO") else "$"
+                    cname   = inf.get('longName', inf.get('shortName', sym))[:30]
+                    c1, c2 = st.columns([5, 1])
+                    with c1:
+                        st.markdown(f'''
+                        <div style="background:#1A2232;border:1px solid #243348;border-radius:8px;
+                                    padding:10px 16px;margin-bottom:6px;display:flex;align-items:center;gap:16px;">
+                          <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;color:#00FF88;min-width:72px;">{sym}</div>
+                          <div style="flex:1;font-size:12px;color:#94A3B8;">{cname}</div>
+                          <div style="font-size:19px;font-weight:800;color:{sc_col};font-family:monospace;min-width:30px;">{sc}</div>
+                          <div style="font-family:monospace;font-size:15px;font-weight:700;color:#F1F5F9;">{cur_w}{close:.2f}</div>
+                          <div style="font-size:13px;color:{chg_col};font-weight:700;">{sign}{chg_pct:.2f}%</div>
+                          <div style="font-size:13px;color:#A78BFA;font-family:monospace;">{float(row["RSI"]):.0f} RSI</div>
+                        </div>''', unsafe_allow_html=True)
+                    with c2:
+                        if st.button(f"Analyze", key=f"wl_an_{sym}"):
+                            run_analysis(sym)
+                        if st.button(f"✕", key=f"wl_rm_{sym}"):
+                            st.session_state['watchlist'] = [x for x in watchlist if x != sym]
+                            st.rerun()
+                except: continue
+        else:
+            st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;padding:32px 0;">No tickers in watchlist yet. Add some above.</div>', unsafe_allow_html=True)
+
+
+if __name__ == '__main__':
+    main()
