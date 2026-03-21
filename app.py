@@ -140,7 +140,7 @@ def search_ticker_fmp(query, fmp_key=""):
     return result
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def fetch_ticker_data(ticker, fmp_key="", _v=15):
+def fetch_ticker_data(ticker, fmp_key="", _v=16):
     """Hybrid: yfinance for price+fundamentals, FMP only for analyst/earnings/insider."""
     import time, requests
     yf_ticker = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
@@ -201,8 +201,19 @@ def fetch_ticker_data(ticker, fmp_key="", _v=15):
             rev_prev = _row(inc.iloc[:,1:2] if inc.shape[1]>1 else inc, 'Total Revenue')
             net      = _row(inc, 'Net Income')
             net_prev = _row(inc.iloc[:,1:2] if inc.shape[1]>1 else inc, 'Net Income')
-            op_inc   = _row(inc, 'Operating Income')
-            gross    = _row(inc, 'Gross Profit')
+            op_inc       = _row(inc, 'Operating Income')
+            gross        = _row(inc, 'Gross Profit')
+            interest_exp = _row(inc, 'Interest Expense')
+            cogs_val     = _row(inc, 'Cost Of Revenue', 'Cost of Goods')
+            if cogs_val == 0 and gross > 0 and rev > 0:
+                cogs_val = rev - gross  # COGS = Revenue - Gross Profit
+            # Store raw values so balance sheet block can compute cross-statement ratios
+            if rev > 0:      info['_rev_raw']   = rev
+            if op_inc != 0:  info['_op_inc_raw'] = op_inc
+            if cogs_val > 0: info['_cogs_raw']   = cogs_val
+            # Interest Coverage = Operating Income / Interest Expense
+            if interest_exp != 0 and op_inc != 0:
+                info['interestCoverage'] = round(op_inc / abs(interest_exp), 2)
             if rev > 0:
                 info['operatingMargins'] = op_inc / rev
                 info['profitMargins']    = net / rev
@@ -233,10 +244,16 @@ def fetch_ticker_data(ticker, fmp_key="", _v=15):
                                 if v != 0: return v
                             except: pass
                 return 0
-            equity    = _b('Stockholders Equity','Total Equity','Common Stock Equity')
-            debt      = _b('Total Debt','Long Term Debt')
-            c_assets  = _b('Current Assets')
-            c_liab    = _b('Current Liabilities')
+            equity       = _b('Stockholders Equity','Total Equity','Common Stock Equity')
+            debt         = _b('Total Debt','Long Term Debt')
+            c_assets     = _b('Current Assets')
+            c_liab       = _b('Current Liabilities')
+            total_assets = _b('Total Assets')
+            total_liab   = _b('Total Liabilities Net Minority Interest','Total Liabilities')
+            cash_bs      = _b('Cash And Cash Equivalents','Cash Cash Equivalents And Short Term Investments','Cash')
+            receivables  = _b('Net Receivables','Accounts Receivable','Receivables')
+            st_invest    = _b('Short Term Investments','Other Short Term Investments')
+            inventory_bs = _b('Inventory','Inventories')
             if equity != 0:
                 if debt != 0:  info['debtToEquity'] = debt / abs(equity)
                 bvps = equity / shares
@@ -247,6 +264,21 @@ def fetch_ticker_data(ticker, fmp_key="", _v=15):
                     info['returnOnEquity'] = net_inc / abs(equity)
             if c_liab != 0:
                 info['currentRatio'] = c_assets / abs(c_liab)
+                # Quick Ratio = (Cash + Short-term Investments + Receivables) / Current Liabilities
+                quick_assets = cash_bs + st_invest + receivables
+                if quick_assets > 0:
+                    info['quickRatio'] = round(quick_assets / abs(c_liab), 2)
+            # Debt-to-Assets = Total Liabilities / Total Assets
+            if total_assets > 0 and total_liab != 0:
+                info['debtToAssets'] = round(abs(total_liab) / total_assets, 2)
+            # Asset Turnover = Revenue / Total Assets
+            rev_raw = float(info.get('_rev_raw', 0) or 0)
+            if total_assets > 0 and rev_raw > 0:
+                info['assetTurnover'] = round(rev_raw / total_assets, 2)
+            # Inventory Turnover = COGS / Inventory
+            cogs_raw = float(info.get('_cogs_raw', 0) or 0)
+            if inventory_bs > 0 and cogs_raw > 0:
+                info['inventoryTurnover'] = round(cogs_raw / inventory_bs, 2)
     except: pass
 
     try:
@@ -1473,6 +1505,11 @@ INFO_LINKS = {
     "Return on Equity": "https://www.investopedia.com/terms/r/returnonequity.asp",
     "Debt / Equity":    "https://www.investopedia.com/terms/d/debtequityratio.asp",
     "Current Ratio":    "https://www.investopedia.com/terms/c/currentratio.asp",
+    "Quick Ratio":      "https://www.investopedia.com/terms/q/quickratio.asp",
+    "Debt-to-Assets":   "https://www.investopedia.com/terms/d/debt-to-total-assets-ratio.asp",
+    "Interest Coverage":"https://www.investopedia.com/terms/i/interestcoverageratio.asp",
+    "Asset Turnover":   "https://www.investopedia.com/terms/a/assetturnover.asp",
+    "Inventory Turnover":"https://www.investopedia.com/terms/i/inventoryturnover.asp",
     "Dividend Yield":   "https://www.investopedia.com/terms/d/dividendyield.asp",
     "Short % Float":    "https://www.investopedia.com/terms/s/shortinterest.asp",
     "Float Shares":     "https://www.investopedia.com/terms/f/floating-stock.asp",
@@ -2119,7 +2156,7 @@ def run_analysis(ticker):
     try:
         prog.info(f"⏳ Fetching data for {ticker}...")
         fmp_key = st.secrets.get("FMP_API_KEY", "")
-        data  = fetch_ticker_data(ticker, fmp_key, _v=15)
+        data  = fetch_ticker_data(ticker, fmp_key, _v=16)
         df    = data['df']
         info  = data['info']
 
@@ -2800,6 +2837,11 @@ def render_hud():
         roe        = float(_get(['returnOnEquity', 'returnOnAssets'], 0) or 0) * (100 if abs(float(_get(['returnOnEquity'], 0) or 0)) <= 1 else 1)
         debt_eq    = float(_get(['debtToEquity', 'totalDebt'], 0) or 0)
         curr_ratio = float(_get(['currentRatio'], 0) or 0)
+        quick_ratio    = float(_get(['quickRatio'], 0) or 0)
+        debt_to_assets = float(_get(['debtToAssets'], 0) or 0)
+        int_coverage   = float(_get(['interestCoverage'], 0) or 0)
+        asset_turn     = float(_get(['assetTurnover'], 0) or 0)
+        inv_turn       = float(_get(['inventoryTurnover'], 0) or 0)
         div_yield  = float(_get(['dividendYield', 'trailingAnnualDividendYield'], 0) or 0) * (100 if float(_get(['dividendYield'], 0) or 0) < 1 else 1)
         short_pct  = float(_get(['shortPercentOfFloat', 'shortRatio'], 0) or 0) * (100 if float(_get(['shortPercentOfFloat'], 0) or 0) < 1 else 1)
         float_sh   = float(_get(['floatShares', 'sharesOutstanding'], 0) or 0)
@@ -2818,7 +2860,12 @@ def render_hud():
         funds_html += data_row("Profit Margin",    f"{profit_m:.1f}%" if profit_m else "—",      "val-g" if profit_m > 10 else "val-y" if profit_m > 0 else "val-r", True)
         funds_html += data_row("Return on Equity", f"{roe:.1f}%" if roe else "—",                "val-g" if roe > 15 else "val-y" if roe > 0 else "val-r", True)
         funds_html += data_row("Debt / Equity",    f"{debt_eq:.2f}" if debt_eq else "—",         "val-r" if debt_eq > 2 else "val-y" if debt_eq > 1 else "val-g", True)
+        funds_html += data_row("Debt-to-Assets",   f"{debt_to_assets:.2f}" if debt_to_assets else "—", "val-r" if debt_to_assets > 0.6 else "val-y" if debt_to_assets > 0.4 else "val-g" if debt_to_assets else "val-m", True)
+        funds_html += data_row("Interest Coverage",f"{int_coverage:.1f}x" if int_coverage else "—",    "val-r" if 0 < int_coverage < 1.5 else "val-y" if 0 < int_coverage < 3 else "val-g" if int_coverage >= 3 else "val-m", True)
         funds_html += data_row("Current Ratio",    f"{curr_ratio:.2f}" if curr_ratio else "—",   "val-g" if curr_ratio > 1.5 else "val-y" if curr_ratio > 1 else "val-r", True)
+        funds_html += data_row("Quick Ratio",      f"{quick_ratio:.2f}" if quick_ratio else "—", "val-g" if quick_ratio > 1.0 else "val-y" if quick_ratio > 0.7 else "val-r" if quick_ratio else "val-m", True)
+        funds_html += data_row("Asset Turnover",   f"{asset_turn:.2f}x" if asset_turn else "—",  "val-g" if asset_turn > 1.0 else "val-y" if asset_turn > 0.5 else "val-m" if asset_turn else "val-m", True)
+        funds_html += data_row("Inventory Turnover",f"{inv_turn:.1f}x" if inv_turn else "—",     "val-g" if inv_turn > 6 else "val-y" if inv_turn > 3 else "val-m" if inv_turn else "val-m", True)
         funds_html += data_row("Dividend Yield",   f"{div_yield:.2f}%" if div_yield else "None",   "val-g" if div_yield > 2 else "val-m", True)
         funds_html += data_row("Short % Float",    f"{short_pct:.1f}%" if short_pct else "—",    "val-r" if short_pct > 20 else "val-y" if short_pct > 10 else "val-g", True)
         funds_html += data_row("Float Shares",     fmt_cap(float_sh).replace("$","") if float_sh else "—", "val-m", True)
@@ -3543,7 +3590,7 @@ def render_screener():
                 prog = st.progress(0, text="Scanning universe...")
                 for i, sym in enumerate(tickers):
                     try:
-                        d  = fetch_ticker_data(sym, fmp_key_sc, _v=15)
+                        d  = fetch_ticker_data(sym, fmp_key_sc, _v=16)
                         df = d['df']
                         if df.empty or len(df) < 50: continue
                         df = calculate_indicators(df)
@@ -3653,7 +3700,7 @@ def render_screener():
 
             for sym in watchlist:
                 try:
-                    d   = fetch_ticker_data(sym, fmp_key_sc, _v=15)
+                    d   = fetch_ticker_data(sym, fmp_key_sc, _v=16)
                     df  = d['df']
                     if df.empty or len(df) < 50: continue
                     df  = calculate_indicators(df)
