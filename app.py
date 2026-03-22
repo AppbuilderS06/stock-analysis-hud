@@ -1412,7 +1412,7 @@ def get_sector_phase(sector_etf):
 
 
 # ── Claude Analysis ───────────────────────────────────────────
-def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, market_ctx):
+def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, market_ctx, mode="Quick"):
     row   = df.iloc[-1]
     prev  = df.iloc[-2]
     close = float(row['Close'])
@@ -1463,11 +1463,55 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
     l52 = info.get('fiftyTwoWeekLow', 0) or 0
     fib382, fib500, fib618 = fibs
 
-    # PATCH: SWING TRADE replaced with TECHNICAL SETUP in verdict options
-    # PATCH: summary now requires specific HUD data references
+    is_deep = (mode == "Deep Research")
+
+    # ── Deep Research: multi-step reasoning preamble ──────────
+    if is_deep:
+        role_line = (
+            f"You are a senior institutional stock analyst with 20 years of experience. "
+            f"You are conducting a DEEP RESEARCH analysis of {ticker}.\n"
+            "Before producing your JSON output, work through the following four steps in your reasoning. "
+            "Be thorough — this analysis will be used to make a real trading decision.\n\n"
+            "STEP 1 — TECHNICAL PICTURE: What do the moving averages, RSI, MACD, OBV, and volume "
+            "tell you? Is the trend confirmed across timeframes or are signals diverging? "
+            "Where are the critical support and resistance levels? Is momentum building or fading?\n\n"
+            "STEP 2 — FUNDAMENTAL QUALITY: What does the revenue growth, margins, cash flow, "
+            "and balance sheet tell you about this business? Is growth accelerating or slowing? "
+            "Are margins expanding or compressing? Does the valuation make sense given the growth rate?\n\n"
+            "STEP 3 — MACRO & SECTOR CONTEXT: How does the current market phase, sector trend, "
+            "and broader macro environment affect the probability of this trade working? "
+            "Is the market a tailwind or headwind right now?\n\n"
+            "STEP 4 — SYNTHESIS: Where do the technicals, fundamentals, and macro agree? "
+            "Where do they conflict? What is the highest-probability scenario and what would "
+            "invalidate it? What is the single most important thing to watch?\n\n"
+            "Now produce your complete analysis in the required JSON format. "
+            "Return ONLY raw JSON — no markdown, no backticks, no explanation.\n\n"
+        )
+        summary_instruction = (
+            "SUMMARY — write 5-6 sentences covering all four research steps: "
+            "(1) Technical: name actual RSI value, which MAs price is above/below, OBV direction. "
+            "(2) Fundamental: one sentence on business quality — revenue growth, margins, or cash flow. "
+            "(3) Macro: one sentence on market/sector context and whether it helps or hurts. "
+            "(4) Synthesis: what the setup means overall and the single most important level to watch. "
+            "Be specific with numbers. No vague language."
+        )
+        model_name = "claude-opus-4-5-20251001"
+        max_tok    = 4000
+    else:
+        role_line = (
+            f"You are an expert stock market analyst. Analyze {ticker}.\n"
+            "Return ONLY raw JSON — no markdown, no backticks, no explanation.\n\n"
+        )
+        summary_instruction = (
+            "SUMMARY — write 3-4 sentences. Reference specific HUD values: name the actual RSI "
+            "value, which MAs price is above or below, whether OBV is rising or falling, and "
+            "what the entry zone or key support level to watch is. Be specific, not vague."
+        )
+        model_name = "claude-sonnet-4-20250514"
+        max_tok    = 2500
+
     prompt = (
-        f"You are an expert stock market analyst. Analyze {ticker}.\n"
-        "Return ONLY raw JSON — no markdown, no backticks, no explanation.\n\n"
+        role_line +
         f"TECHNICAL DATA:\n"
         f"{ma_ctx}\n"
         f"Close: {close:.2f} | Change: {chg_abs:.2f} ({chg_pct:.2f}%)\n"
@@ -1500,9 +1544,7 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         "- still_valid: true if price still within pattern\n"
         "- Only include patterns with confidence >40%\n\n"
         "CANDLESTICK PATTERNS — use last 5 OHLCV\n\n"
-        "SUMMARY — write 3-4 sentences. Reference specific HUD values: name the actual RSI "
-        "value, which MAs price is above or below, whether OBV is rising or falling, and "
-        "what the entry zone or key support level to watch is. Be specific, not vague.\n\n"
+        + summary_instruction + "\n\n"
         "OTHER:\n"
         "- Classify each news headline as bullish/bearish/neutral\n"
         "- ALWAYS return trend_short/medium/long — NEVER return N/A\n"
@@ -1525,7 +1567,7 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         '"resistance3":0,"resistance3_label":"label",'
         '"reasons_bull":["r1","r2","r3"],'
         '"reasons_bear":["r1","r2"],'
-        '"summary":"3-4 sentence specific analysis referencing actual RSI value, MA positions, OBV direction, and key levels",'
+        '"summary":"analysis referencing RSI, MA positions, OBV, fundamentals, macro context, and key level",'
         '"day_trade_note":"one sentence",'
         '"swing_note":"one sentence",'
         '"invest_note":"one sentence",'
@@ -1552,8 +1594,8 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
     try:
         client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
         msg = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=2500,
+            model=model_name,
+            max_tokens=max_tok,
             messages=[{"role": "user", "content": prompt}]
         )
         raw = msg.content[0].text.strip()
@@ -1854,6 +1896,33 @@ def main():
                 ticker_upper = ticker_in.strip().upper() if ticker_in else ""
                 prev_val = st.session_state.get('_prev_ticker_val', '')
                 st.session_state['_prev_ticker_val'] = ticker_upper
+
+                # ── Analysis Mode Toggle ──────────────────────
+                if 'analysis_mode' not in st.session_state:
+                    st.session_state['analysis_mode'] = 'Quick'
+                cur_mode = st.session_state['analysis_mode']
+                m1, m2, _ = st.columns([1, 1, 2])
+                with m1:
+                    quick_style = "border:2px solid #38BDF8;" if cur_mode == "Quick" else "border:1px solid #243348;"
+                    st.markdown(f'''<div style="background:#0A1525;{quick_style}border-radius:8px;
+                        padding:10px 14px;text-align:center;cursor:pointer;">
+                      <div style="font-size:11px;font-weight:800;color:#38BDF8;letter-spacing:1px;">⚡ QUICK</div>
+                      <div style="font-size:10px;color:#64748B;margin-top:2px;">Sonnet · ~15 sec</div>
+                    </div>''', unsafe_allow_html=True)
+                    if st.button("Select Quick", key="mode_quick", use_container_width=True):
+                        st.session_state['analysis_mode'] = 'Quick'
+                        st.rerun()
+                with m2:
+                    deep_style = "border:2px solid #A78BFA;" if cur_mode == "Deep Research" else "border:1px solid #243348;"
+                    st.markdown(f'''<div style="background:#1C1A50;{deep_style}border-radius:8px;
+                        padding:10px 14px;text-align:center;cursor:pointer;">
+                      <div style="font-size:11px;font-weight:800;color:#A78BFA;letter-spacing:1px;">🔬 DEEP RESEARCH</div>
+                      <div style="font-size:10px;color:#64748B;margin-top:2px;">Opus · ~45 sec</div>
+                    </div>''', unsafe_allow_html=True)
+                    if st.button("Select Deep Research", key="mode_deep", use_container_width=True):
+                        st.session_state['analysis_mode'] = 'Deep Research'
+                        st.rerun()
+
                 selected_ticker = None
 
                 def render_identity_card(sym, name, exch, curr, name_found=True):
@@ -2059,8 +2128,12 @@ def run_analysis(ticker):
                 except: pass
         except: pass
 
-        prog.info(f"🤖 Running AI analysis for {ticker}... (10-15 sec)")
-        analysis = get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, market_ctx)
+        analysis_mode = st.session_state.get('analysis_mode', 'Quick')
+        if analysis_mode == 'Deep Research':
+            prog.info(f"🔬 Running Deep Research on {ticker}... (30-45 sec)")
+        else:
+            prog.info(f"⚡ Running Quick Analysis on {ticker}... (10-15 sec)")
+        analysis = get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, market_ctx, mode=analysis_mode)
         if 'error' in analysis:
             prog.empty()
             st.error(f"Claude API error: {analysis['error']}")
@@ -2279,8 +2352,9 @@ def run_analysis(ticker):
         st.session_state.insider_data  = insider_data
         st.session_state.news_items    = news_items
         st.session_state.vol_data      = vol_data
-        st.session_state.earn_date_str = earn_date_str
-        st.session_state.days_to_earn  = days_to_earn
+        st.session_state.earn_date_str  = earn_date_str
+        st.session_state.days_to_earn   = days_to_earn
+        st.session_state.analysis_mode  = analysis_mode
         st.rerun()
 
     except Exception as e:
@@ -2406,7 +2480,7 @@ def render_hud():
     if st.button("← New ticker"):
         for k in ['analysis','df','info','ticker','signals','score','fibs','row','prev',
                   '_prev_ticker_val','rr_mode','_rr_ticker','_resolved_name',
-                  '_resolved_exch','_resolved_curr']:
+                  '_resolved_exch','_resolved_curr','analysis_mode']:
             if k in st.session_state: del st.session_state[k]
         st.rerun()
 
@@ -2538,6 +2612,13 @@ def render_hud():
     bull_names = " · ".join(signals[k]["label"] for k in signals if signals[k]["bull"]) or "None"
     bear_names = " · ".join(signals[k]["label"] for k in signals if not signals[k]["bull"]) or "None"
 
+    # Analysis mode badge
+    analysis_mode = st.session_state.get('analysis_mode', 'Quick')
+    if analysis_mode == 'Deep Research':
+        mode_badge = '<span style="background:#1C1A50;border:1px solid #A78BFA;border-radius:4px;padding:2px 8px;font-size:10px;color:#A78BFA;font-weight:700;letter-spacing:1px;margin-left:8px;">🔬 DEEP RESEARCH</span>'
+    else:
+        mode_badge = '<span style="background:#0A1525;border:1px solid #38BDF8;border-radius:4px;padding:2px 8px;font-size:10px;color:#38BDF8;font-weight:700;letter-spacing:1px;margin-left:8px;">⚡ QUICK</span>'
+
     # Run fundamental screen
     fs = fundamental_screen(info, a.get('verdict', ''))
     fs_icon = (
@@ -2554,7 +2635,7 @@ def render_hud():
     with c1:
         st.markdown(f"""
         <div class="verdict-card" style="background:{vc['bg']};border-left-color:{vc['border']};">
-          <div class="verdict-label" style="color:{vc['color']};">AI Verdict</div>
+          <div class="verdict-label" style="color:{vc['color']};display:flex;align-items:center;">AI Verdict{mode_badge}</div>
           <div class="verdict-value" style="color:{vc['color']};">{a.get('verdict','')}</div>
           <div class="verdict-meta">Confidence: {a.get('confidence','')} &nbsp;·&nbsp; Risk: {a.get('risk','')}</div>
           <div class="verdict-note" style="color:{vc['color']};">{a.get('risk_reason','')}</div>
