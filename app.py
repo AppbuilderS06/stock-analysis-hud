@@ -1488,12 +1488,17 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
             "Return ONLY raw JSON — no markdown, no backticks, no explanation.\n\n"
         )
         summary_instruction = (
-            "SUMMARY — write 5-6 sentences covering all four research steps: "
-            "(1) Technical: name actual RSI value, which MAs price is above/below, OBV direction. "
-            "(2) Fundamental: one sentence on business quality — revenue growth, margins, or cash flow. "
-            "(3) Macro: one sentence on market/sector context and whether it helps or hurts. "
-            "(4) Synthesis: what the setup means overall and the single most important level to watch. "
-            "Be specific with numbers. No vague language."
+            "SUMMARY — write THREE separate paragraphs, each 2-3 sentences, returned as separate JSON fields:\n"
+            "summary_technical: Technical structure only. Name actual RSI value, exact MA positions (above/below with prices), "
+            "OBV direction, MACD histogram, volume character. State whether the trend is confirmed or diverging. "
+            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
+            "summary_fundamental: Business quality only. Revenue growth %, earnings growth, margins, cash flow, "
+            "valuation vs growth rate. Is the business fundamentally strong or deteriorating? "
+            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
+            "summary_macro: Macro environment and news only. Market phase (SPY/QQQ/DIA performance), sector context, "
+            "recent news impact, and the single most important level to watch with a clear decision framework. "
+            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
+            "Be specific with numbers throughout. No vague language."
         )
         model_name = "claude-opus-4-6"
         max_tok    = 4000
@@ -1503,9 +1508,14 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
             "Return ONLY raw JSON — no markdown, no backticks, no explanation.\n\n"
         )
         summary_instruction = (
-            "SUMMARY — write 3-4 sentences. Reference specific HUD values: name the actual RSI "
-            "value, which MAs price is above or below, whether OBV is rising or falling, and "
-            "what the entry zone or key support level to watch is. Be specific, not vague."
+            "SUMMARY — write THREE separate paragraphs returned as separate JSON fields:\n"
+            "summary_technical: 2 sentences on technical structure. Name actual RSI value, which MAs price is above/below, OBV direction. "
+            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
+            "summary_fundamental: 1-2 sentences on business quality — revenue growth, margins, or valuation. "
+            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
+            "summary_macro: 1-2 sentences on macro context and the key level to watch with a decision trigger. "
+            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
+            "Be specific with numbers. No vague language."
         )
         model_name = "claude-sonnet-4-20250514"
         max_tok    = 2500
@@ -1567,7 +1577,10 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         '"resistance3":0,"resistance3_label":"label",'
         '"reasons_bull":["r1","r2","r3"],'
         '"reasons_bear":["r1","r2"],'
-        '"summary":"analysis referencing RSI, MA positions, OBV, fundamentals, macro context, and key level",'
+        '"summary_technical":"2-3 sentences on technical structure with [BULL]/[BEAR] sentence tags",'
+        '"summary_fundamental":"1-2 sentences on business quality with [BULL]/[BEAR] sentence tags",'
+        '"summary_macro":"1-2 sentences on macro context and key level with [BULL]/[BEAR] sentence tags",'
+        '"summary":"fallback single paragraph combining all three",'
         '"day_trade_note":"one sentence",'
         '"swing_note":"one sentence",'
         '"invest_note":"one sentence",'
@@ -1894,13 +1907,71 @@ def main():
 
             with tab1:
                 st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:4px;">Enter a ticker</div>', unsafe_allow_html=True)
-                st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:12px;">Type any symbol — a dropdown will guide you</div>', unsafe_allow_html=True)
+                st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:10px;">Type any symbol — a dropdown will guide you</div>', unsafe_allow_html=True)
 
                 fmp_key_lp = st.secrets.get("FMP_API_KEY", "")
                 if "analysis_mode" not in st.session_state:
                     st.session_state["analysis_mode"] = "Quick"
                 if "_confirmed_ticker" not in st.session_state:
                     st.session_state["_confirmed_ticker"] = None
+
+                # ── MODE PILLS — always visible, above everything ──
+                cur_mode = st.session_state["analysis_mode"]
+                mp1, mp2 = st.columns(2)
+                with mp1:
+                    if cur_mode == "Quick":
+                        st.markdown("""<div style="background:#081510;border:2px solid #00FF88;
+                            border-radius:8px;padding:9px 14px;margin-bottom:2px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                              font-weight:800;color:#00FF88;letter-spacing:1.5px;">⚡ QUICK</span>
+                            <span style="font-size:10px;color:#00FF88;font-weight:700;">● Active</span>
+                          </div>
+                          <div style="font-size:10px;color:#4A6080;margin-top:3px;">
+                            Sonnet · ~15s · Full analysis</div>
+                        </div>""", unsafe_allow_html=True)
+                    else:
+                        st.markdown("""<div style="background:#0D1525;border:1px solid #243348;
+                            border-radius:8px;padding:9px 14px;margin-bottom:2px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                              font-weight:800;color:#374151;letter-spacing:1.5px;">⚡ QUICK</span>
+                            <span style="font-size:10px;color:#374151;">Sonnet · ~15s</span>
+                          </div>
+                          <div style="font-size:10px;color:#374151;margin-top:3px;">
+                            Full technical + fundamental</div>
+                        </div>""", unsafe_allow_html=True)
+                    if st.button("Select Quick", key="mode_q", use_container_width=True):
+                        st.session_state["analysis_mode"] = "Quick"
+                        st.rerun()
+                with mp2:
+                    if cur_mode == "Deep Research":
+                        st.markdown("""<div style="background:#0D0D2E;border:2px solid #A78BFA;
+                            border-radius:8px;padding:9px 14px;margin-bottom:2px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                              font-weight:800;color:#A78BFA;letter-spacing:1.5px;">🔬 DEEP</span>
+                            <span style="font-size:10px;color:#A78BFA;font-weight:700;">● Active</span>
+                          </div>
+                          <div style="font-size:10px;color:#4A6080;margin-top:3px;">
+                            Opus · ~45s · Multi-step reasoning</div>
+                        </div>""", unsafe_allow_html=True)
+                    else:
+                        st.markdown("""<div style="background:#0D1525;border:1px solid #243348;
+                            border-radius:8px;padding:9px 14px;margin-bottom:2px;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                              font-weight:800;color:#374151;letter-spacing:1.5px;">🔬 DEEP</span>
+                            <span style="font-size:10px;color:#374151;">Opus · ~45s</span>
+                          </div>
+                          <div style="font-size:10px;color:#374151;margin-top:3px;">
+                            Technicals → fundamentals → macro</div>
+                        </div>""", unsafe_allow_html=True)
+                    if st.button("Select Deep Research", key="mode_d", use_container_width=True):
+                        st.session_state["analysis_mode"] = "Deep Research"
+                        st.rerun()
+
+                st.markdown("<div style='margin-top:6px;'></div>", unsafe_allow_html=True)
 
                 # ── PHASE 1: SEARCH ───────────────────────────
                 if not st.session_state["_confirmed_ticker"]:
@@ -1909,64 +1980,6 @@ def main():
                                                  label_visibility="collapsed")
                     ticker_upper = ticker_in.strip().upper() if ticker_in else ""
                     st.session_state["_prev_ticker_val"] = ticker_upper
-
-                    # Mode pills — two separate columns, no HTML variables
-                    cur_mode = st.session_state["analysis_mode"]
-                    mp1, mp2 = st.columns(2)
-
-                    with mp1:
-                        if cur_mode == "Quick":
-                            st.markdown("""<div style="background:#081510;border:2px solid #00FF88;
-                                border-radius:8px;padding:9px 14px;margin-bottom:2px;">
-                              <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
-                                  font-weight:800;color:#00FF88;letter-spacing:1.5px;">⚡ QUICK</span>
-                                <span style="font-size:10px;color:#00FF88;font-weight:700;">● Active</span>
-                              </div>
-                              <div style="font-size:10px;color:#4A6080;margin-top:3px;">
-                                Sonnet · ~15s · Full analysis</div>
-                            </div>""", unsafe_allow_html=True)
-                        else:
-                            st.markdown("""<div style="background:#0D1525;border:1px solid #243348;
-                                border-radius:8px;padding:9px 14px;margin-bottom:2px;">
-                              <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
-                                  font-weight:800;color:#374151;letter-spacing:1.5px;">⚡ QUICK</span>
-                                <span style="font-size:10px;color:#374151;">Sonnet · ~15s</span>
-                              </div>
-                              <div style="font-size:10px;color:#374151;margin-top:3px;">
-                                Full technical + fundamental</div>
-                            </div>""", unsafe_allow_html=True)
-                        if st.button("Select Quick", key="mode_q", use_container_width=True):
-                            st.session_state["analysis_mode"] = "Quick"
-                            st.rerun()
-
-                    with mp2:
-                        if cur_mode == "Deep Research":
-                            st.markdown("""<div style="background:#0D0D2E;border:2px solid #A78BFA;
-                                border-radius:8px;padding:9px 14px;margin-bottom:2px;">
-                              <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
-                                  font-weight:800;color:#A78BFA;letter-spacing:1.5px;">🔬 DEEP</span>
-                                <span style="font-size:10px;color:#A78BFA;font-weight:700;">● Active</span>
-                              </div>
-                              <div style="font-size:10px;color:#4A6080;margin-top:3px;">
-                                Opus · ~45s · Multi-step reasoning</div>
-                            </div>""", unsafe_allow_html=True)
-                        else:
-                            st.markdown("""<div style="background:#0D1525;border:1px solid #243348;
-                                border-radius:8px;padding:9px 14px;margin-bottom:2px;">
-                              <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
-                                  font-weight:800;color:#374151;letter-spacing:1.5px;">🔬 DEEP</span>
-                                <span style="font-size:10px;color:#374151;">Opus · ~45s</span>
-                              </div>
-                              <div style="font-size:10px;color:#374151;margin-top:3px;">
-                                Technicals → fundamentals → macro</div>
-                            </div>""", unsafe_allow_html=True)
-                        if st.button("Select Deep Research", key="mode_d", use_container_width=True):
-                            st.session_state["analysis_mode"] = "Deep Research"
-                            st.rerun()
 
                     def _confirm(sym, name, exch, curr, name_found=True):
                         st.session_state["_confirmed_ticker"]   = sym
@@ -2077,7 +2090,8 @@ def main():
                                     render_dropdown_search(rows)
                                 elif len(matches) == 1:
                                     m = matches[0]
-                                    render_preview_card(m["sym"], m["name"], m["exchange"], m["currency"])
+                                    render_preview_card(m["sym"], m["name"],
+                                                        m["exchange"], m["currency"])
                                     if st.button(f"Select {m['name']} →", type="primary",
                                                  use_container_width=True, key="select_yf"):
                                         _confirm(m["sym"], m["name"], m["exchange"], m["currency"])
@@ -2098,9 +2112,7 @@ def main():
                     exch       = st.session_state.get("_confirmed_exch", "")
                     curr       = st.session_state.get("_confirmed_curr", "")
                     name_found = st.session_state.get("_confirm_name_found", True)
-                    cur_mode   = st.session_state.get("analysis_mode", "Quick")
 
-                    # Pre-compute — simple strings only, no HTML in variables
                     card_border  = "#14B8A6" if name_found else "#FACC15"
                     badge_col    = "#14B8A6" if name_found else "#FACC15"
                     badge_bg     = "#071A18" if name_found else "#1A1000"
@@ -2108,18 +2120,13 @@ def main():
                     name_col     = "#F1F5F9" if name_found else "#FACC15"
                     name_display = name if name else sym
                     exch_display = f"{exch} &nbsp;·&nbsp; {curr}" if exch else ""
-                    mode_col     = "#00FF88" if cur_mode == "Quick" else "#A78BFA"
-                    mode_bg      = "#071510" if cur_mode == "Quick" else "#0D0B1E"
-                    mode_border  = "#00FF8844" if cur_mode == "Quick" else "#A78BFA44"
-                    mode_icon    = "⚡" if cur_mode == "Quick" else "🔬"
-                    mode_lbl     = "QUICK" if cur_mode == "Quick" else "DEEP"
 
                     st.markdown(f"""<div style="background:linear-gradient(135deg,#0A1E2C,#0D1525);
                         border:1px solid {card_border};border-radius:12px;
-                        padding:18px 20px;margin-top:10px;
+                        padding:16px 20px;margin-top:4px;
                         box-shadow:0 4px 24px rgba(0,0,0,0.3);">
                       <div style="display:flex;align-items:center;gap:16px;">
-                        <div style="font-family:'JetBrains Mono',monospace;font-size:28px;
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:26px;
                           font-weight:800;color:#00FF88;letter-spacing:4px;min-width:80px;
                           text-shadow:0 0 20px #00FF8830;">{sym}</div>
                         <div style="flex:1;min-width:0;">
@@ -2128,14 +2135,9 @@ def main():
                             text-overflow:ellipsis;">{name_display}</div>
                           <div style="font-size:11px;color:#5EEAD4;">{exch_display}</div>
                         </div>
-                        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;">
-                          <div style="background:{badge_bg};border:1px solid {badge_col};
-                            border-radius:20px;padding:3px 10px;font-size:10px;
-                            font-weight:700;color:{badge_col};">{badge_txt}</div>
-                          <div style="background:{mode_bg};border:1px solid {mode_border};
-                            border-radius:20px;padding:3px 10px;font-size:10px;
-                            font-weight:700;color:{mode_col};">{mode_icon} {mode_lbl}</div>
-                        </div>
+                        <div style="background:{badge_bg};border:1px solid {badge_col};
+                          border-radius:20px;padding:3px 10px;font-size:10px;
+                          font-weight:700;color:{badge_col};">{badge_txt}</div>
                       </div>
                     </div>""", unsafe_allow_html=True)
 
@@ -2159,6 +2161,7 @@ def main():
 
                 st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:20px;">US · TSX · LSE · Euronext · HKEX · ASX — all major exchanges supported</div>', unsafe_allow_html=True)
                 render_disclaimer()
+
 
             with tab2:
                 st.markdown("""
@@ -2798,13 +2801,61 @@ def render_hud():
           </div>
         </div>""", unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
-                border-radius:8px;padding:14px 18px;margin-top:6px;">
-      <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
-                  margin-bottom:8px;font-weight:600;">AI Summary</div>
-      <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{a.get('summary','')}</div>
-    </div>""", unsafe_allow_html=True)
+    # ── AI Summary — 3 paragraph layout ─────────────────────
+    def render_summary_para(label, label_col, border_col, bg_col, text):
+        """Render one summary paragraph with sentence-level bull/bear coloring."""
+        if not text:
+            return
+        # Split into sentences and color by [BULL]/[BEAR] tag
+        sentences = text.replace('[BULL]', '§BULL§').replace('[BEAR]', '§BEAR§').split('§')
+        html_parts = []
+        for part in sentences:
+            part = part.strip()
+            if not part:
+                continue
+            if part.startswith('BULL'):
+                part = part[4:].strip()
+                html_parts.append(
+                    f'<span style="color:#86EFAC;">{part}</span>')
+            elif part.startswith('BEAR'):
+                part = part[4:].strip()
+                html_parts.append(
+                    f'<span style="color:#FCA5A5;">{part}</span>')
+            else:
+                html_parts.append(
+                    f'<span style="color:#CBD5E1;">{part}</span>')
+        body = ' '.join(html_parts)
+        st.markdown(f"""
+        <div style="background:{bg_col};border-left:3px solid {border_col};
+                    border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:8px;">
+          <div style="font-size:9px;color:{label_col};letter-spacing:2px;
+                      text-transform:uppercase;font-weight:700;margin-bottom:6px;">{label}</div>
+          <div style="font-size:13px;line-height:1.75;">{body}</div>
+        </div>""", unsafe_allow_html=True)
+
+    s_tech  = a.get('summary_technical', '')
+    s_fund  = a.get('summary_fundamental', '')
+    s_macro = a.get('summary_macro', '')
+    s_fall  = a.get('summary', '')
+
+    has_structured = bool(s_tech or s_fund or s_macro)
+
+    st.markdown("""
+    <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                font-weight:600;margin:10px 0 6px;">AI SUMMARY</div>
+    """, unsafe_allow_html=True)
+
+    if has_structured:
+        render_summary_para("📊 Technical Structure", "#38BDF8", "#38BDF8", "#060F1E", s_tech)
+        render_summary_para("📈 Fundamental Quality", "#00FF88", "#00FF88", "#040E0A", s_fund)
+        render_summary_para("🌍 Macro & Key Level",   "#A78BFA", "#A78BFA", "#0B0820", s_macro)
+    else:
+        # Fallback for old single-paragraph responses
+        st.markdown(f"""
+        <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
+                    border-radius:8px;padding:14px 18px;">
+          <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{s_fall}</div>
+        </div>""", unsafe_allow_html=True)
 
     # ── WEINSTEIN PHASE + THREE TAILWINDS ────────────────────
     ph_num, ph_label, ph_sub, ph_col, ph_conf, ph_conf_text, ph_desc = phase_result
