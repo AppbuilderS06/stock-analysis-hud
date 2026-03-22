@@ -1488,17 +1488,22 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
             "Return ONLY raw JSON — no markdown, no backticks, no explanation.\n\n"
         )
         summary_instruction = (
-            "SUMMARY — write THREE separate paragraphs, each 2-3 sentences, returned as separate JSON fields:\n"
-            "summary_technical: Technical structure only. Name actual RSI value, exact MA positions (above/below with prices), "
-            "OBV direction, MACD histogram, volume character. State whether the trend is confirmed or diverging. "
-            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
-            "summary_fundamental: Business quality only. Revenue growth %, earnings growth, margins, cash flow, "
-            "valuation vs growth rate. Is the business fundamentally strong or deteriorating? "
-            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
-            "summary_macro: Macro environment and news only. Market phase (SPY/QQQ/DIA performance), sector context, "
-            "recent news impact, and the single most important level to watch with a clear decision framework. "
-            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
-            "Be specific with numbers throughout. No vague language."
+            "SUMMARY — return FOUR separate JSON fields:\n"
+            "summary_levels: Key levels first — the most actionable section. Name the 2-3 most critical support prices and exactly what a decisive break below each means for the trade. Name the 1-2 most critical resistance prices and what a confirmed breakout means. State the entry zone and the single price that invalidates the bullish case.\n"
+            "summary_levels_sentiment: 'bullish', 'bearish', or 'mixed' — based on where price sits relative to these levels\n"
+            "summary_technical: Trend and momentum. Exact MA positions with prices, RSI value, OBV direction, MACD histogram, volume character. Is the trend confirmed or diverging across timeframes?\n"
+            "summary_technical_sentiment: 'bullish', 'bearish', or 'mixed'\n"
+            "summary_fundamental: Business quality. Revenue growth %, earnings growth, margins, cash flow quality, valuation vs growth rate. Is the business accelerating or decelerating?\n"
+            "summary_fundamental_sentiment: 'bullish', 'bearish', or 'mixed'\n"
+            "summary_macro: Macro environment AND ticker-specific news impact analysis. "
+            "REQUIRED: Reference the actual SPY/QQQ/DIA performance numbers provided. "
+            "REQUIRED: For each news headline provided, scan for keyword triggers: "
+            "earnings beat/miss, guidance raise/cut, regulation/legal risk, competition threat, "
+            "insider buying/selling, analyst upgrade/downgrade, product launch, macro catalyst. "
+            "For each relevant headline, state the keyword trigger, whether impact on THIS specific stock is Bullish/Bearish/Neutral, and magnitude (High/Medium/Low). "
+            "End with a clear decision trigger — the specific price or event that would change your view.\n"
+            "summary_macro_sentiment: 'bullish', 'bearish', or 'mixed'\n"
+            "Be specific with numbers throughout. No vague language. No generic statements."
         )
         model_name = "claude-opus-4-6"
         max_tok    = 4000
@@ -1508,13 +1513,18 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
             "Return ONLY raw JSON — no markdown, no backticks, no explanation.\n\n"
         )
         summary_instruction = (
-            "SUMMARY — write THREE separate paragraphs returned as separate JSON fields:\n"
-            "summary_technical: 2 sentences on technical structure. Name actual RSI value, which MAs price is above/below, OBV direction. "
-            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
-            "summary_fundamental: 1-2 sentences on business quality — revenue growth, margins, or valuation. "
-            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
-            "summary_macro: 1-2 sentences on macro context and the key level to watch with a decision trigger. "
-            "Start bearish sentences with [BEAR] and bullish sentences with [BULL].\n"
+            "SUMMARY — return FOUR separate JSON fields:\n"
+            "summary_levels: Key levels first. Critical support prices + what a break means. Critical resistance + what a breakout means. Entry zone and invalidation level.\n"
+            "summary_levels_sentiment: 'bullish', 'bearish', or 'mixed'\n"
+            "summary_technical: 2 sentences. Trend and momentum. Exact RSI, MA positions with prices, OBV direction, MACD.\n"
+            "summary_technical_sentiment: 'bullish', 'bearish', or 'mixed'\n"
+            "summary_fundamental: 1-2 sentences. Business quality — revenue growth %, margins, valuation.\n"
+            "summary_fundamental_sentiment: 'bullish', 'bearish', or 'mixed'\n"
+            "summary_macro: Reference actual SPY/QQQ/DIA numbers. "
+            "For each headline: identify keyword trigger (earnings, guidance, regulation, competition, analyst, macro), "
+            "state Bullish/Bearish/Neutral impact on THIS stock and magnitude (High/Medium/Low). "
+            "End with the decision trigger.\n"
+            "summary_macro_sentiment: 'bullish', 'bearish', or 'mixed'\n"
             "Be specific with numbers. No vague language."
         )
         model_name = "claude-sonnet-4-20250514"
@@ -1577,10 +1587,15 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         '"resistance3":0,"resistance3_label":"label",'
         '"reasons_bull":["r1","r2","r3"],'
         '"reasons_bear":["r1","r2"],'
-        '"summary_technical":"2-3 sentences on technical structure with [BULL]/[BEAR] sentence tags",'
-        '"summary_fundamental":"1-2 sentences on business quality with [BULL]/[BEAR] sentence tags",'
-        '"summary_macro":"1-2 sentences on macro context and key level with [BULL]/[BEAR] sentence tags",'
-        '"summary":"fallback single paragraph combining all three",'
+        '"summary_technical":"2-3 sentences on trend and momentum",'
+        '"summary_technical_sentiment":"bullish|bearish|mixed",'
+        '"summary_levels":"2-3 sentences on critical support and resistance levels with exact prices",'
+        '"summary_levels_sentiment":"bullish|bearish|mixed",'
+        '"summary_fundamental":"1-2 sentences on business quality",'
+        '"summary_fundamental_sentiment":"bullish|bearish|mixed",'
+        '"summary_macro":"1-2 sentences referencing actual market numbers and specific news headlines",'
+        '"summary_macro_sentiment":"bullish|bearish|mixed",'
+        '"summary":"fallback single paragraph",'
         '"day_trade_note":"one sentence",'
         '"swing_note":"one sentence",'
         '"invest_note":"one sentence",'
@@ -1979,6 +1994,11 @@ def main():
                     ticker_in    = st.text_input("", placeholder="NVDA", key="ticker_input",
                                                  label_visibility="collapsed")
                     ticker_upper = ticker_in.strip().upper() if ticker_in else ""
+                    # Persist across mode-switch reruns
+                    if ticker_upper:
+                        st.session_state["_search_ticker"] = ticker_upper
+                    else:
+                        ticker_upper = st.session_state.get("_search_ticker", "")
                     st.session_state["_prev_ticker_val"] = ticker_upper
 
                     def _confirm(sym, name, exch, curr, name_found=True):
@@ -2152,7 +2172,8 @@ def main():
                             for k in ["_confirmed_ticker","_confirmed_name",
                                       "_confirmed_exch","_confirmed_curr",
                                       "_confirm_name_found","_resolved_name",
-                                      "_resolved_exch","_resolved_curr"]:
+                                      "_resolved_exch","_resolved_curr",
+                                      "_search_ticker"]:
                                 st.session_state.pop(k, None)
                             for k in list(st.session_state.keys()):
                                 if k.startswith("_yf_"):
@@ -2802,43 +2823,49 @@ def render_hud():
         </div>""", unsafe_allow_html=True)
 
     # ── AI Summary — 3 paragraph layout ─────────────────────
-    def render_summary_para(label, label_col, border_col, bg_col, text):
-        """Render one summary paragraph with sentence-level bull/bear coloring."""
+    def render_summary_para(label, icon, text, sentiment):
+        """Render one summary paragraph. Color driven by sentiment field."""
         if not text:
             return
-        # Split into sentences and color by [BULL]/[BEAR] tag
-        sentences = text.replace('[BULL]', '§BULL§').replace('[BEAR]', '§BEAR§').split('§')
-        html_parts = []
-        for part in sentences:
-            part = part.strip()
-            if not part:
-                continue
-            if part.startswith('BULL'):
-                part = part[4:].strip()
-                html_parts.append(
-                    f'<span style="color:#86EFAC;">{part}</span>')
-            elif part.startswith('BEAR'):
-                part = part[4:].strip()
-                html_parts.append(
-                    f'<span style="color:#FCA5A5;">{part}</span>')
-            else:
-                html_parts.append(
-                    f'<span style="color:#CBD5E1;">{part}</span>')
-        body = ' '.join(html_parts)
+        s = str(sentiment).lower().strip()
+        if s == 'bullish':
+            border_col = '#00FF88'
+            bg_col     = '#030F07'
+            label_col  = '#00FF88'
+            dot        = '<span style="color:#00FF88;font-size:12px;margin-right:6px;">▲</span>'
+        elif s == 'bearish':
+            border_col = '#FF6B6B'
+            bg_col     = '#0F0505'
+            label_col  = '#FF6B6B'
+            dot        = '<span style="color:#FF6B6B;font-size:12px;margin-right:6px;">▼</span>'
+        else:  # mixed
+            border_col = '#FACC15'
+            bg_col     = '#0C0B04'
+            label_col  = '#FACC15'
+            dot        = '<span style="color:#FACC15;font-size:12px;margin-right:6px;">◆</span>'
+
         st.markdown(f"""
         <div style="background:{bg_col};border-left:3px solid {border_col};
-                    border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:8px;">
-          <div style="font-size:9px;color:{label_col};letter-spacing:2px;
-                      text-transform:uppercase;font-weight:700;margin-bottom:6px;">{label}</div>
-          <div style="font-size:13px;line-height:1.75;">{body}</div>
+                    border-radius:0 8px 8px 0;padding:13px 16px;margin-bottom:8px;">
+          <div style="display:flex;align-items:center;margin-bottom:7px;">
+            {dot}
+            <span style="font-size:9px;color:{label_col};letter-spacing:2px;
+                         text-transform:uppercase;font-weight:700;">{icon} {label}</span>
+          </div>
+          <div style="font-size:13px;color:#CBD5E1;line-height:1.75;">{text}</div>
         </div>""", unsafe_allow_html=True)
 
-    s_tech  = a.get('summary_technical', '')
-    s_fund  = a.get('summary_fundamental', '')
-    s_macro = a.get('summary_macro', '')
-    s_fall  = a.get('summary', '')
+    s_tech       = a.get('summary_technical', '')
+    s_tech_sent  = a.get('summary_technical_sentiment', 'mixed')
+    s_lvl        = a.get('summary_levels', '')
+    s_lvl_sent   = a.get('summary_levels_sentiment', 'mixed')
+    s_fund       = a.get('summary_fundamental', '')
+    s_fund_sent  = a.get('summary_fundamental_sentiment', 'mixed')
+    s_macro      = a.get('summary_macro', '')
+    s_macro_sent = a.get('summary_macro_sentiment', 'mixed')
+    s_fall       = a.get('summary', '')
 
-    has_structured = bool(s_tech or s_fund or s_macro)
+    has_structured = bool(s_tech or s_lvl or s_fund or s_macro)
 
     st.markdown("""
     <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
@@ -2846,11 +2873,11 @@ def render_hud():
     """, unsafe_allow_html=True)
 
     if has_structured:
-        render_summary_para("📊 Technical Structure", "#38BDF8", "#38BDF8", "#060F1E", s_tech)
-        render_summary_para("📈 Fundamental Quality", "#00FF88", "#00FF88", "#040E0A", s_fund)
-        render_summary_para("🌍 Macro & Key Level",   "#A78BFA", "#A78BFA", "#0B0820", s_macro)
+        render_summary_para("Key Levels",              "🎯", s_lvl,   s_lvl_sent)
+        render_summary_para("Technical Structure",     "📊", s_tech,  s_tech_sent)
+        render_summary_para("Fundamental Quality",     "📈", s_fund,  s_fund_sent)
+        render_summary_para("Macro & News Events",     "🌍", s_macro, s_macro_sent)
     else:
-        # Fallback for old single-paragraph responses
         st.markdown(f"""
         <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
                     border-radius:8px;padding:14px 18px;">
