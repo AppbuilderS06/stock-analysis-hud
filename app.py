@@ -1495,7 +1495,7 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
             "(4) Synthesis: what the setup means overall and the single most important level to watch. "
             "Be specific with numbers. No vague language."
         )
-        model_name = "claude-opus-4-5-20251001"
+        model_name = "claude-opus-4-6"
         max_tok    = 4000
     else:
         role_line = (
@@ -1901,25 +1901,49 @@ def main():
                 if 'analysis_mode' not in st.session_state:
                     st.session_state['analysis_mode'] = 'Quick'
                 cur_mode = st.session_state['analysis_mode']
-                m1, m2, _ = st.columns([1, 1, 2])
-                with m1:
-                    quick_style = "border:2px solid #38BDF8;" if cur_mode == "Quick" else "border:1px solid #243348;"
-                    st.markdown(f'''<div style="background:#0A1525;{quick_style}border-radius:8px;
-                        padding:10px 14px;text-align:center;cursor:pointer;">
-                      <div style="font-size:11px;font-weight:800;color:#38BDF8;letter-spacing:1px;">⚡ QUICK</div>
-                      <div style="font-size:10px;color:#64748B;margin-top:2px;">Sonnet · ~15 sec</div>
-                    </div>''', unsafe_allow_html=True)
-                    if st.button("Select Quick", key="mode_quick", use_container_width=True):
+
+                quick_active = cur_mode == 'Quick'
+                deep_active  = cur_mode == 'Deep Research'
+
+                st.markdown(f'''
+                <div style="display:flex;flex-direction:column;gap:6px;margin:8px 0 12px;">
+                  <div style="background:{"#081510" if quick_active else "#0D1525"};
+                              border:{"2px solid #00FF88" if quick_active else "1px solid #243348"};
+                              border-radius:8px;padding:10px 16px;
+                              display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:14px;
+                                   font-weight:800;color:{"#00FF88" if quick_active else "#64748B"};
+                                   letter-spacing:2px;">⚡ QUICK ANALYSIS</span>
+                      <span style="font-size:11px;color:#4A6080;margin-left:10px;">Sonnet · ~15 sec</span>
+                    </div>
+                    {"<span style='font-size:11px;color:#00FF88;font-weight:700;'>● SELECTED</span>" if quick_active else ""}
+                  </div>
+                  <div style="background:{"#0D0D2E" if deep_active else "#0D1525"};
+                              border:{"2px solid #A78BFA" if deep_active else "1px solid #243348"};
+                              border-radius:8px;padding:10px 16px;
+                              display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:14px;
+                                   font-weight:800;color:{"#A78BFA" if deep_active else "#64748B"};
+                                   letter-spacing:2px;">🔬 DEEP RESEARCH</span>
+                      <span style="font-size:11px;color:#4A6080;margin-left:10px;">Opus · ~45 sec</span>
+                    </div>
+                    {"<span style='font-size:11px;color:#A78BFA;font-weight:700;'>● SELECTED</span>" if deep_active else ""}
+                  </div>
+                </div>''', unsafe_allow_html=True)
+
+                col_q, col_d = st.columns(2)
+                with col_q:
+                    if st.button("⚡ Quick Analysis", key="mode_quick",
+                                 use_container_width=True,
+                                 type="primary" if quick_active else "secondary"):
                         st.session_state['analysis_mode'] = 'Quick'
                         st.rerun()
-                with m2:
-                    deep_style = "border:2px solid #A78BFA;" if cur_mode == "Deep Research" else "border:1px solid #243348;"
-                    st.markdown(f'''<div style="background:#1C1A50;{deep_style}border-radius:8px;
-                        padding:10px 14px;text-align:center;cursor:pointer;">
-                      <div style="font-size:11px;font-weight:800;color:#A78BFA;letter-spacing:1px;">🔬 DEEP RESEARCH</div>
-                      <div style="font-size:10px;color:#64748B;margin-top:2px;">Opus · ~45 sec</div>
-                    </div>''', unsafe_allow_html=True)
-                    if st.button("Select Deep Research", key="mode_deep", use_container_width=True):
+                with col_d:
+                    if st.button("🔬 Deep Research", key="mode_deep",
+                                 use_container_width=True,
+                                 type="primary" if deep_active else "secondary"):
                         st.session_state['analysis_mode'] = 'Deep Research'
                         st.rerun()
 
@@ -2060,8 +2084,40 @@ def main():
                 render_disclaimer()
 
             with tab2:
-                render_earnings_analyzer()
+                st.markdown("""
+                <div style="text-align:center;padding:60px 20px;">
+                  <div style="font-size:36px;margin-bottom:16px;">🎙️</div>
+                  <div style="font-size:22px;font-weight:800;color:#F1F5F9;margin-bottom:8px;">
+                    Earnings Call Analyzer
+                  </div>
+                  <div style="font-size:13px;color:#4A6080;margin-bottom:24px;">
+                    Paste any earnings call transcript and get an instant AI teardown
+                  </div>
+                  <div style="display:inline-block;background:#251800;border:1px solid #FACC15;
+                              border-radius:8px;padding:8px 20px;">
+                    <span style="font-size:12px;font-weight:700;color:#FACC15;letter-spacing:2px;">
+                      🚧 COMING SOON
+                    </span>
+                  </div>
+                </div>""", unsafe_allow_html=True)
+
             with tab3:
+                st.markdown("""
+                <div style="text-align:center;padding:60px 20px;">
+                  <div style="font-size:36px;margin-bottom:16px;">📈</div>
+                  <div style="font-size:22px;font-weight:800;color:#F1F5F9;margin-bottom:8px;">
+                    Screener
+                  </div>
+                  <div style="font-size:13px;color:#4A6080;margin-bottom:24px;">
+                    Find stocks matching specific criteria — describe what you're looking for
+                  </div>
+                  <div style="display:inline-block;background:#251800;border:1px solid #FACC15;
+                              border-radius:8px;padding:8px 20px;">
+                    <span style="font-size:12px;font-weight:700;color:#FACC15;letter-spacing:2px;">
+                      🚧 COMING SOON
+                    </span>
+                  </div>
+                </div>""", unsafe_allow_html=True)
                 render_screener()
         return
 
