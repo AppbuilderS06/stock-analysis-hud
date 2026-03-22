@@ -2912,88 +2912,37 @@ def render_hud():
         render_summary_para("Fundamental Quality", "📈", s_fund,  s_fund_sent)
         render_summary_para("Macro & News Events", "🌍", s_macro, s_macro_sent)
 
-        # ── News scorecard ────────────────────────────
-        if news_scores or net_score is not None:
-            # Net score bar
-            if net_score is not None:
-                try:
-                    ns = int(net_score)
-                except:
-                    ns = 0
-                ns_clamped = max(-5, min(5, ns))
-                ns_pct     = int((ns_clamped + 5) / 10 * 100)
-                if ns > 0:
-                    ns_col = '#00FF88'; ns_label = f'+{ns} Bullish' if ns > 1 else '+{ns} Mildly Bullish'
-                elif ns < 0:
-                    ns_col = '#FF6B6B'; ns_label = f'{ns} Bearish' if ns < -1 else f'{ns} Mildly Bearish'
-                else:
-                    ns_col = '#FACC15'; ns_label = '0 Neutral'
-                ns_label = f'+{ns} Bullish' if ns > 1 else (f'+{ns} Mildly Bullish' if ns == 1 else (f'{ns} Bearish' if ns < -1 else (f'{ns} Mildly Bearish' if ns == -1 else '0 Neutral')))
-                st.markdown(f"""
-                <div style="background:#0A1020;border:1px solid #1A2A3A;border-radius:8px;
-                            padding:10px 14px;margin-bottom:6px;">
-                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                    <span style="font-size:9px;color:#5EEAD4;letter-spacing:2px;
-                                 text-transform:uppercase;font-weight:700;">📰 News Impact Score</span>
-                    <span style="font-size:12px;font-weight:800;color:{ns_col};
-                                 font-family:'JetBrains Mono',monospace;">{ns_label}</span>
-                  </div>
-                  <div style="background:#0D1525;border-radius:4px;height:6px;overflow:hidden;">
-                    <div style="height:100%;width:{ns_pct}%;background:{ns_col};
-                                border-radius:4px;transition:width 0.3s;"></div>
-                  </div>
-                  <div style="display:flex;justify-content:space-between;margin-top:3px;">
-                    <span style="font-size:9px;color:#374151;">-5 Very Bearish</span>
-                    <span style="font-size:9px;color:#374151;">+5 Very Bullish</span>
-                  </div>
-                </div>""", unsafe_allow_html=True)
+        # ── News Impact Score bar ─────────────────────────
+        if net_score is not None:
+            try:
+                ns = int(net_score)
+            except:
+                ns = 0
+            ns_clamped = max(-5, min(5, ns))
+            ns_pct     = int((ns_clamped + 5) / 10 * 100)
+            if ns > 1:    ns_col, ns_label = '#00FF88', f'+{ns} Bullish'
+            elif ns == 1: ns_col, ns_label = '#00FF88', '+1 Mildly Bullish'
+            elif ns == 0: ns_col, ns_label = '#FACC15', '0 Neutral'
+            elif ns ==-1: ns_col, ns_label = '#FF6B6B', '-1 Mildly Bearish'
+            else:         ns_col, ns_label = '#FF6B6B', f'{ns} Bearish'
+            st.markdown(f"""
+            <div style="background:#0A1020;border:1px solid #1A2A3A;border-radius:8px;
+                        padding:10px 14px;margin-bottom:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-size:9px;color:#5EEAD4;letter-spacing:2px;
+                             text-transform:uppercase;font-weight:700;">📰 News Impact Score</span>
+                <span style="font-size:12px;font-weight:800;color:{ns_col};
+                             font-family:'JetBrains Mono',monospace;">{ns_label}</span>
+              </div>
+              <div style="background:#0D1525;border-radius:4px;height:6px;overflow:hidden;">
+                <div style="height:100%;width:{ns_pct}%;background:{ns_col};border-radius:4px;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:3px;">
+                <span style="font-size:9px;color:#374151;">-5 Very Bearish</span>
+                <span style="font-size:9px;color:#374151;">+5 Very Bullish</span>
+              </div>
+            </div>""", unsafe_allow_html=True)
 
-            # Individual headline scores
-            if news_scores:
-                impact_cols = {
-                    'Bullish':  ('#00FF88', '#052A14', '▲'),
-                    'Bearish':  ('#FF6B6B', '#1A0505', '▼'),
-                    'Neutral':  ('#64748B', '#0D1525', '◆'),
-                }
-                mag_badge = {
-                    'High':   ('background:#1A0A00;color:#F97316;', 'HIGH'),
-                    'Medium': ('background:#1A1500;color:#FACC15;', 'MED'),
-                    'Low':    ('background:#111827;color:#64748B;', 'LOW'),
-                }
-                rows_html = ''
-                for item in news_scores[:10]:
-                    imp   = item.get('impact', 'Neutral')
-                    mag   = item.get('magnitude', 'Low')
-                    hdl   = item.get('headline', '')[:75]
-                    ctx   = item.get('context', '')
-                    trig  = item.get('trigger', 'generic').replace('_', ' ').title()
-                    i_col, i_bg, i_arrow = impact_cols.get(imp, impact_cols['Neutral'])
-                    m_style, m_txt = mag_badge.get(mag, mag_badge['Low'])
-                    rows_html += f"""
-                    <div style="padding:8px 0;border-bottom:1px solid #0D1E2E;">
-                      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:3px;">
-                        <span style="color:{i_col};font-size:11px;margin-top:1px;">{i_arrow}</span>
-                        <div style="flex:1;min-width:0;">
-                          <span style="font-size:11px;color:#CBD5E1;line-height:1.4;">{hdl}</span>
-                        </div>
-                        <div style="display:flex;gap:4px;flex-shrink:0;">
-                          <span style="font-size:9px;font-weight:700;padding:2px 5px;
-                                       border-radius:3px;{m_style}">{m_txt}</span>
-                          <span style="font-size:9px;font-weight:700;padding:2px 5px;
-                                       border-radius:3px;background:{i_bg};color:{i_col};">{imp}</span>
-                        </div>
-                      </div>
-                      <div style="font-size:10px;color:#4A6080;margin-left:19px;">
-                        {trig} · {ctx}</div>
-                    </div>"""
-                st.markdown(f"""
-                <div style="background:#070F1A;border:1px solid #1A2A3A;border-radius:8px;
-                            padding:10px 14px;margin-bottom:8px;">
-                  <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;
-                               text-transform:uppercase;font-weight:700;margin-bottom:4px;">
-                    Headline Analysis</div>
-                  {rows_html}
-                </div>""", unsafe_allow_html=True)
 
     else:
         st.markdown(f"""
