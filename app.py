@@ -1892,60 +1892,35 @@ def main():
                 st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Enter a ticker</div>', unsafe_allow_html=True)
                 st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:16px;">Type any symbol — a dropdown will guide you</div>', unsafe_allow_html=True)
                 fmp_key_lp = st.secrets.get("FMP_API_KEY", "")
+                if 'analysis_mode' not in st.session_state:
+                    st.session_state['analysis_mode'] = 'Quick'
                 ticker_in = st.text_input("", placeholder="NVDA", key="ticker_input", label_visibility="collapsed")
                 ticker_upper = ticker_in.strip().upper() if ticker_in else ""
                 prev_val = st.session_state.get('_prev_ticker_val', '')
                 st.session_state['_prev_ticker_val'] = ticker_upper
 
-                # ── Analysis Mode Toggle ──────────────────────
-                if 'analysis_mode' not in st.session_state:
-                    st.session_state['analysis_mode'] = 'Quick'
-                cur_mode = st.session_state['analysis_mode']
-
-                quick_active = cur_mode == 'Quick'
-                deep_active  = cur_mode == 'Deep Research'
-
-                st.markdown(f'''
-                <div style="display:flex;flex-direction:column;gap:6px;margin:8px 0 12px;">
-                  <div style="background:{"#081510" if quick_active else "#0D1525"};
-                              border:{"2px solid #00FF88" if quick_active else "1px solid #243348"};
-                              border-radius:8px;padding:10px 16px;
-                              display:flex;justify-content:space-between;align-items:center;">
+                # ── Analysis Mode Info — display only ─────────
+                st.markdown('''
+                <div style="display:flex;flex-direction:column;gap:6px;margin:8px 0 4px;">
+                  <div style="background:#081510;border:1px solid #1A3A28;border-radius:8px;
+                              padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
                     <div>
-                      <span style="font-family:'JetBrains Mono',monospace;font-size:14px;
-                                   font-weight:800;color:{"#00FF88" if quick_active else "#64748B"};
-                                   letter-spacing:2px;">⚡ QUICK ANALYSIS</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
+                                   font-weight:800;color:#00FF88;letter-spacing:2px;">⚡ QUICK ANALYSIS</span>
                       <span style="font-size:11px;color:#4A6080;margin-left:10px;">Sonnet · ~15 sec</span>
                     </div>
-                    {"<span style='font-size:11px;color:#00FF88;font-weight:700;'>● SELECTED</span>" if quick_active else ""}
+                    <span style="font-size:11px;color:#4A6080;">Full technical + fundamental analysis</span>
                   </div>
-                  <div style="background:{"#0D0D2E" if deep_active else "#0D1525"};
-                              border:{"2px solid #A78BFA" if deep_active else "1px solid #243348"};
-                              border-radius:8px;padding:10px 16px;
-                              display:flex;justify-content:space-between;align-items:center;">
+                  <div style="background:#0D0D2E;border:1px solid #2A1F5A;border-radius:8px;
+                              padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
                     <div>
-                      <span style="font-family:'JetBrains Mono',monospace;font-size:14px;
-                                   font-weight:800;color:{"#A78BFA" if deep_active else "#64748B"};
-                                   letter-spacing:2px;">🔬 DEEP RESEARCH</span>
+                      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
+                                   font-weight:800;color:#A78BFA;letter-spacing:2px;">🔬 DEEP RESEARCH</span>
                       <span style="font-size:11px;color:#4A6080;margin-left:10px;">Opus · ~45 sec</span>
                     </div>
-                    {"<span style='font-size:11px;color:#A78BFA;font-weight:700;'>● SELECTED</span>" if deep_active else ""}
+                    <span style="font-size:11px;color:#4A6080;">Multi-step reasoning · technicals → fundamentals → macro</span>
                   </div>
                 </div>''', unsafe_allow_html=True)
-
-                col_q, col_d = st.columns(2)
-                with col_q:
-                    if st.button("⚡ Quick Analysis", key="mode_quick",
-                                 use_container_width=True,
-                                 type="primary" if quick_active else "secondary"):
-                        st.session_state['analysis_mode'] = 'Quick'
-                        st.rerun()
-                with col_d:
-                    if st.button("🔬 Deep Research", key="mode_deep",
-                                 use_container_width=True,
-                                 type="primary" if deep_active else "secondary"):
-                        st.session_state['analysis_mode'] = 'Deep Research'
-                        st.rerun()
 
                 selected_ticker = None
 
@@ -2023,9 +1998,17 @@ def main():
                                 st.session_state["_resolved_name"] = name
                                 st.session_state["_resolved_exch"] = exch
                                 st.session_state["_resolved_curr"] = curr
-                                btn_lbl = f"Analyze {name} →" if name else "Analyze →"
-                                if st.button(btn_lbl, type="primary", use_container_width=True, key="analyze_exact"):
-                                    selected_ticker = ticker_upper
+                                bq, bd = st.columns(2)
+                                with bq:
+                                    if st.button("⚡ Quick Analysis →", key="analyze_exact_quick",
+                                                 use_container_width=True, type="primary"):
+                                        st.session_state['analysis_mode'] = 'Quick'
+                                        selected_ticker = ticker_upper
+                                with bd:
+                                    if st.button("🔬 Deep Research →", key="analyze_exact_deep",
+                                                 use_container_width=True):
+                                        st.session_state['analysis_mode'] = 'Deep Research'
+                                        selected_ticker = ticker_upper
                             else:
                                 rows = [{"sym": r.get("symbol",""), "name": r.get("name","")[:45],
                                          "exch": r.get("exchangeShortName",""), "curr": r.get("currency","USD"),
@@ -2053,29 +2036,50 @@ def main():
                                 st.session_state["_resolved_name"] = m["name"]
                                 st.session_state["_resolved_exch"] = m["exchange"]
                                 st.session_state["_resolved_curr"] = m["currency"]
-                                c1, c2 = st.columns([3, 1])
-                                with c1:
-                                    if st.button(f"Analyze {m['name']} →", type="primary",
-                                                 use_container_width=True, key="analyze_yf"):
+                                bq, bd, br = st.columns([2, 2, 1])
+                                with bq:
+                                    if st.button("⚡ Quick Analysis →", key="analyze_yf_quick",
+                                                 use_container_width=True, type="primary"):
+                                        st.session_state['analysis_mode'] = 'Quick'
                                         selected_ticker = m["sym"]
-                                with c2:
+                                with bd:
+                                    if st.button("🔬 Deep Research →", key="analyze_yf_deep",
+                                                 use_container_width=True):
+                                        st.session_state['analysis_mode'] = 'Deep Research'
+                                        selected_ticker = m["sym"]
+                                with br:
                                     if st.button("↩ Reset", use_container_width=True, key="analyze_reset"):
                                         st.session_state.pop(cache_key, None)
                                         st.rerun()
                             else:
                                 render_identity_card(ticker_upper, "", "", "", name_found=False)
-                                c1, c2 = st.columns([3, 1])
-                                with c1:
-                                    if st.button(f"Analyze {ticker_upper} →", type="primary",
-                                                 use_container_width=True, key="analyze_yf_unknown"):
+                                bq, bd, br = st.columns([2, 2, 1])
+                                with bq:
+                                    if st.button("⚡ Quick Analysis →", key="analyze_unk_quick",
+                                                 use_container_width=True, type="primary"):
+                                        st.session_state['analysis_mode'] = 'Quick'
                                         selected_ticker = ticker_upper
-                                with c2:
+                                with bd:
+                                    if st.button("🔬 Deep Research →", key="analyze_unk_deep",
+                                                 use_container_width=True):
+                                        st.session_state['analysis_mode'] = 'Deep Research'
+                                        selected_ticker = ticker_upper
+                                with br:
                                     if st.button("↩ Reset", use_container_width=True, key="analyze_reset_unknown"):
                                         st.session_state.pop(cache_key, None)
                                         st.rerun()
                     else:
-                        if st.button("Analyze →", type="primary", use_container_width=True, key="analyze_direct"):
-                            selected_ticker = ticker_upper
+                        bq, bd = st.columns(2)
+                        with bq:
+                            if st.button("⚡ Quick Analysis →", key="analyze_direct_quick",
+                                         use_container_width=True, type="primary"):
+                                st.session_state['analysis_mode'] = 'Quick'
+                                selected_ticker = ticker_upper
+                        with bd:
+                            if st.button("🔬 Deep Research →", key="analyze_direct_deep",
+                                         use_container_width=True):
+                                st.session_state['analysis_mode'] = 'Deep Research'
+                                selected_ticker = ticker_upper
 
                 if selected_ticker:
                     run_analysis(selected_ticker)
