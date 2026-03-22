@@ -1661,6 +1661,10 @@ MULTI_LISTED = {
              {'ticker':'SHOP.TO', 'name':'Shopify (TSX)',                  'exchange':'TSX',    'currency':'CAD'}],
     'BRK':  [{'ticker':'BRK-B',   'name':'Berkshire Hathaway Class B',    'exchange':'NYSE',   'currency':'USD'},
              {'ticker':'BRK-A',   'name':'Berkshire Hathaway Class A',    'exchange':'NYSE',   'currency':'USD'}],
+    'GOOGL':[{'ticker':'GOOGL',   'name':'Alphabet Inc. Class C (No Vote)','exchange':'NASDAQ','currency':'USD'},
+             {'ticker':'GOOG',    'name':'Alphabet Inc. Class A (Voting)', 'exchange':'NASDAQ','currency':'USD'}],
+    'GOOG': [{'ticker':'GOOGL',   'name':'Alphabet Inc. Class C (No Vote)','exchange':'NASDAQ','currency':'USD'},
+             {'ticker':'GOOG',    'name':'Alphabet Inc. Class A (Voting)', 'exchange':'NASDAQ','currency':'USD'}],
     'BABA': [{'ticker':'BABA',    'name':'Alibaba Group (US ADR)',         'exchange':'NYSE',   'currency':'USD'}],
     'CNR':  [{'ticker':'CNI',     'name':'Canadian National Railway (US)','exchange':'NYSE',   'currency':'USD'},
              {'ticker':'CNR.TO',  'name':'Canadian National Railway (TSX)','exchange':'TSX',   'currency':'CAD'}],
@@ -2045,71 +2049,96 @@ def main():
                                 _confirm(ticker_upper, "", "", "", name_found=False)
 
                 # ── PHASE 2: CONFIRM CARD ─────────────────────
-                # Renders once ticker is confirmed — always shows mode toggle + analyze
                 if st.session_state.get('_confirmed_ticker'):
                     sym        = st.session_state['_confirmed_ticker']
                     name       = st.session_state.get('_confirmed_name', '')
                     exch       = st.session_state.get('_confirmed_exch', '')
                     curr       = st.session_state.get('_confirmed_curr', '')
                     name_found = st.session_state.get('_confirm_name_found', True)
-
-                    cur_mode   = st.session_state['analysis_mode']
+                    cur_mode   = st.session_state.get('analysis_mode', 'Quick')
                     quick_on   = cur_mode == 'Quick'
-                    deep_on    = cur_mode == 'Deep Research'
 
-                    border    = "#14B8A6" if name_found else "#FACC15"
-                    badge_bg  = "#0A1E1C" if name_found else "#1A1000"
-                    badge_col = "#14B8A6" if name_found else "#FACC15"
-                    badge_txt = "✓ Confirmed" if name_found else "⚠ Verify"
-                    name_col  = "#F1F5F9" if name_found else "#FACC15"
-                    name_txt  = name if name else sym
-                    exch_txt  = f"{exch} &nbsp;·&nbsp; {curr}" if exch else ""
+                    # ── Pre-compute all conditional values ────
+                    card_border   = '#14B8A6' if name_found else '#FACC15'
+                    badge_bg      = '#0A1E1C' if name_found else '#1A1000'
+                    badge_col     = '#14B8A6' if name_found else '#FACC15'
+                    badge_txt     = '✓ Confirmed' if name_found else '⚠ Verify'
+                    name_col      = '#F1F5F9' if name_found else '#FACC15'
+                    name_display  = name if name else sym
+                    exch_display  = f"{exch} &nbsp;·&nbsp; {curr}" if exch else ''
 
-                    # Identity card
+                    q_bg      = '#081510' if quick_on else '#111827'
+                    q_border  = '2px solid #00FF88' if quick_on else '1px solid #243348'
+                    q_col     = '#00FF88' if quick_on else '#4A6080'
+                    q_dot     = '<span style="color:#00FF88;font-size:14px;margin-left:4px;">●</span>' if quick_on else ''
+
+                    d_bg      = '#0D0D2E' if not quick_on else '#111827'
+                    d_border  = '2px solid #A78BFA' if not quick_on else '1px solid #243348'
+                    d_col     = '#A78BFA' if not quick_on else '#4A6080'
+                    d_dot     = '<span style="color:#A78BFA;font-size:14px;margin-left:4px;">●</span>' if not quick_on else ''
+
+                    analyze_lbl = f"Analyze {name_display} →"
+
                     st.markdown(f"""
-                    <div style="background:linear-gradient(135deg,#0A1E2C 0%,#0D1525 100%);
-                                border:1px solid {border};border-radius:10px 10px 0 0;
-                                padding:14px 18px;margin-top:8px;
-                                display:flex;align-items:center;gap:16px;">
-                      <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:800;
-                                  color:#00FF88;letter-spacing:3px;min-width:70px;">{sym}</div>
-                      <div style="flex:1;min-width:0;">
-                        <div style="font-size:15px;font-weight:700;color:{name_col};margin-bottom:3px;
-                                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{name_txt}</div>
-                        <div style="font-size:11px;color:#5EEAD4;">{exch_txt}</div>
+                    <div style="margin-top:10px;border-radius:12px;overflow:hidden;
+                                box-shadow:0 0 24px rgba(20,184,166,0.08);">
+
+                      <!-- Identity row -->
+                      <div style="background:linear-gradient(135deg,#0A1E2C 0%,#0D1525 100%);
+                                  border:1px solid {card_border};border-bottom:none;
+                                  padding:16px 18px;display:flex;align-items:center;gap:16px;">
+                        <div style="font-family:'JetBrains Mono',monospace;font-size:26px;
+                                    font-weight:800;color:#00FF88;letter-spacing:4px;min-width:80px;">{sym}</div>
+                        <div style="flex:1;min-width:0;">
+                          <div style="font-size:15px;font-weight:700;color:{name_col};
+                                      margin-bottom:3px;white-space:nowrap;overflow:hidden;
+                                      text-overflow:ellipsis;">{name_display}</div>
+                          <div style="font-size:11px;color:#5EEAD4;letter-spacing:0.3px;">{exch_display}</div>
+                        </div>
+                        <div style="background:{badge_bg};border:1px solid {badge_col};
+                                    border-radius:20px;padding:3px 12px;font-size:10px;
+                                    font-weight:700;color:{badge_col};white-space:nowrap;">{badge_txt}</div>
                       </div>
-                      <div style="background:{badge_bg};border:1px solid {border};border-radius:20px;
-                                  padding:3px 10px;font-size:10px;font-weight:700;color:{badge_col};">{badge_txt}</div>
+
+                      <!-- Mode selector row -->
+                      <div style="background:#0D1525;border:1px solid {card_border};
+                                  border-top:1px solid #1A2A3A;border-bottom:none;
+                                  padding:12px 18px;">
+                        <div style="font-size:9px;color:#4A6080;letter-spacing:2px;
+                                    text-transform:uppercase;margin-bottom:8px;">Analysis Depth</div>
+                        <div style="display:flex;gap:8px;">
+                          <div style="flex:1;background:{q_bg};border:{q_border};
+                                      border-radius:8px;padding:10px 14px;cursor:pointer;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                              <div>
+                                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                                             font-weight:800;color:{q_col};letter-spacing:1.5px;">⚡ QUICK</span>
+                                {q_dot}
+                              </div>
+                              <span style="font-size:10px;color:#4A6080;">Sonnet · ~15s</span>
+                            </div>
+                            <div style="font-size:10px;color:#4A6080;margin-top:3px;">
+                              Full technical + fundamental</div>
+                          </div>
+                          <div style="flex:1;background:{d_bg};border:{d_border};
+                                      border-radius:8px;padding:10px 14px;cursor:pointer;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;">
+                              <div>
+                                <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                                             font-weight:800;color:{d_col};letter-spacing:1.5px;">🔬 DEEP</span>
+                                {d_dot}
+                              </div>
+                              <span style="font-size:10px;color:#4A6080;">Opus · ~45s</span>
+                            </div>
+                            <div style="font-size:10px;color:#4A6080;margin-top:3px;">
+                              Technicals → fundamentals → macro</div>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>""", unsafe_allow_html=True)
 
-                    # Mode toggle row — attached to identity card
-                    st.markdown(f"""
-                    <div style="background:#0D1525;border:1px solid {border};border-top:none;
-                                border-radius:0;padding:10px 18px;
-                                display:flex;align-items:center;gap:10px;">
-                      <span style="font-size:10px;color:#4A6080;letter-spacing:1px;
-                                   text-transform:uppercase;white-space:nowrap;">Analysis depth</span>
-                      <div style="display:flex;flex:1;gap:8px;">
-                        <div style="flex:1;background:{"#081510" if quick_on else "#0D1525"};
-                                    border:{"2px solid #00FF88" if quick_on else "1px solid #243348"};
-                                    border-radius:6px;padding:7px 12px;text-align:center;">
-                          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;
-                                       color:{"#00FF88" if quick_on else "#64748B"};">⚡ QUICK</span>
-                          <span style="font-size:10px;color:#4A6080;margin-left:6px;">Sonnet · ~15s</span>
-                          {"<span style='font-size:10px;color:#00FF88;font-weight:700;margin-left:6px;'>●</span>" if quick_on else ""}
-                        </div>
-                        <div style="flex:1;background:{"#0D0D2E" if deep_on else "#0D1525"};
-                                    border:{"2px solid #A78BFA" if deep_on else "1px solid #243348"};
-                                    border-radius:6px;padding:7px 12px;text-align:center;">
-                          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;
-                                       color:{"#A78BFA" if deep_on else "#64748B"};">🔬 DEEP</span>
-                          <span style="font-size:10px;color:#4A6080;margin-left:6px;">Opus · ~45s</span>
-                          {"<span style='font-size:10px;color:#A78BFA;font-weight:700;margin-left:6px;'>●</span>" if deep_on else ""}
-                        </div>
-                      </div>
-                    </div>""", unsafe_allow_html=True)
-
-                    # Mode toggle buttons (functional, sit under the visual display)
+                    # Toggle buttons — sit flush under the visual display
                     tc1, tc2 = st.columns(2)
                     with tc1:
                         if st.button("⚡ Quick", key="tog_quick", use_container_width=True,
@@ -2118,20 +2147,14 @@ def main():
                             st.rerun()
                     with tc2:
                         if st.button("🔬 Deep Research", key="tog_deep", use_container_width=True,
-                                     type="primary" if deep_on else "secondary"):
+                                     type="primary" if not quick_on else "secondary"):
                             st.session_state['analysis_mode'] = 'Deep Research'
                             st.rerun()
 
-                    # Analyze CTA + Change ticker
-                    analyze_label = f"Analyze {name_txt} →" if name_txt != sym else f"Analyze {sym} →"
-                    st.markdown(f"""
-                    <div style="background:#0A1020;border:1px solid {border};border-top:none;
-                                border-radius:0 0 10px 10px;padding:10px 18px 14px;">
-                    </div>""", unsafe_allow_html=True)
-
+                    # Analyze CTA + Change
                     ca, cb = st.columns([4, 1])
                     with ca:
-                        if st.button(analyze_label, type="primary",
+                        if st.button(analyze_lbl, type="primary",
                                      use_container_width=True, key="analyze_confirm"):
                             run_analysis(sym)
                     with cb:
@@ -2140,7 +2163,6 @@ def main():
                                       '_confirmed_curr','_confirm_name_found',
                                       '_resolved_name','_resolved_exch','_resolved_curr']:
                                 st.session_state.pop(k, None)
-                            # Clear yfinance caches
                             for k in list(st.session_state.keys()):
                                 if k.startswith('_yf_'):
                                     st.session_state.pop(k, None)
