@@ -1891,198 +1891,260 @@ def main():
             with tab1:
                 st.markdown('<div style="text-align:center;font-size:24px;font-weight:800;color:#F1F5F9;margin-bottom:6px;">Enter a ticker</div>', unsafe_allow_html=True)
                 st.markdown('<div style="text-align:center;font-size:13px;color:#4A6080;margin-bottom:16px;">Type any symbol — a dropdown will guide you</div>', unsafe_allow_html=True)
+
                 fmp_key_lp = st.secrets.get("FMP_API_KEY", "")
                 if 'analysis_mode' not in st.session_state:
                     st.session_state['analysis_mode'] = 'Quick'
-                ticker_in = st.text_input("", placeholder="NVDA", key="ticker_input", label_visibility="collapsed")
-                ticker_upper = ticker_in.strip().upper() if ticker_in else ""
-                prev_val = st.session_state.get('_prev_ticker_val', '')
-                st.session_state['_prev_ticker_val'] = ticker_upper
+                if '_confirmed_ticker' not in st.session_state:
+                    st.session_state['_confirmed_ticker'] = None
 
-                # ── Analysis Mode Info — display only ─────────
-                st.markdown('''
-                <div style="display:flex;flex-direction:column;gap:6px;margin:8px 0 4px;">
-                  <div style="background:#081510;border:1px solid #1A3A28;border-radius:8px;
-                              padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
-                    <div>
-                      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
-                                   font-weight:800;color:#00FF88;letter-spacing:2px;">⚡ QUICK ANALYSIS</span>
-                      <span style="font-size:11px;color:#4A6080;margin-left:10px;">Sonnet · ~15 sec</span>
-                    </div>
-                    <span style="font-size:11px;color:#4A6080;">Full technical + fundamental analysis</span>
-                  </div>
-                  <div style="background:#0D0D2E;border:1px solid #2A1F5A;border-radius:8px;
-                              padding:10px 16px;display:flex;justify-content:space-between;align-items:center;">
-                    <div>
-                      <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
-                                   font-weight:800;color:#A78BFA;letter-spacing:2px;">🔬 DEEP RESEARCH</span>
-                      <span style="font-size:11px;color:#4A6080;margin-left:10px;">Opus · ~45 sec</span>
-                    </div>
-                    <span style="font-size:11px;color:#4A6080;">Multi-step reasoning · technicals → fundamentals → macro</span>
-                  </div>
-                </div>''', unsafe_allow_html=True)
+                # ── PHASE 1: SEARCH ───────────────────────────
+                # Only show search when no ticker confirmed yet
+                if not st.session_state['_confirmed_ticker']:
 
-                selected_ticker = None
+                    ticker_in    = st.text_input("", placeholder="NVDA", key="ticker_input", label_visibility="collapsed")
+                    ticker_upper = ticker_in.strip().upper() if ticker_in else ""
+                    st.session_state['_prev_ticker_val'] = ticker_upper
 
-                def render_identity_card(sym, name, exch, curr, name_found=True):
-                    border = "#14B8A6" if name_found else "#FACC15"
-                    glow   = "0 0 20px rgba(20,184,166,0.15)" if name_found else "0 0 20px rgba(250,204,21,0.15)"
+                    # Info bars — display only, always visible
+                    st.markdown('''
+                    <div style="display:flex;flex-direction:column;gap:5px;margin:8px 0 6px;">
+                      <div style="background:#081510;border:1px solid #1A3A28;border-radius:8px;
+                                  padding:9px 14px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;
+                                     color:#00FF88;letter-spacing:1.5px;">⚡ QUICK ANALYSIS</span>
+                        <span style="font-size:11px;color:#4A6080;">Sonnet · ~15 sec · Full technical + fundamental</span>
+                      </div>
+                      <div style="background:#0D0D2E;border:1px solid #2A1F5A;border-radius:8px;
+                                  padding:9px 14px;display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:800;
+                                     color:#A78BFA;letter-spacing:1.5px;">🔬 DEEP RESEARCH</span>
+                        <span style="font-size:11px;color:#4A6080;">Opus · ~45 sec · Technicals → fundamentals → macro</span>
+                      </div>
+                    </div>''', unsafe_allow_html=True)
+
+                    def _confirm(sym, name, exch, curr, name_found=True):
+                        """Set confirmed ticker in session state and rerun to show confirm card."""
+                        st.session_state['_confirmed_ticker']    = sym
+                        st.session_state['_confirmed_name']      = name
+                        st.session_state['_confirmed_exch']      = exch
+                        st.session_state['_confirmed_curr']      = curr
+                        st.session_state['_confirm_name_found']  = name_found
+                        st.rerun()
+
+                    def render_identity_card_search(sym, name, exch, curr, name_found=True):
+                        border    = "#14B8A6" if name_found else "#FACC15"
+                        glow      = "0 0 20px rgba(20,184,166,0.15)" if name_found else "0 0 20px rgba(250,204,21,0.15)"
+                        badge_bg  = "#0A1E1C" if name_found else "#1A1000"
+                        badge_col = "#14B8A6" if name_found else "#FACC15"
+                        badge_txt = "✓ Confirmed" if name_found else "⚠ Verify"
+                        name_col  = "#F1F5F9" if name_found else "#FACC15"
+                        name_txt  = name if name_found else "Name not found — verify this symbol"
+                        exch_txt  = f"{exch} &nbsp;·&nbsp; {curr}" if exch else "Exchange unknown"
+                        st.markdown(f"""
+                        <div style="background:linear-gradient(135deg,#0A1E2C 0%,#0D1525 100%);
+                                    border:1px solid {border};border-radius:10px;padding:14px 18px;
+                                    margin:8px 0 6px;box-shadow:{glow};
+                                    display:flex;align-items:center;gap:16px;">
+                          <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:800;
+                                      color:#00FF88;letter-spacing:3px;min-width:70px;">{sym}</div>
+                          <div style="flex:1;min-width:0;">
+                            <div style="font-size:15px;font-weight:700;color:{name_col};margin-bottom:3px;
+                                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{name_txt}</div>
+                            <div style="font-size:11px;color:#5EEAD4;">{exch_txt}</div>
+                          </div>
+                          <div style="background:{badge_bg};border:1px solid {border};border-radius:20px;
+                                      padding:3px 10px;font-size:10px;font-weight:700;color:{badge_col};">{badge_txt}</div>
+                        </div>""", unsafe_allow_html=True)
+
+                    def render_dropdown_search(rows):
+                        unique_names = list({r["name"] for r in rows if r["name"]})
+                        if len(unique_names) > 1:
+                            st.markdown("""
+                            <div style="background:linear-gradient(135deg,#1A1000 0%,#2D1500 100%);
+                                        border:1px solid #FACC15;border-radius:8px;padding:10px 16px;margin:8px 0 4px;">
+                              <div style="font-size:12px;font-weight:700;color:#FACC15;margin-bottom:2px;">
+                                ⚠️ Same symbol — different companies</div>
+                              <div style="font-size:11px;color:#CBD5E1;">Read the full name carefully before selecting.</div>
+                            </div>""", unsafe_allow_html=True)
+                        st.markdown("""<div style="background:#071420;border:1px solid #14B8A6;
+                            border-radius:10px;overflow:hidden;margin-top:4px;">
+                          <div style="padding:6px 16px;font-size:10px;color:#5EEAD4;letter-spacing:2px;
+                                      text-transform:uppercase;font-weight:700;border-bottom:1px solid #0D2030;">
+                            Select exchange or share class</div>""", unsafe_allow_html=True)
+                        for i, row in enumerate(rows):
+                            border_b = "" if i == len(rows)-1 else "border-bottom:1px solid #0D2030;"
+                            st.markdown(f"""<div style="padding:10px 16px;{border_b}display:flex;align-items:center;gap:12px;">
+                              <div style="font-family:'JetBrains Mono',monospace;font-weight:800;color:#00FF88;
+                                          font-size:15px;min-width:80px;">{row['sym']}</div>
+                              <div style="flex:1;">
+                                <div style="font-size:13px;font-weight:600;color:#E2E8F0;margin-bottom:2px;">{row['name']}</div>
+                                <div style="font-size:11px;color:#5EEAD4;">{row['exch']} · {row['curr']}</div>
+                              </div></div>""", unsafe_allow_html=True)
+                            if st.button(f"Select {row['sym']}", key=row["key"], use_container_width=True):
+                                _confirm(row['sym'], row['name'], row['exch'], row['curr'])
+                        st.markdown("</div>", unsafe_allow_html=True)
+
+                    # ── Search logic ──────────────────────────
+                    if ticker_upper:
+                        if ticker_upper in MULTI_LISTED:
+                            rows = [{"sym": o["ticker"], "name": o["name"],
+                                     "exch": o["exchange"], "curr": o["currency"],
+                                     "key": f'ml_{o["ticker"]}'}
+                                    for o in MULTI_LISTED[ticker_upper]]
+                            render_dropdown_search(rows)
+
+                        elif fmp_key_lp:
+                            results = search_ticker_fmp(ticker_upper, fmp_key_lp)
+                            if results:
+                                exact = next((r for r in results
+                                              if r.get("symbol","").upper() == ticker_upper), None)
+                                if exact and len({r.get("symbol","").upper() for r in results
+                                                  if r.get("symbol","").upper() == ticker_upper}) == 1:
+                                    name = exact.get("name","")[:52]
+                                    exch = exact.get("exchangeShortName","")
+                                    curr = exact.get("currency","USD")
+                                    render_identity_card_search(ticker_upper, name, exch, curr)
+                                    if st.button(f"Select {name} →", type="primary",
+                                                 use_container_width=True, key="select_exact"):
+                                        _confirm(ticker_upper, name, exch, curr)
+                                else:
+                                    rows = [{"sym":  r.get("symbol",""),
+                                             "name": r.get("name","")[:45],
+                                             "exch": r.get("exchangeShortName",""),
+                                             "curr": r.get("currency","USD"),
+                                             "key":  f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
+                                            for r in results[:10] if r.get("symbol","")]
+                                    render_dropdown_search(rows)
+                            else:
+                                cache_key = f"_yf_{ticker_upper}"
+                                if cache_key not in st.session_state:
+                                    matches = resolve_all_matches(ticker_upper)
+                                    st.session_state[cache_key] = matches
+                                matches = st.session_state.get(cache_key, [])
+                                if len(matches) > 1:
+                                    rows = [{"sym": m["sym"], "name": m["name"],
+                                             "exch": m["exchange"], "curr": m["currency"],
+                                             "key": f'yf_{m["sym"]}_{m["exchange"]}'}
+                                            for m in matches]
+                                    render_dropdown_search(rows)
+                                elif len(matches) == 1:
+                                    m = matches[0]
+                                    render_identity_card_search(m["sym"], m["name"], m["exchange"], m["currency"])
+                                    if st.button(f"Select {m['name']} →", type="primary",
+                                                 use_container_width=True, key="select_yf"):
+                                        _confirm(m["sym"], m["name"], m["exchange"], m["currency"])
+                                else:
+                                    render_identity_card_search(ticker_upper, "", "", "", name_found=False)
+                                    if st.button(f"Select {ticker_upper} →", type="primary",
+                                                 use_container_width=True, key="select_unk"):
+                                        _confirm(ticker_upper, "", "", "", name_found=False)
+                        else:
+                            if st.button(f"Select {ticker_upper} →", type="primary",
+                                         use_container_width=True, key="select_direct"):
+                                _confirm(ticker_upper, "", "", "", name_found=False)
+
+                # ── PHASE 2: CONFIRM CARD ─────────────────────
+                # Renders once ticker is confirmed — always shows mode toggle + analyze
+                if st.session_state.get('_confirmed_ticker'):
+                    sym        = st.session_state['_confirmed_ticker']
+                    name       = st.session_state.get('_confirmed_name', '')
+                    exch       = st.session_state.get('_confirmed_exch', '')
+                    curr       = st.session_state.get('_confirmed_curr', '')
+                    name_found = st.session_state.get('_confirm_name_found', True)
+
+                    cur_mode   = st.session_state['analysis_mode']
+                    quick_on   = cur_mode == 'Quick'
+                    deep_on    = cur_mode == 'Deep Research'
+
+                    border    = "#14B8A6" if name_found else "#FACC15"
                     badge_bg  = "#0A1E1C" if name_found else "#1A1000"
                     badge_col = "#14B8A6" if name_found else "#FACC15"
-                    badge_text = "✓ Confirmed" if name_found else "⚠ Verify"
+                    badge_txt = "✓ Confirmed" if name_found else "⚠ Verify"
                     name_col  = "#F1F5F9" if name_found else "#FACC15"
-                    name_text = name if name_found else "Name not found — verify this symbol"
-                    exch_text = f"{exch} &nbsp;·&nbsp; {curr}" if exch else "Exchange unknown"
+                    name_txt  = name if name else sym
+                    exch_txt  = f"{exch} &nbsp;·&nbsp; {curr}" if exch else ""
+
+                    # Identity card
                     st.markdown(f"""
                     <div style="background:linear-gradient(135deg,#0A1E2C 0%,#0D1525 100%);
-                                border:1px solid {border};border-radius:10px;padding:14px 18px;
-                                margin:8px 0 6px;box-shadow:{glow};
+                                border:1px solid {border};border-radius:10px 10px 0 0;
+                                padding:14px 18px;margin-top:8px;
                                 display:flex;align-items:center;gap:16px;">
                       <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:800;
                                   color:#00FF88;letter-spacing:3px;min-width:70px;">{sym}</div>
                       <div style="flex:1;min-width:0;">
                         <div style="font-size:15px;font-weight:700;color:{name_col};margin-bottom:3px;
-                                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{name_text}</div>
-                        <div style="font-size:11px;color:#5EEAD4;">{exch_text}</div>
+                                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{name_txt}</div>
+                        <div style="font-size:11px;color:#5EEAD4;">{exch_txt}</div>
                       </div>
                       <div style="background:{badge_bg};border:1px solid {border};border-radius:20px;
-                                  padding:3px 10px;font-size:10px;font-weight:700;color:{badge_col};">{badge_text}</div>
+                                  padding:3px 10px;font-size:10px;font-weight:700;color:{badge_col};">{badge_txt}</div>
                     </div>""", unsafe_allow_html=True)
 
-                def render_dropdown(rows):
-                    unique_names = list({r["name"] for r in rows if r["name"]})
-                    if len(unique_names) > 1:
-                        st.markdown("""
-                        <div style="background:linear-gradient(135deg,#1A1000 0%,#2D1500 100%);
-                                    border:1px solid #FACC15;border-radius:8px;padding:10px 16px;margin:8px 0 4px;">
-                          <div style="font-size:12px;font-weight:700;color:#FACC15;margin-bottom:2px;">⚠️ Same symbol — different companies</div>
-                          <div style="font-size:11px;color:#CBD5E1;">Read the full name carefully before selecting.</div>
-                        </div>""", unsafe_allow_html=True)
-                    st.markdown("""<div style="background:#071420;border:1px solid #14B8A6;border-radius:10px;overflow:hidden;margin-top:4px;">
-                      <div style="padding:6px 16px;font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;font-weight:700;border-bottom:1px solid #0D2030;">
-                        Select exchange or share class</div>""", unsafe_allow_html=True)
-                    for i, row in enumerate(rows):
-                        border_b = "" if i == len(rows)-1 else "border-bottom:1px solid #0D2030;"
-                        st.markdown(f"""<div style="padding:10px 16px;{border_b}display:flex;align-items:center;gap:12px;">
-                          <div style="font-family:'JetBrains Mono',monospace;font-weight:800;color:#00FF88;font-size:15px;min-width:80px;">{row['sym']}</div>
-                          <div style="flex:1;">
-                            <div style="font-size:13px;font-weight:600;color:#E2E8F0;margin-bottom:2px;">{row['name']}</div>
-                            <div style="font-size:11px;color:#5EEAD4;">{row['exch']} · {row['curr']}</div>
-                          </div></div>""", unsafe_allow_html=True)
-                        if st.button(f"▶ Analyze {row['sym']}", key=row["key"], use_container_width=True):
-                            st.session_state["_resolved_name"] = row["name"]
-                            st.session_state["_resolved_exch"] = row["exch"]
-                            st.session_state["_resolved_curr"] = row["curr"]
-                            return row["sym"]
-                    st.markdown("</div>", unsafe_allow_html=True)
-                    return None
+                    # Mode toggle row — attached to identity card
+                    st.markdown(f"""
+                    <div style="background:#0D1525;border:1px solid {border};border-top:none;
+                                border-radius:0;padding:10px 18px;
+                                display:flex;align-items:center;gap:10px;">
+                      <span style="font-size:10px;color:#4A6080;letter-spacing:1px;
+                                   text-transform:uppercase;white-space:nowrap;">Analysis depth</span>
+                      <div style="display:flex;flex:1;gap:8px;">
+                        <div style="flex:1;background:{"#081510" if quick_on else "#0D1525"};
+                                    border:{"2px solid #00FF88" if quick_on else "1px solid #243348"};
+                                    border-radius:6px;padding:7px 12px;text-align:center;">
+                          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;
+                                       color:{"#00FF88" if quick_on else "#64748B"};">⚡ QUICK</span>
+                          <span style="font-size:10px;color:#4A6080;margin-left:6px;">Sonnet · ~15s</span>
+                          {"<span style='font-size:10px;color:#00FF88;font-weight:700;margin-left:6px;'>●</span>" if quick_on else ""}
+                        </div>
+                        <div style="flex:1;background:{"#0D0D2E" if deep_on else "#0D1525"};
+                                    border:{"2px solid #A78BFA" if deep_on else "1px solid #243348"};
+                                    border-radius:6px;padding:7px 12px;text-align:center;">
+                          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;
+                                       color:{"#A78BFA" if deep_on else "#64748B"};">🔬 DEEP</span>
+                          <span style="font-size:10px;color:#4A6080;margin-left:6px;">Opus · ~45s</span>
+                          {"<span style='font-size:10px;color:#A78BFA;font-weight:700;margin-left:6px;'>●</span>" if deep_on else ""}
+                        </div>
+                      </div>
+                    </div>""", unsafe_allow_html=True)
 
-                if ticker_upper:
-                    if ticker_upper in MULTI_LISTED:
-                        rows = [{"sym": o["ticker"], "name": o["name"], "exch": o["exchange"],
-                                 "curr": o["currency"], "key": f'ml_{o["ticker"]}'}
-                                for o in MULTI_LISTED[ticker_upper]]
-                        result = render_dropdown(rows)
-                        if result:
-                            selected_ticker = result
-                    elif fmp_key_lp:
-                        results = search_ticker_fmp(ticker_upper, fmp_key_lp)
-                        if results:
-                            exact = next((r for r in results if r.get("symbol","").upper() == ticker_upper), None)
-                            if exact and len({r.get("symbol","").upper() for r in results
-                                              if r.get("symbol","").upper() == ticker_upper}) == 1:
-                                name = exact.get("name","")[:52]
-                                exch = exact.get("exchangeShortName","")
-                                curr = exact.get("currency","USD")
-                                render_identity_card(ticker_upper, name, exch, curr)
-                                st.session_state["_resolved_name"] = name
-                                st.session_state["_resolved_exch"] = exch
-                                st.session_state["_resolved_curr"] = curr
-                                bq, bd = st.columns(2)
-                                with bq:
-                                    if st.button("⚡ Quick Analysis →", key="analyze_exact_quick",
-                                                 use_container_width=True, type="primary"):
-                                        st.session_state['analysis_mode'] = 'Quick'
-                                        selected_ticker = ticker_upper
-                                with bd:
-                                    if st.button("🔬 Deep Research →", key="analyze_exact_deep",
-                                                 use_container_width=True):
-                                        st.session_state['analysis_mode'] = 'Deep Research'
-                                        selected_ticker = ticker_upper
-                            else:
-                                rows = [{"sym": r.get("symbol",""), "name": r.get("name","")[:45],
-                                         "exch": r.get("exchangeShortName",""), "curr": r.get("currency","USD"),
-                                         "key": f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
-                                        for r in results[:10] if r.get("symbol","")]
-                                result = render_dropdown(rows)
-                                if result:
-                                    selected_ticker = result
-                        else:
-                            cache_key = f"_yf_{ticker_upper}"
-                            if cache_key not in st.session_state:
-                                matches = resolve_all_matches(ticker_upper)
-                                st.session_state[cache_key] = matches
-                            matches = st.session_state.get(cache_key, [])
-                            if len(matches) > 1:
-                                rows = [{"sym": m["sym"], "name": m["name"], "exch": m["exchange"],
-                                         "curr": m["currency"], "key": f'yf_{m["sym"]}_{m["exchange"]}'}
-                                        for m in matches]
-                                result = render_dropdown(rows)
-                                if result:
-                                    selected_ticker = result
-                            elif len(matches) == 1:
-                                m = matches[0]
-                                render_identity_card(m["sym"], m["name"], m["exchange"], m["currency"])
-                                st.session_state["_resolved_name"] = m["name"]
-                                st.session_state["_resolved_exch"] = m["exchange"]
-                                st.session_state["_resolved_curr"] = m["currency"]
-                                bq, bd, br = st.columns([2, 2, 1])
-                                with bq:
-                                    if st.button("⚡ Quick Analysis →", key="analyze_yf_quick",
-                                                 use_container_width=True, type="primary"):
-                                        st.session_state['analysis_mode'] = 'Quick'
-                                        selected_ticker = m["sym"]
-                                with bd:
-                                    if st.button("🔬 Deep Research →", key="analyze_yf_deep",
-                                                 use_container_width=True):
-                                        st.session_state['analysis_mode'] = 'Deep Research'
-                                        selected_ticker = m["sym"]
-                                with br:
-                                    if st.button("↩ Reset", use_container_width=True, key="analyze_reset"):
-                                        st.session_state.pop(cache_key, None)
-                                        st.rerun()
-                            else:
-                                render_identity_card(ticker_upper, "", "", "", name_found=False)
-                                bq, bd, br = st.columns([2, 2, 1])
-                                with bq:
-                                    if st.button("⚡ Quick Analysis →", key="analyze_unk_quick",
-                                                 use_container_width=True, type="primary"):
-                                        st.session_state['analysis_mode'] = 'Quick'
-                                        selected_ticker = ticker_upper
-                                with bd:
-                                    if st.button("🔬 Deep Research →", key="analyze_unk_deep",
-                                                 use_container_width=True):
-                                        st.session_state['analysis_mode'] = 'Deep Research'
-                                        selected_ticker = ticker_upper
-                                with br:
-                                    if st.button("↩ Reset", use_container_width=True, key="analyze_reset_unknown"):
-                                        st.session_state.pop(cache_key, None)
-                                        st.rerun()
-                    else:
-                        bq, bd = st.columns(2)
-                        with bq:
-                            if st.button("⚡ Quick Analysis →", key="analyze_direct_quick",
-                                         use_container_width=True, type="primary"):
-                                st.session_state['analysis_mode'] = 'Quick'
-                                selected_ticker = ticker_upper
-                        with bd:
-                            if st.button("🔬 Deep Research →", key="analyze_direct_deep",
-                                         use_container_width=True):
-                                st.session_state['analysis_mode'] = 'Deep Research'
-                                selected_ticker = ticker_upper
+                    # Mode toggle buttons (functional, sit under the visual display)
+                    tc1, tc2 = st.columns(2)
+                    with tc1:
+                        if st.button("⚡ Quick", key="tog_quick", use_container_width=True,
+                                     type="primary" if quick_on else "secondary"):
+                            st.session_state['analysis_mode'] = 'Quick'
+                            st.rerun()
+                    with tc2:
+                        if st.button("🔬 Deep Research", key="tog_deep", use_container_width=True,
+                                     type="primary" if deep_on else "secondary"):
+                            st.session_state['analysis_mode'] = 'Deep Research'
+                            st.rerun()
 
-                if selected_ticker:
-                    run_analysis(selected_ticker)
+                    # Analyze CTA + Change ticker
+                    analyze_label = f"Analyze {name_txt} →" if name_txt != sym else f"Analyze {sym} →"
+                    st.markdown(f"""
+                    <div style="background:#0A1020;border:1px solid {border};border-top:none;
+                                border-radius:0 0 10px 10px;padding:10px 18px 14px;">
+                    </div>""", unsafe_allow_html=True)
+
+                    ca, cb = st.columns([4, 1])
+                    with ca:
+                        if st.button(analyze_label, type="primary",
+                                     use_container_width=True, key="analyze_confirm"):
+                            run_analysis(sym)
+                    with cb:
+                        if st.button("← Change", use_container_width=True, key="change_ticker"):
+                            for k in ['_confirmed_ticker','_confirmed_name','_confirmed_exch',
+                                      '_confirmed_curr','_confirm_name_found',
+                                      '_resolved_name','_resolved_exch','_resolved_curr']:
+                                st.session_state.pop(k, None)
+                            # Clear yfinance caches
+                            for k in list(st.session_state.keys()):
+                                if k.startswith('_yf_'):
+                                    st.session_state.pop(k, None)
+                            st.rerun()
 
                 st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:20px;">US · TSX · LSE · Euronext · HKEX · ASX — all major exchanges supported</div>', unsafe_allow_html=True)
                 render_disclaimer()
@@ -2540,7 +2602,9 @@ def render_hud():
     if st.button("← New ticker"):
         for k in ['analysis','df','info','ticker','signals','score','fibs','row','prev',
                   '_prev_ticker_val','rr_mode','_rr_ticker','_resolved_name',
-                  '_resolved_exch','_resolved_curr','analysis_mode']:
+                  '_resolved_exch','_resolved_curr','analysis_mode',
+                  '_confirmed_ticker','_confirmed_name','_confirmed_exch',
+                  '_confirmed_curr','_confirm_name_found']:
             if k in st.session_state: del st.session_state[k]
         st.rerun()
 
