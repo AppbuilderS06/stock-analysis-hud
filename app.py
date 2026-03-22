@@ -305,22 +305,31 @@ def fetch_ticker_data(ticker, fmp_key="", _v=17):
     except: pass
 
     news = []
-    try:
-        for item in (raw.news or [])[:5]:
-            try:
-                t = str(item.get('title','') or item.get('content',{}).get('title',''))
-                p = str(item.get('publisher','') or '')
-                l = str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url',''))
-                if t: news.append({'title':t,'publisher':p,'link':l})
-            except: pass
-    except: pass
-    if not news and use_fmp:
+    # FMP news first — ticker-tagged, structured, more reliable than yfinance
+    if use_fmp:
         try:
-            articles = _fmp_get(f"v3/stock_news?tickers={ticker}&limit=5", fmp_key)
-            if articles:
-                for a in articles[:5]:
-                    t = str(a.get("title",""))
-                    if t: news.append({"title":t,"publisher":str(a.get("site","")),"link":str(a.get("url",""))})
+            articles = _fmp_get(f"v3/stock_news?tickers={ticker}&limit=10", fmp_key)
+            if articles and isinstance(articles, list):
+                for a in articles[:10]:
+                    t = str(a.get("title","")).strip()
+                    if t:
+                        news.append({
+                            "title":     t,
+                            "publisher": str(a.get("site","")),
+                            "link":      str(a.get("url","")),
+                            "published": str(a.get("publishedDate",""))
+                        })
+        except: pass
+    # yfinance news as fallback when FMP returns nothing
+    if not news:
+        try:
+            for item in (raw.news or [])[:5]:
+                try:
+                    t = str(item.get('title','') or item.get('content',{}).get('title',''))
+                    p = str(item.get('publisher','') or '')
+                    l = str(item.get('link','') or item.get('content',{}).get('canonicalUrl',{}).get('url',''))
+                    if t: news.append({'title':t,'publisher':p,'link':l})
+                except: pass
         except: pass
 
     earn_hist       = None
@@ -1446,7 +1455,10 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
     dia_chg = market_ctx.get('dia_1m', 0)
 
     if news_items:
-        headlines_text = "\n".join(f"- {n.get('title','')}" for n in news_items[:5])
+        headlines_text = "\n".join(
+            f"- {n.get('title','')} [{n.get('publisher','')}]{' (' + n.get('published','')[:10] + ')' if n.get('published') else ''}"
+            for n in news_items[:10]
+        )
     else:
         headlines_text = "No recent news available"
 
@@ -1495,14 +1507,28 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
             "summary_technical_sentiment: 'bullish', 'bearish', or 'mixed'\n"
             "summary_fundamental: Business quality. Revenue growth %, earnings growth, margins, cash flow quality, valuation vs growth rate. Is the business accelerating or decelerating?\n"
             "summary_fundamental_sentiment: 'bullish', 'bearish', or 'mixed'\n"
-            "summary_macro: Macro environment AND ticker-specific news impact analysis. "
-            "REQUIRED: Reference the actual SPY/QQQ/DIA performance numbers provided. "
-            "REQUIRED: For each news headline provided, scan for keyword triggers: "
-            "earnings beat/miss, guidance raise/cut, regulation/legal risk, competition threat, "
-            "insider buying/selling, analyst upgrade/downgrade, product launch, macro catalyst. "
-            "For each relevant headline, state the keyword trigger, whether impact on THIS specific stock is Bullish/Bearish/Neutral, and magnitude (High/Medium/Low). "
-            "End with a clear decision trigger — the specific price or event that would change your view.\n"
+            "summary_macro: Write 3 flowing, well-constructed sentences — no lists, no numbering, no inline enumerations. "
+            "Sentence 1: State the macro environment using the actual SPY/QQQ/DIA numbers provided — is it a tailwind or headwind and how strong? "
+            "Sentence 2: Synthesize the overall news picture for THIS stock in one sentence — what is the dominant theme across the headlines (e.g. product momentum, regulatory pressure, analyst optimism) and is it net bullish or bearish? Do NOT list each headline. Distill them into a single coherent narrative. "
+            "Sentence 3: State the decision trigger clearly — the exact price level or specific event that would change the current view from bearish to bullish or vice versa.\n"
             "summary_macro_sentiment: 'bullish', 'bearish', or 'mixed'\n"
+            "news_scores: For each headline provided, apply two-tier scoring:\n"
+            "  TIER 1 — Keyword trigger (find the highest-impact keyword in the headline):\n"
+            "    earnings_beat → base Bullish Medium | earnings_miss → base Bearish Medium\n"
+            "    guidance_raise → base Bullish High | guidance_cut → base Bearish High\n"
+            "    analyst_upgrade → base Bullish Low | analyst_downgrade → base Bearish Low\n"
+            "    insider_buy → base Bullish Low | insider_sell → base Bearish Low\n"
+            "    regulation → base Bearish Medium | competition → base Bearish Medium\n"
+            "    product_launch → base Bullish Medium | macro_catalyst → context-dependent\n"
+            "    generic (no clear trigger) → Neutral, Low\n"
+            "  TIER 2 — Context modifiers (adjust base up or down):\n"
+            "    Magnitude words: 'record', 'historic', 'massive' → bump magnitude up\n"
+            "    Qualifier words: 'slight', 'minor', 'modest' → bump magnitude down\n"
+            "    Reversal words: 'cleared', 'dismissed', 'settled' flip Bearish → Bullish\n"
+            "    Sector relevance: if headline is in same sector as {ticker}, magnitude stays; if unrelated sector, reduce magnitude by one level\n"
+            "    Expectation context: 'beat expectations' or 'topped estimates' → bump up; 'in-line' → keep base\n"
+            "  For each headline return: trigger, impact (Bullish/Bearish/Neutral), magnitude (High/Medium/Low), context (one sentence why this magnitude for THIS stock)\n"
+            "net_news_score: integer -5 to +5. Sum: High=2pts, Medium=1pt, Low=0.5pt. Bullish=positive, Bearish=negative. Round to nearest integer.\n"
             "Be specific with numbers throughout. No vague language. No generic statements."
         )
         model_name = "claude-opus-4-6"
@@ -1520,11 +1546,15 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
             "summary_technical_sentiment: 'bullish', 'bearish', or 'mixed'\n"
             "summary_fundamental: 1-2 sentences. Business quality — revenue growth %, margins, valuation.\n"
             "summary_fundamental_sentiment: 'bullish', 'bearish', or 'mixed'\n"
-            "summary_macro: Reference actual SPY/QQQ/DIA numbers. "
-            "For each headline: identify keyword trigger (earnings, guidance, regulation, competition, analyst, macro), "
-            "state Bullish/Bearish/Neutral impact on THIS stock and magnitude (High/Medium/Low). "
-            "End with the decision trigger.\n"
+            "summary_macro: Write 2 flowing sentences — no lists, no numbering. "
+            "Sentence 1: Macro environment with actual SPY/QQQ/DIA numbers — tailwind or headwind? "
+            "Sentence 2: Synthesize the dominant news theme for THIS stock (distill all headlines into one narrative, not a list) + the decision trigger.\n"
             "summary_macro_sentiment: 'bullish', 'bearish', or 'mixed'\n"
+            "news_scores: For each headline, score using two-tier system:\n"
+            "  Tier 1 keyword triggers: earnings_beat=Bullish Med, earnings_miss=Bearish Med, guidance_raise=Bullish High, guidance_cut=Bearish High, analyst_upgrade=Bullish Low, analyst_downgrade=Bearish Low, regulation=Bearish Med, competition=Bearish Med, product_launch=Bullish Med, insider_buy=Bullish Low, insider_sell=Bearish Low, generic=Neutral Low\n"
+            "  Tier 2 modifiers: magnitude words bump up; qualifier words bump down; reversal words flip direction; unrelated sector reduces magnitude one level\n"
+            "  Return per headline: trigger, impact, magnitude, context (one sentence why for THIS stock)\n"
+            "net_news_score: integer -5 to +5. High=2pts, Medium=1pt, Low=0.5pt. Bullish positive, Bearish negative.\n"
             "Be specific with numbers. No vague language."
         )
         model_name = "claude-sonnet-4-20250514"
@@ -1593,8 +1623,10 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         '"summary_levels_sentiment":"bullish|bearish|mixed",'
         '"summary_fundamental":"1-2 sentences on business quality",'
         '"summary_fundamental_sentiment":"bullish|bearish|mixed",'
-        '"summary_macro":"1-2 sentences referencing actual market numbers and specific news headlines",'
+        '"summary_macro":"2-3 sentences: macro context with SPY/QQQ/DIA numbers + news synthesis + decision trigger",'
         '"summary_macro_sentiment":"bullish|bearish|mixed",'
+        '"news_scores":[{"headline":"exact headline","trigger":"earnings_beat|earnings_miss|guidance_raise|guidance_cut|regulation|competition|insider_buy|insider_sell|analyst_upgrade|analyst_downgrade|product_launch|macro_catalyst|generic","impact":"Bullish|Bearish|Neutral","magnitude":"High|Medium|Low","context":"one sentence why this magnitude for THIS stock"}],'
+        '"net_news_score":0,'
         '"summary":"fallback single paragraph",'
         '"day_trade_note":"one sentence",'
         '"swing_note":"one sentence",'
@@ -2832,25 +2864,25 @@ def render_hud():
             border_col = '#00FF88'
             bg_col     = '#030F07'
             label_col  = '#00FF88'
-            dot        = '<span style="color:#00FF88;font-size:12px;margin-right:6px;">▲</span>'
+            dot_char   = '▲'
         elif s == 'bearish':
             border_col = '#FF6B6B'
             bg_col     = '#0F0505'
             label_col  = '#FF6B6B'
-            dot        = '<span style="color:#FF6B6B;font-size:12px;margin-right:6px;">▼</span>'
-        else:  # mixed
+            dot_char   = '▼'
+        else:
             border_col = '#FACC15'
             bg_col     = '#0C0B04'
             label_col  = '#FACC15'
-            dot        = '<span style="color:#FACC15;font-size:12px;margin-right:6px;">◆</span>'
+            dot_char   = '◆'
 
         st.markdown(f"""
         <div style="background:{bg_col};border-left:3px solid {border_col};
                     border-radius:0 8px 8px 0;padding:13px 16px;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;margin-bottom:7px;">
-            {dot}
-            <span style="font-size:9px;color:{label_col};letter-spacing:2px;
-                         text-transform:uppercase;font-weight:700;">{icon} {label}</span>
+          <div style="display:flex;align-items:center;margin-bottom:8px;">
+            <span style="color:{label_col};font-size:16px;margin-right:8px;">{dot_char}</span>
+            <span style="font-size:11px;color:{label_col};letter-spacing:2px;
+                         text-transform:uppercase;font-weight:800;">{icon} {label}</span>
           </div>
           <div style="font-size:13px;color:#CBD5E1;line-height:1.75;">{text}</div>
         </div>""", unsafe_allow_html=True)
@@ -2863,6 +2895,8 @@ def render_hud():
     s_fund_sent  = a.get('summary_fundamental_sentiment', 'mixed')
     s_macro      = a.get('summary_macro', '')
     s_macro_sent = a.get('summary_macro_sentiment', 'mixed')
+    news_scores  = a.get('news_scores', [])
+    net_score    = a.get('net_news_score', None)
     s_fall       = a.get('summary', '')
 
     has_structured = bool(s_tech or s_lvl or s_fund or s_macro)
@@ -2873,10 +2907,94 @@ def render_hud():
     """, unsafe_allow_html=True)
 
     if has_structured:
-        render_summary_para("Key Levels",              "🎯", s_lvl,   s_lvl_sent)
-        render_summary_para("Technical Structure",     "📊", s_tech,  s_tech_sent)
-        render_summary_para("Fundamental Quality",     "📈", s_fund,  s_fund_sent)
-        render_summary_para("Macro & News Events",     "🌍", s_macro, s_macro_sent)
+        render_summary_para("Key Levels",          "🎯", s_lvl,   s_lvl_sent)
+        render_summary_para("Technical Structure", "📊", s_tech,  s_tech_sent)
+        render_summary_para("Fundamental Quality", "📈", s_fund,  s_fund_sent)
+        render_summary_para("Macro & News Events", "🌍", s_macro, s_macro_sent)
+
+        # ── News scorecard ────────────────────────────
+        if news_scores or net_score is not None:
+            # Net score bar
+            if net_score is not None:
+                try:
+                    ns = int(net_score)
+                except:
+                    ns = 0
+                ns_clamped = max(-5, min(5, ns))
+                ns_pct     = int((ns_clamped + 5) / 10 * 100)
+                if ns > 0:
+                    ns_col = '#00FF88'; ns_label = f'+{ns} Bullish' if ns > 1 else '+{ns} Mildly Bullish'
+                elif ns < 0:
+                    ns_col = '#FF6B6B'; ns_label = f'{ns} Bearish' if ns < -1 else f'{ns} Mildly Bearish'
+                else:
+                    ns_col = '#FACC15'; ns_label = '0 Neutral'
+                ns_label = f'+{ns} Bullish' if ns > 1 else (f'+{ns} Mildly Bullish' if ns == 1 else (f'{ns} Bearish' if ns < -1 else (f'{ns} Mildly Bearish' if ns == -1 else '0 Neutral')))
+                st.markdown(f"""
+                <div style="background:#0A1020;border:1px solid #1A2A3A;border-radius:8px;
+                            padding:10px 14px;margin-bottom:6px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <span style="font-size:9px;color:#5EEAD4;letter-spacing:2px;
+                                 text-transform:uppercase;font-weight:700;">📰 News Impact Score</span>
+                    <span style="font-size:12px;font-weight:800;color:{ns_col};
+                                 font-family:'JetBrains Mono',monospace;">{ns_label}</span>
+                  </div>
+                  <div style="background:#0D1525;border-radius:4px;height:6px;overflow:hidden;">
+                    <div style="height:100%;width:{ns_pct}%;background:{ns_col};
+                                border-radius:4px;transition:width 0.3s;"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-top:3px;">
+                    <span style="font-size:9px;color:#374151;">-5 Very Bearish</span>
+                    <span style="font-size:9px;color:#374151;">+5 Very Bullish</span>
+                  </div>
+                </div>""", unsafe_allow_html=True)
+
+            # Individual headline scores
+            if news_scores:
+                impact_cols = {
+                    'Bullish':  ('#00FF88', '#052A14', '▲'),
+                    'Bearish':  ('#FF6B6B', '#1A0505', '▼'),
+                    'Neutral':  ('#64748B', '#0D1525', '◆'),
+                }
+                mag_badge = {
+                    'High':   ('background:#1A0A00;color:#F97316;', 'HIGH'),
+                    'Medium': ('background:#1A1500;color:#FACC15;', 'MED'),
+                    'Low':    ('background:#111827;color:#64748B;', 'LOW'),
+                }
+                rows_html = ''
+                for item in news_scores[:10]:
+                    imp   = item.get('impact', 'Neutral')
+                    mag   = item.get('magnitude', 'Low')
+                    hdl   = item.get('headline', '')[:75]
+                    ctx   = item.get('context', '')
+                    trig  = item.get('trigger', 'generic').replace('_', ' ').title()
+                    i_col, i_bg, i_arrow = impact_cols.get(imp, impact_cols['Neutral'])
+                    m_style, m_txt = mag_badge.get(mag, mag_badge['Low'])
+                    rows_html += f"""
+                    <div style="padding:8px 0;border-bottom:1px solid #0D1E2E;">
+                      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:3px;">
+                        <span style="color:{i_col};font-size:11px;margin-top:1px;">{i_arrow}</span>
+                        <div style="flex:1;min-width:0;">
+                          <span style="font-size:11px;color:#CBD5E1;line-height:1.4;">{hdl}</span>
+                        </div>
+                        <div style="display:flex;gap:4px;flex-shrink:0;">
+                          <span style="font-size:9px;font-weight:700;padding:2px 5px;
+                                       border-radius:3px;{m_style}">{m_txt}</span>
+                          <span style="font-size:9px;font-weight:700;padding:2px 5px;
+                                       border-radius:3px;background:{i_bg};color:{i_col};">{imp}</span>
+                        </div>
+                      </div>
+                      <div style="font-size:10px;color:#4A6080;margin-left:19px;">
+                        {trig} · {ctx}</div>
+                    </div>"""
+                st.markdown(f"""
+                <div style="background:#070F1A;border:1px solid #1A2A3A;border-radius:8px;
+                            padding:10px 14px;margin-bottom:8px;">
+                  <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;
+                               text-transform:uppercase;font-weight:700;margin-bottom:4px;">
+                    Headline Analysis</div>
+                  {rows_html}
+                </div>""", unsafe_allow_html=True)
+
     else:
         st.markdown(f"""
         <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
