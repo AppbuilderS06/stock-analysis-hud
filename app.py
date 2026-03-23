@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import anthropic
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # ── Data layer: FMP primary, yfinance fallback ───────────────
 def _fmp_get(endpoint, api_key, params=""):
@@ -460,9 +460,8 @@ def fetch_ticker_data(ticker, fmp_key="", _v=17):
         except: pass
 
         try:
-            from datetime import datetime as _dt, timedelta
-            today = _dt.now().strftime("%Y-%m-%d")
-            fut   = (_dt.now() + timedelta(days=180)).strftime("%Y-%m-%d")
+            today = datetime.now().strftime("%Y-%m-%d")
+            fut   = (datetime.now() + timedelta(days=180)).strftime("%Y-%m-%d")
             cal = _fmp_get(f"v3/earning_calendar?from={today}&to={fut}", fmp_key)
             if cal and isinstance(cal, list):
                 matches = [e for e in cal if str(e.get("symbol","")).upper() == ticker.upper()]
@@ -3510,7 +3509,6 @@ def render_hud():
         st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:12px;color:#4A6080;">No recent insider transactions found</div>', unsafe_allow_html=True)
     else:
         # ── Insider sentiment flag ────────────────────────────
-        from datetime import datetime, timedelta
         cutoff = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         buy_val  = sum(i['value'] for i in insider_data if i['type']=='BUY'  and i.get('date','') >= cutoff)
         sell_val = sum(i['value'] for i in insider_data if i['type']=='SELL' and i.get('date','') >= cutoff)
