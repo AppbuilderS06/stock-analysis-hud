@@ -2151,6 +2151,7 @@ def main():
 
                     if ticker_upper:
                         if ticker_upper in MULTI_LISTED:
+                            # Multiple options — user must choose
                             rows = [{"sym": o["ticker"], "name": o["name"],
                                      "exch": o["exchange"], "curr": o["currency"],
                                      "key": f'ml_{o["ticker"]}'}
@@ -2163,14 +2164,13 @@ def main():
                                               if r.get("symbol","").upper() == ticker_upper), None)
                                 if exact and len({r.get("symbol","").upper() for r in results
                                                   if r.get("symbol","").upper() == ticker_upper}) == 1:
+                                    # Single unambiguous match — auto-confirm
                                     nm = exact.get("name","")[:52]
                                     ex = exact.get("exchangeShortName","")
                                     cu = exact.get("currency","USD")
-                                    render_preview_card(ticker_upper, nm, ex, cu)
-                                    if st.button(f"Select {nm} →", type="primary",
-                                                 use_container_width=True, key="select_exact"):
-                                        _confirm(ticker_upper, nm, ex, cu)
+                                    _confirm(ticker_upper, nm, ex, cu)
                                 else:
+                                    # Multiple results — user must choose
                                     rows = [{"sym": r.get("symbol",""), "name": r.get("name","")[:45],
                                              "exch": r.get("exchangeShortName",""), "curr": r.get("currency","USD"),
                                              "key": f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
@@ -2189,21 +2189,18 @@ def main():
                                             for m in matches]
                                     render_dropdown_search(rows)
                                 elif len(matches) == 1:
+                                    # Single yfinance match — auto-confirm
                                     m = matches[0]
-                                    render_preview_card(m["sym"], m["name"],
-                                                        m["exchange"], m["currency"])
-                                    if st.button(f"Select {m['name']} →", type="primary",
-                                                 use_container_width=True, key="select_yf"):
-                                        _confirm(m["sym"], m["name"], m["exchange"], m["currency"])
+                                    _confirm(m["sym"], m["name"], m["exchange"], m["currency"])
                                 else:
+                                    # Unknown ticker — show verify card + confirm button
                                     render_preview_card(ticker_upper, "", "", "", name_found=False)
                                     if st.button(f"Select {ticker_upper} →", type="primary",
                                                  use_container_width=True, key="select_unk"):
                                         _confirm(ticker_upper, "", "", "", name_found=False)
                         else:
-                            if st.button(f"Select {ticker_upper} →", type="primary",
-                                         use_container_width=True, key="select_direct"):
-                                _confirm(ticker_upper, "", "", "", name_found=False)
+                            # No FMP key — auto-confirm directly
+                            _confirm(ticker_upper, "", "", "", name_found=False)
 
                 # ── PHASE 2: CONFIRM CARD ─────────────────────
                 if st.session_state.get("_confirmed_ticker"):
@@ -2966,8 +2963,6 @@ def render_hud():
     s_fund_sent  = a.get('summary_fundamental_sentiment', 'mixed')
     s_macro      = a.get('summary_macro', '')
     s_macro_sent = a.get('summary_macro_sentiment', 'mixed')
-    news_scores  = a.get('news_scores', [])
-    net_score    = a.get('net_news_score', None)
     s_fall       = a.get('summary', '')
 
     has_structured = bool(s_tech or s_lvl or s_fund or s_macro)
@@ -2982,38 +2977,6 @@ def render_hud():
         render_summary_para("Technical Structure", "📊", s_tech,  s_tech_sent)
         render_summary_para("Fundamental Quality", "📈", s_fund,  s_fund_sent)
         render_summary_para("Macro & News Events", "🌍", s_macro, s_macro_sent)
-
-        # ── News Impact Score bar ─────────────────────────
-        if net_score is not None:
-            try:
-                ns = int(net_score)
-            except:
-                ns = 0
-            ns_clamped = max(-5, min(5, ns))
-            ns_pct     = int((ns_clamped + 5) / 10 * 100)
-            if ns > 1:    ns_col, ns_label = '#00FF88', f'+{ns} Bullish'
-            elif ns == 1: ns_col, ns_label = '#00FF88', '+1 Mildly Bullish'
-            elif ns == 0: ns_col, ns_label = '#FACC15', '0 Neutral'
-            elif ns ==-1: ns_col, ns_label = '#FF6B6B', '-1 Mildly Bearish'
-            else:         ns_col, ns_label = '#FF6B6B', f'{ns} Bearish'
-            st.markdown(f"""
-            <div style="background:#0A1020;border:1px solid #1A2A3A;border-radius:8px;
-                        padding:10px 14px;margin-bottom:8px;">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <span style="font-size:9px;color:#5EEAD4;letter-spacing:2px;
-                             text-transform:uppercase;font-weight:700;">📰 News Impact Score</span>
-                <span style="font-size:12px;font-weight:800;color:{ns_col};
-                             font-family:'JetBrains Mono',monospace;">{ns_label}</span>
-              </div>
-              <div style="background:#0D1525;border-radius:4px;height:6px;overflow:hidden;">
-                <div style="height:100%;width:{ns_pct}%;background:{ns_col};border-radius:4px;"></div>
-              </div>
-              <div style="display:flex;justify-content:space-between;margin-top:3px;">
-                <span style="font-size:9px;color:#374151;">-5 Very Bearish</span>
-                <span style="font-size:9px;color:#374151;">+5 Very Bullish</span>
-              </div>
-            </div>""", unsafe_allow_html=True)
-
 
     else:
         st.markdown(f"""
@@ -3553,31 +3516,90 @@ def render_hud():
 
     # ── NEWS SENTIMENT ────────────────────────────────────────
     news_sentiment = a.get('news_sentiment', [])
+    news_scores    = a.get('news_scores', [])
+    net_score      = a.get('net_news_score', None)
     st.markdown('<div class="section-header">News & Sentiment</div>', unsafe_allow_html=True)
+
     if not news_items:
         st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:12px;color:#4A6080;">No recent news available</div>', unsafe_allow_html=True)
     else:
-        news_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;">'
+        st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:4px 0;">', unsafe_allow_html=True)
         for i, news in enumerate(news_items):
             title     = news.get('title','')
             pub       = news.get('publisher','')
             link      = news.get('link','')
-            sent_data = next((s for s in news_sentiment if title[:20] in s.get('headline','') or s.get('headline','')[:20] in title), None)
+            published = news.get('published','')[:10] if news.get('published') else ''
+
+            # Match to Claude's sentiment scoring
+            sent_data = next((s for s in news_sentiment
+                              if title[:20] in s.get('headline','')
+                              or s.get('headline','')[:20] in title), None)
             sent      = sent_data.get('sentiment','neutral') if sent_data else 'neutral'
             reason    = sent_data.get('reason','') if sent_data else ''
-            sent_col  = "#00FF88" if sent=='bullish' else "#FF6B6B" if sent=='bearish' else "#FACC15"
-            sent_icon = "▲" if sent=='bullish' else "▼" if sent=='bearish' else "↔"
-            sent_lbl  = sent.capitalize()
-            news_html += f'<div class="news-row">'
-            if link:
-                news_html += f'<div class="news-headline"><a href="{link}" target="_blank" style="color:#E2E8F0;text-decoration:none;">{title}</a></div>'
-            else:
-                news_html += f'<div class="news-headline">{title}</div>'
-            news_html += f'<div class="news-meta"><span style="color:#4A6080;">{pub}</span><span style="color:{sent_col};font-weight:700;">{sent_icon} {sent_lbl}</span></div>'
-            if reason:
-                news_html += f'<div style="font-size:11px;color:#64748B;margin-top:3px;">{reason}</div>'
-            news_html += '</div>'
-        st.markdown(news_html + '</div>', unsafe_allow_html=True)
+
+            # Match to news_scores for keyword trigger + magnitude
+            score_data = next((s for s in news_scores
+                               if title[:25] in s.get('headline','')
+                               or s.get('headline','')[:25] in title), None)
+            trigger   = score_data.get('trigger','').replace('_',' ').title() if score_data else ''
+            magnitude = score_data.get('magnitude','') if score_data else ''
+
+            sent_col  = '#00FF88' if sent=='bullish' else '#FF6B6B' if sent=='bearish' else '#FACC15'
+            sent_icon = '▲' if sent=='bullish' else '▼' if sent=='bearish' else '↔'
+            mag_col   = '#F97316' if magnitude=='High' else '#FACC15' if magnitude=='Medium' else '#64748B'
+            border_b  = 'border-bottom:1px solid #243348;' if i < len(news_items)-1 else ''
+
+            # Headline row
+            st.markdown(f"""
+            <div style="padding:8px 14px;{border_b}">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+                <div style="flex:1;min-width:0;">
+                  {'<a href="' + link + '" target="_blank" style="color:#E2E8F0;text-decoration:none;font-size:12px;line-height:1.4;">' + title + '</a>' if link else '<span style="color:#E2E8F0;font-size:12px;line-height:1.4;">' + title + '</span>'}
+                </div>
+                <div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">
+                  {'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:' + mag_col + ';">' + magnitude + '</span>' if magnitude else ''}
+                  <span style="font-size:10px;font-weight:700;color:{sent_col};">{sent_icon} {sent.capitalize()}</span>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;margin-top:3px;align-items:center;">
+                <span style="font-size:10px;color:#4A6080;">{pub}{' · ' + published if published else ''}</span>
+                {('<span style="font-size:9px;color:#374151;">· ' + trigger + '</span>') if trigger else ''}
+              </div>
+              {('<div style="font-size:11px;color:#64748B;margin-top:2px;">' + reason + '</div>') if reason else ''}
+            </div>""", unsafe_allow_html=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
+
+        # Net news score bar — separate st.markdown, no nesting issue
+        if net_score is not None:
+            try:
+                ns = int(net_score)
+            except:
+                ns = 0
+            ns_clamped = max(-5, min(5, ns))
+            ns_pct     = int((ns_clamped + 5) / 10 * 100)
+            if ns > 1:    ns_col, ns_label = '#00FF88', f'+{ns} Bullish'
+            elif ns == 1: ns_col, ns_label = '#00FF88', '+1 Mildly Bullish'
+            elif ns == 0: ns_col, ns_label = '#FACC15', '0 Neutral'
+            elif ns ==-1: ns_col, ns_label = '#FF6B6B', '-1 Mildly Bearish'
+            else:         ns_col, ns_label = '#FF6B6B', f'{ns} Bearish'
+            st.markdown(f"""
+            <div style="background:#0A1020;border:1px solid #1A2A3A;border-radius:8px;
+                        padding:10px 14px;margin-top:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <span style="font-size:9px;color:#5EEAD4;letter-spacing:2px;
+                             text-transform:uppercase;font-weight:700;">📰 News Impact Score</span>
+                <span style="font-size:12px;font-weight:800;color:{ns_col};
+                             font-family:'JetBrains Mono',monospace;">{ns_label}</span>
+              </div>
+              <div style="background:#0D1525;border-radius:4px;height:6px;overflow:hidden;">
+                <div style="height:100%;width:{ns_pct}%;background:{ns_col};border-radius:4px;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:3px;">
+                <span style="font-size:9px;color:#374151;">-5 Very Bearish</span>
+                <span style="font-size:9px;color:#374151;">+5 Very Bullish</span>
+              </div>
+            </div>""", unsafe_allow_html=True)
 
     # ── MARKET CONTEXT ────────────────────────────────────────
     mctx      = st.session_state.get('market_ctx', {})
