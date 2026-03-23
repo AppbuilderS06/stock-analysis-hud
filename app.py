@@ -2578,7 +2578,6 @@ def main():
                     </span>
                   </div>
                 </div>""", unsafe_allow_html=True)
-                render_screener()
         return
 
     render_hud()
@@ -3236,25 +3235,42 @@ def render_hud():
           <div class="score-markers"><span>AVOID</span><span>NEUTRAL</span><span>STRONG</span></div>
           <div style="font-size:12px;color:{score_col};font-weight:700;margin-top:7px;">{tf_meaning}</div>
           <div style="font-size:11px;color:#94A3B8;font-weight:600;margin-top:4px;line-height:1.5;">{tf_desc[cur_tf]}</div>
-          <div style="font-size:10px;color:#5EEAD4;margin-top:5px;line-height:1.6;">
-            <span style="color:#4A6080;font-size:9px;letter-spacing:1px;text-transform:uppercase;">Signals used · </span>{tf_signals_used[cur_tf]}
-          </div>
           <div style="margin-top:8px;padding-top:6px;border-top:1px solid #243348;">
-            <div style="font-size:10px;color:#00FF88;margin-bottom:3px;line-height:1.5;">&#9650; {bull_names}</div>
-            <div style="font-size:10px;color:#FF6B6B;line-height:1.5;">&#9660; {bear_names}</div>
+            <div style="font-size:12px;color:#00FF88;font-weight:700;margin-bottom:4px;line-height:1.6;">&#9650; {bull_names}</div>
+            <div style="font-size:12px;color:#FF6B6B;font-weight:700;line-height:1.6;">&#9660; {bear_names}</div>
           </div>
         </div>""", unsafe_allow_html=True)
 
-        # Arrows inside the card flow — compact, side by side
-        btn_l, btn_r = st.columns(2)
-        with btn_l:
-            if st.button("◀ Prev", key="tf_prev", use_container_width=True):
+        # Arrows — 3 cols: ◀ | TIMEFRAME NAME | ▶
+        arr_l, arr_m, arr_r = st.columns([1, 2, 1])
+        with arr_l:
+            if st.button("◀", key="tf_prev", use_container_width=True):
                 st.session_state['score_timeframe'] = tf_order[(cur_idx - 1) % 3]
                 st.rerun()
-        with btn_r:
-            if st.button("Next ▶", key="tf_next", use_container_width=True):
+        with arr_m:
+            tf_name_colors = {'Day': '#FACC15', 'Swing': '#38BDF8', 'Position': '#00FF88'}
+            st.markdown(
+                f'<div style="text-align:center;padding-top:4px;font-size:13px;'
+                f'font-weight:800;color:{tf_name_colors[cur_tf]};letter-spacing:1px;">'
+                f'{cur_tf.upper()}</div>',
+                unsafe_allow_html=True)
+        with arr_r:
+            if st.button("▶", key="tf_next", use_container_width=True):
                 st.session_state['score_timeframe'] = tf_order[(cur_idx + 1) % 3]
                 st.rerun()
+
+        # Timeframe notes — relocated here from below R/R calculator
+        day_note   = a.get('day_trade_note', '')
+        swing_note = a.get('swing_note', '')
+        inv_note   = a.get('invest_note', '')
+        if day_note or swing_note or inv_note:
+            st.markdown('<div style="margin-top:8px;"></div>', unsafe_allow_html=True)
+            if day_note:
+                st.markdown(f'<div class="tf-day"><div class="tf-label" style="color:#FACC15;">⚡ Day Trade</div><div class="tf-note">{day_note}</div></div>', unsafe_allow_html=True)
+            if swing_note:
+                st.markdown(f'<div class="tf-swing"><div class="tf-label" style="color:#38BDF8;">🔄 Swing Trade</div><div class="tf-note">{swing_note}</div></div>', unsafe_allow_html=True)
+            if inv_note:
+                st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">📈 Position</div><div class="tf-note">{inv_note}</div></div>', unsafe_allow_html=True)
 
     # ── AI Summary — 3 paragraph layout ─────────────────────
     def render_summary_para(label, icon, text, sentiment):
@@ -3494,6 +3510,46 @@ def render_hud():
         funds_html += '</div>'
         st.markdown(funds_html, unsafe_allow_html=True)
 
+        # ── Analyst Ratings — relocated here from full-width ──
+        buy   = analyst_data.get('buy', 0)
+        hold  = analyst_data.get('hold', 0)
+        sell  = analyst_data.get('sell', 0)
+        total_analysts = buy + hold + sell
+        target      = analyst_data.get('target', 0)
+        target_low  = analyst_data.get('target_low', 0)
+        target_high = analyst_data.get('target_high', 0)
+        rec_key     = analyst_data.get('rec_key', 'N/A').replace('-',' ').title()
+        num_analysts = analyst_data.get('num_analysts', 0)
+        upside  = ((target / close) - 1) * 100 if target > 0 and close > 0 else 0
+        up_col  = "#00FF88" if upside > 10 else "#FACC15" if upside > 0 else "#FF6B6B"
+        cons_col = "#00FF88" if 'Buy' in rec_key or 'Strong' in rec_key else "#FF6B6B" if 'Sell' in rec_key else "#FACC15"
+        st.markdown('<div class="section-header" style="margin-top:8px;">Analyst Ratings</div>', unsafe_allow_html=True)
+        an1, an2, an3, an4 = st.columns(4)
+        for acol, lbl, val, col in [
+            (an1, "Consensus",    rec_key if rec_key != 'N/A' else "N/A", cons_col),
+            (an2, "Price Target", f"{cur}{target:.2f}" if target else "N/A", up_col),
+            (an3, "Upside",       f"{upside:+.1f}%" if target else "N/A", up_col),
+            (an4, "# Analysts",   str(num_analysts) if num_analysts else "N/A", "#94A3B8"),
+        ]:
+            with acol:
+                st.markdown(f'<div class="earn-bar" style="border-left-color:{col};"><div class="earn-label">{lbl}</div><div class="earn-val" style="color:{col};">{val}</div></div>', unsafe_allow_html=True)
+        if total_analysts > 0:
+            buy_pct  = int(buy  / total_analysts * 100)
+            hold_pct = int(hold / total_analysts * 100)
+            sell_pct = 100 - buy_pct - hold_pct
+            st.markdown(f'''<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:10px 16px;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">
+                <span style="color:#00FF88;font-weight:700;">Buy {buy} ({buy_pct}%)</span>
+                <span style="color:#FACC15;font-weight:700;">Hold {hold} ({hold_pct}%)</span>
+                <span style="color:#FF6B6B;font-weight:700;">Sell {sell} ({sell_pct}%)</span>
+              </div>
+              <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;">
+                <div style="width:{buy_pct}%;background:#00FF88;"></div>
+                <div style="width:{hold_pct}%;background:#FACC15;"></div>
+                <div style="width:{sell_pct}%;background:#FF6B6B;"></div>
+              </div>
+            </div>''', unsafe_allow_html=True)
+
     # ── VOLATILITY ───────────────────────────────────────────
     cur_close = float(row['Close'])
     bb_upper  = vol_data.get('bb_upper', 0)
@@ -3552,47 +3608,6 @@ def render_hud():
         iv_rows += f'<div class="vol-row"><span class="vol-lbl">Day range est.</span><span style="color:#38BDF8;font-family:monospace;">{cur}{cur_close - float(row["ATR"]):.2f} – {cur}{cur_close + float(row["ATR"]):.2f}</span></div>'
         st.markdown(iv_rows + '</div>', unsafe_allow_html=True)
 
-    # ── ANALYST RATINGS ──────────────────────────────────────
-    buy   = analyst_data.get('buy', 0)
-    hold  = analyst_data.get('hold', 0)
-    sell  = analyst_data.get('sell', 0)
-    total_analysts = buy + hold + sell
-    target      = analyst_data.get('target', 0)
-    target_low  = analyst_data.get('target_low', 0)
-    target_high = analyst_data.get('target_high', 0)
-    rec_key     = analyst_data.get('rec_key', 'N/A').replace('-',' ').title()
-    num_analysts = analyst_data.get('num_analysts', 0)
-    upside  = ((target / cur_close) - 1) * 100 if target > 0 and cur_close > 0 else 0
-    up_col  = "#00FF88" if upside > 10 else "#FACC15" if upside > 0 else "#FF6B6B"
-    cons_col = "#00FF88" if 'Buy' in rec_key or 'Strong' in rec_key else "#FF6B6B" if 'Sell' in rec_key else "#FACC15"
-    st.markdown('<div class="section-header">Analyst Ratings</div>', unsafe_allow_html=True)
-    ac1, ac2, ac3, ac4, ac5 = st.columns(5)
-    for acol, lbl, val, col in [
-        (ac1, "Consensus",    rec_key if rec_key != 'N/A' else "N/A", cons_col),
-        (ac2, "# Analysts",   str(num_analysts) if num_analysts else "N/A", "#94A3B8"),
-        (ac3, "Price Target", f"{cur}{target:.2f}" if target else "N/A", up_col),
-        (ac4, "Upside",       f"{upside:+.1f}%" if target else "N/A", up_col),
-        (ac5, "Target Range", f"{cur}{target_low:.0f}–{cur}{target_high:.0f}" if target_low else "N/A", "#94A3B8"),
-    ]:
-        with acol:
-            st.markdown(f'<div class="earn-bar" style="border-left-color:{col};"><div class="earn-label">{lbl}</div><div class="earn-val" style="color:{col};">{val}</div></div>', unsafe_allow_html=True)
-    if total_analysts > 0:
-        buy_pct  = int(buy  / total_analysts * 100)
-        hold_pct = int(hold / total_analysts * 100)
-        sell_pct = 100 - buy_pct - hold_pct
-        st.markdown(f'''<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:10px 16px;">
-          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">
-            <span style="color:#00FF88;font-weight:700;">Buy {buy} ({buy_pct}%)</span>
-            <span style="color:#FACC15;font-weight:700;">Hold {hold} ({hold_pct}%)</span>
-            <span style="color:#FF6B6B;font-weight:700;">Sell {sell} ({sell_pct}%)</span>
-          </div>
-          <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;">
-            <div style="width:{buy_pct}%;background:#00FF88;"></div>
-            <div style="width:{hold_pct}%;background:#FACC15;"></div>
-            <div style="width:{sell_pct}%;background:#FF6B6B;"></div>
-          </div>
-        </div>''', unsafe_allow_html=True)
-
     # ── REASONS ───────────────────────────────────────────────
     bulls = a.get('reasons_bull', [])
     bears = a.get('reasons_bear', [])
@@ -3603,15 +3618,6 @@ def render_hud():
     with c2:
         for b in bears:
             st.markdown(f'<div class="reason-bear">− &nbsp;{b}</div>', unsafe_allow_html=True)
-
-    # ── TIMEFRAMES ────────────────────────────────────────────
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.markdown(f'<div class="tf-day"><div class="tf-label" style="color:#FACC15;">Day Trade</div><div class="tf-note">{a.get("day_trade_note","")}</div></div>', unsafe_allow_html=True)
-    with c2:
-        st.markdown(f'<div class="tf-swing"><div class="tf-label" style="color:#38BDF8;">Swing Trade</div><div class="tf-note">{a.get("swing_note","")}</div></div>', unsafe_allow_html=True)
-    with c3:
-        st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">Invest</div><div class="tf-note">{a.get("invest_note","")}</div></div>', unsafe_allow_html=True)
 
     # ── R/R CALCULATOR — tabs removed ────────────────────────
     st.markdown('<div class="section-header" style="margin-top:8px;">⚡ Risk / Reward Calculator</div>', unsafe_allow_html=True)
