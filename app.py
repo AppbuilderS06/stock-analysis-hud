@@ -2773,6 +2773,29 @@ def render_hud():
             {vol_ratio:.1f}x average volume — unusual activity, watch for a price move</span>
           </div></div>''', unsafe_allow_html=True)
 
+    # ── Wide-Ranging Bar Flag ─────────────────────────────────
+    atr_val   = float(row['ATR'])
+    candle_range = float(row['High']) - float(row['Low'])
+    wide_bar  = candle_range > 2.5 * atr_val
+    if wide_bar:
+        up_candle = float(row['Close']) >= float(row['Open'])
+        wrb_col   = '#38BDF8' if up_candle else '#FF6B6B'
+        wrb_bg    = '#040E18' if up_candle else '#1A0505'
+        wrb_icon  = '⚡' if up_candle else '🔻'
+        wrb_dir   = 'BULLISH' if up_candle else 'BEARISH'
+        wrb_note  = ('Overwhelming buying — prior resistance levels may now act as support'
+                     if up_candle else
+                     'Overwhelming selling — prior support levels may no longer hold')
+        st.markdown(f'''<div style="background:{wrb_bg};border:1px solid {wrb_col};border-radius:8px;
+            padding:8px 16px;margin:6px 0;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">{wrb_icon}</span>
+          <div><span style="color:{wrb_col};font-weight:800;font-size:13px;
+            font-family:'JetBrains Mono',monospace;">
+            WIDE-RANGING BAR — {wrb_dir}</span>
+          <span style="color:{wrb_col}99;font-size:12px;margin-left:10px;">
+            Range {candle_range:.2f} = {candle_range/atr_val:.1f}× ATR — {wrb_note}</span>
+          </div></div>''', unsafe_allow_html=True)
+
     # ── OBV Divergence Flag ──────────────────────────────────
     obv_div = int(df['OBV_div'].iloc[-1]) if 'OBV_div' in df.columns else 0
     if obv_div == 1:
