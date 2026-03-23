@@ -308,18 +308,66 @@ def fetch_ticker_data(ticker, fmp_key="", _v=17):
     # FMP news first — ticker-tagged, structured, more reliable than yfinance
     if use_fmp:
         try:
-            articles = _fmp_get(f"v3/stock_news?tickers={ticker}&limit=10", fmp_key)
+            articles = _fmp_get(f"v3/stock_news?tickers={ticker}&limit=20", fmp_key)
             if articles and isinstance(articles, list):
-                for a in articles[:10]:
+                # Build relevance keywords from ticker + company name
+                company_name = str(info.get('longName') or info.get('shortName') or '').lower()
+                sector       = str(info.get('sector') or '').lower()
+                industry     = str(info.get('industry') or '').lower()
+                tick_lower   = ticker.lower().replace('-','').replace('.to','').replace('.l','')
+
+                # Sector-specific keywords that indicate market-relevant news
+                sector_kw = {
+                    'technology': ['ai','chip','semiconductor','nvidia','amd','intel','tsmc','cloud','data center','gpu','cpu'],
+                    'information technology': ['ai','chip','semiconductor','cloud','data center','software','saas'],
+                    'communication services': ['ad','advertising','streaming','social','meta','google','alphabet','content'],
+                    'financials': ['rate','fed','interest','bank','lending','credit','loan','yield'],
+                    'health care': ['fda','drug','trial','biotech','pharma','approval','clinical'],
+                    'healthcare': ['fda','drug','trial','biotech','pharma','approval','clinical'],
+                    'energy': ['oil','gas','opec','crude','refinery','energy','pipeline'],
+                    'consumer discretionary': ['retail','consumer','spending','amazon','tesla','ev'],
+                    'industrials': ['aerospace','defense','manufacturing','supply chain'],
+                    'materials': ['commodities','metal','mining','lithium','copper'],
+                }
+                extra_kw = sector_kw.get(sector, []) + sector_kw.get(industry[:20], [])
+
+                def relevance_score(title):
+                    t = title.lower()
+                    score = 0
+                    # Direct company/ticker mention = highest weight
+                    if tick_lower in t: score += 10
+                    if company_name and any(w in t for w in company_name.split() if len(w) > 3):
+                        score += 8
+                    # Sector/industry keywords
+                    for kw in extra_kw:
+                        if kw in t: score += 2
+                    # Generic filler penalty
+                    filler = ['$1,000','passive income','buy this etf','10 years ago',
+                              'chipotle','coca-cola','dividend','here\'s how much',
+                              'warren buffett','best stocks to buy','should you buy']
+                    for f in filler:
+                        if f in t: score -= 5
+                    return score
+
+                scored = []
+                for a in articles[:20]:
                     t = str(a.get("title","")).strip()
                     if t:
-                        news.append({
+                        scored.append((relevance_score(t), {
                             "title":     t,
                             "publisher": str(a.get("site","")),
                             "link":      str(a.get("url","")),
                             "published": str(a.get("publishedDate",""))
-                        })
+                        }))
+
+                # Sort by relevance, keep top 8 with score > 0
+                scored.sort(key=lambda x: x[0], reverse=True)
+                news = [item for score, item in scored if score > 0][:8]
+                # If filtering was too aggressive, fall back to top 5 unfiltered
+                if not news:
+                    news = [item for _, item in scored[:5]]
         except: pass
+
     # yfinance news as fallback when FMP returns nothing
     if not news:
         try:
@@ -1901,7 +1949,8 @@ def main():
                         font-weight:700;margin-bottom:10px;font-family:'JetBrains Mono',monospace;">KEY TERMS</div>""",
                         unsafe_allow_html=True)
             glossary = [
-                ("ATR","#FACC15","Average True Range. The average daily price swing over 14 days. Used to set stop losses and gauge volatility."),
+                ("ADR %","#00FF88","Average Daily Range %. How much the stock moves from low to high on an average day, as a percentage of price. At $176 with 3.2% ADR, that's ~$5.72 of daily movement. · Under 1.5%: Too slow — not enough range to trade profitably after commissions. · 1.5–4% Sweet spot: Ideal for day and swing trading — enough movement for good R/R, not so wild it stops you out constantly. · 4–6% High momentum: Good for experienced day traders, risky for beginners. · Above 6% Dangerous: Whipsaws are frequent, position sizing must be very small. For investing, ADR% is mostly noise — only matters if it's rapidly expanding (rising volatility = potential catalyst or deterioration)."),
+                ("ATR","#FACC15","Average True Range. The average daily price swing in dollars over 14 days. At $176 with ATR $5.72 — the stock moves ~$5.72 from low to high on an average day. Use it to set stop losses, size positions, and judge whether the stock has enough range to trade profitably."),
                 ("EPS","#38BDF8","Earnings Per Share. Net profit divided by shares outstanding. Beat the estimate = stock usually gaps up."),
                 ("Fibonacci","#00FF88","Retracement levels (38.2%, 50%, 61.8%). Traders watch these as potential support/resistance in pullbacks."),
                 ("Float","#94A3B8","The number of shares available to trade publicly. Low float stocks are more volatile."),
@@ -3052,17 +3101,7 @@ def render_hud():
         atr_low    = round(close - atr_dollar, 2)
         atr_high   = round(close + atr_dollar, 2)
         levels_html += data_row("Entry zone", f"{cur}{a.get('entry_low',0):.2f} – {cur}{a.get('entry_high',0):.2f}", "val-y")
-        adr_pct = (atr_dollar / close) * 100
-        if adr_pct < 1.5:
-            adr_label = "Too slow"; adr_cls = "val-r"
-        elif adr_pct <= 4.0:
-            adr_label = "Sweet spot ✓"; adr_cls = "val-g"
-        elif adr_pct <= 6.0:
-            adr_label = "High momentum"; adr_cls = "val-y"
-        else:
-            adr_label = "Dangerous"; adr_cls = "val-r"
         levels_html += data_row("ATR (14)", f"{cur}{atr_dollar:.2f}  →  range {cur}{atr_low:.2f} – {cur}{atr_high:.2f}", "val-b", True)
-        levels_html += data_row("ADR %", f"{adr_pct:.1f}%  —  {adr_label}", adr_cls)
         levels_html += data_row("VWAP",    f"{cur}{vwap:.2f}",   "val-g" if close > vwap  else "val-r")
         levels_html += data_row("100 EMA", f"{cur}{ema100:.2f}", "val-g" if close > ema100 else "val-r")
         levels_html += data_row("38.2% Fib", f"{cur}{fib382:.2f}", "val-m", show_info=True)
