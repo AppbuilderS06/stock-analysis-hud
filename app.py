@@ -2151,12 +2151,17 @@ def main():
 
                     if ticker_upper:
                         if ticker_upper in MULTI_LISTED:
-                            # Multiple options — user must choose
                             rows = [{"sym": o["ticker"], "name": o["name"],
                                      "exch": o["exchange"], "curr": o["currency"],
                                      "key": f'ml_{o["ticker"]}'}
                                     for o in MULTI_LISTED[ticker_upper]]
-                            render_dropdown_search(rows)
+                            if len(rows) == 1:
+                                # Single entry — auto-confirm
+                                _confirm(rows[0]["sym"], rows[0]["name"],
+                                         rows[0]["exch"], rows[0]["curr"])
+                            else:
+                                # Multiple options — user must choose
+                                render_dropdown_search(rows)
                         elif fmp_key_lp:
                             results = search_ticker_fmp(ticker_upper, fmp_key_lp)
                             if results:
