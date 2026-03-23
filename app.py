@@ -3554,23 +3554,44 @@ def render_hud():
             mag_col   = '#F97316' if magnitude=='High' else '#FACC15' if magnitude=='Medium' else '#64748B'
             border_b  = 'border-bottom:1px solid #243348;' if i < len(news_items)-1 else ''
 
-            # Headline row
+            # Pre-compute all conditional HTML as variables — no ternaries inside f-string
+            if link:
+                title_html = f'<a href="{link}" target="_blank" style="color:#E2E8F0;text-decoration:none;font-size:12px;line-height:1.4;">{title}</a>'
+            else:
+                title_html = f'<span style="color:#E2E8F0;font-size:12px;line-height:1.4;">{title}</span>'
+
+            if magnitude:
+                mag_html = f'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:{mag_col};">{magnitude}</span>'
+            else:
+                mag_html = ''
+
+            if trigger:
+                trigger_html = f'<span style="font-size:9px;color:#374151;">· {trigger}</span>'
+            else:
+                trigger_html = ''
+
+            if reason:
+                reason_html = f'<div style="font-size:11px;color:#64748B;margin-top:2px;">{reason}</div>'
+            else:
+                reason_html = ''
+
+            pub_date = f"{pub}{' · ' + published if published else ''}"
+
+            # Headline row — no conditionals inside f-string
             st.markdown(f"""
             <div style="padding:8px 14px;{border_b}">
               <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-                <div style="flex:1;min-width:0;">
-                  {'<a href="' + link + '" target="_blank" style="color:#E2E8F0;text-decoration:none;font-size:12px;line-height:1.4;">' + title + '</a>' if link else '<span style="color:#E2E8F0;font-size:12px;line-height:1.4;">' + title + '</span>'}
-                </div>
+                <div style="flex:1;min-width:0;">{title_html}</div>
                 <div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">
-                  {'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:' + mag_col + ';">' + magnitude + '</span>' if magnitude else ''}
+                  {mag_html}
                   <span style="font-size:10px;font-weight:700;color:{sent_col};">{sent_icon} {sent.capitalize()}</span>
                 </div>
               </div>
               <div style="display:flex;gap:8px;margin-top:3px;align-items:center;">
-                <span style="font-size:10px;color:#4A6080;">{pub}{' · ' + published if published else ''}</span>
-                {('<span style="font-size:9px;color:#374151;">· ' + trigger + '</span>') if trigger else ''}
+                <span style="font-size:10px;color:#4A6080;">{pub_date}</span>
+                {trigger_html}
               </div>
-              {('<div style="font-size:11px;color:#64748B;margin-top:2px;">' + reason + '</div>') if reason else ''}
+              {reason_html}
             </div>""", unsafe_allow_html=True)
 
         st.markdown('</div>', unsafe_allow_html=True)
