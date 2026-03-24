@@ -715,8 +715,8 @@ st.markdown("""
   .tf-day   { background: #1A1000; border: 1px solid #FACC1533; border-radius: 8px; padding: 12px 14px; }
   .tf-swing { background: #0D1525; border: 1px solid #38BDF833; border-radius: 8px; padding: 12px 14px; }
   .tf-inv   { background: #0D2010; border: 1px solid #00FF8833; border-radius: 8px; padding: 12px 14px; }
-  .tf-label { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
-  .tf-note  { font-size: 12px; color: #CBD5E1; line-height: 1.6; }
+  .tf-label { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .tf-note  { font-size: 13px; color: #CBD5E1; line-height: 1.6; }
 
   .earn-bar { background: #1A2232; border: 1px solid #243348; border-left: 3px solid #818CF8; border-radius: 8px; padding: 10px 16px; }
   .earn-label { font-size: 9px; color: #4A6080; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
@@ -2190,7 +2190,7 @@ def sig_html(label, val, bull, neut=False, subtitle=""):
     cls = "sig-neut" if neut else ("sig-bull" if bull else "sig-bear")
     vcls = "sig-val-y" if neut else ("sig-val-g" if bull else "sig-val-r")
     prefix = "~ " if neut else ("+ " if bull else "− ")
-    sub_html = f'<div style="font-size:11px;color:#F1F5F9;margin-top:3px;letter-spacing:0.3px;">{subtitle}</div>' if subtitle else ""
+    sub_html = f'<div style="font-size:13px;color:#CBD5E1;margin-top:3px;letter-spacing:0.3px;">{subtitle}</div>' if subtitle else ""
     return f'''<div class="{cls}">
       <div class="sig-label">{label}{info_icon(label)}</div>
       {sub_html}
@@ -2208,17 +2208,17 @@ def range_bar_html(low, high, current, cur):
     <div class="data-row" style="flex-direction:column;gap:6px;">
       <div style="display:flex;justify-content:space-between;width:100%;font-size:13px;">
         <span class="data-lbl">52W Range</span>
-        <span class="val-m" style="font-size:11px;">{cur}{low:.2f} → {cur}{high:.2f}</span>
+        <span class="val-m" style="font-size:13px;">{cur}{low:.2f} → {cur}{high:.2f}</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;width:100%;">
-        <span style="font-size:11px;color:#FF6B6B;">{cur}{low:.0f}</span>
+        <span style="font-size:13px;color:#CBD5E1;">{cur}{low:.0f}</span>
         <div class="range-wrap" style="flex:1;position:relative;height:6px;background:#243348;border-radius:3px;">
           <div class="range-fill" style="width:{pct}%;position:absolute;top:0;left:0;height:6px;border-radius:3px;background:linear-gradient(90deg,#FF6B6B,#FACC15,#00FF88);"></div>
           <div class="range-dot" style="left:{pct}%;position:absolute;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>
         </div>
-        <span style="font-size:11px;color:#00FF88;">{cur}{high:.0f}</span>
+        <span style="font-size:13px;color:#CBD5E1;">{cur}{high:.0f}</span>
       </div>
-      <div style="text-align:center;font-size:11px;color:#94A3B8;">{cur}{current:.2f} — {pct}% of 52W range</div>
+      <div style="text-align:center;font-size:13px;color:#CBD5E1;">{cur}{current:.2f} — {pct}% of 52W range</div>
     </div>'''
 
 
@@ -2228,14 +2228,14 @@ def main():
     with st.sidebar:
         st.markdown("""
         <div style="padding:4px 0 16px;border-bottom:1px solid #1E2D42;margin-bottom:12px;">
-          <div style="font-size:9px;color:#5EEAD4;letter-spacing:3px;text-transform:uppercase;
+          <div style="font-size:13px;color:#CBD5E1;letter-spacing:3px;text-transform:uppercase;
                       margin-bottom:5px;font-family:'JetBrains Mono',monospace;">Stock Analysis HUD</div>
           <div style="font-size:16px;font-weight:800;color:#F1F5F9;margin-bottom:2px;">Trading Reference</div>
-          <div style="font-size:11px;color:#64748B;">Signal guide · Glossary · Controls</div>
+          <div style="font-size:13px;color:#CBD5E1;">Signal guide · Glossary · Controls</div>
         </div>""", unsafe_allow_html=True)
 
         with st.expander("📡  Signal Legend", expanded=False):
-            st.markdown("""<div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+            st.markdown("""<div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                         font-weight:700;margin-bottom:10px;font-family:'JetBrains Mono',monospace;">8 SIGNALS EXPLAINED</div>""",
                         unsafe_allow_html=True)
             signals_data = [
@@ -2262,12 +2262,12 @@ def main():
                             padding:9px 12px;margin-bottom:7px;">
                   <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
                               color:{color};margin-bottom:4px;">{abbr}</div>
-                  <div style="font-size:11px;font-weight:600;color:#CBD5E1;margin-bottom:3px;">{full_name}</div>
-                  <div style="font-size:11px;color:#64748B;line-height:1.5;">{explanation}</div>
+                  <div style="font-size:13px;font-weight:600;color:#CBD5E1;margin-bottom:3px;">{full_name}</div>
+                  <div style="font-size:13px;color:#CBD5E1;line-height:1.5;">{explanation}</div>
                 </div>""", unsafe_allow_html=True)
 
         with st.expander("📊  Score Guide", expanded=False):
-            st.markdown("""<div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+            st.markdown("""<div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                         font-weight:700;margin-bottom:10px;font-family:'JetBrains Mono',monospace;">WHAT EACH SCORE MEANS</div>""",
                         unsafe_allow_html=True)
             score_bands = [
@@ -2296,13 +2296,13 @@ def main():
                         <div style="width:{bar_pct}%;height:5px;background:{color};border-radius:3px;"></div>
                       </div>
                     </div>
-                    <span style="font-size:11px;font-weight:700;color:{color};white-space:nowrap;">{label}</span>
+                    <span style="font-size:13px;font-weight:700;color:{color};white-space:nowrap;">{label}</span>
                   </div>
-                  <div style="font-size:11px;color:#94A3B8;line-height:1.5;">{desc}</div>
+                  <div style="font-size:13px;color:#CBD5E1;line-height:1.5;">{desc}</div>
                 </div>""", unsafe_allow_html=True)
 
         with st.expander("📖  Glossary", expanded=False):
-            st.markdown("""<div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+            st.markdown("""<div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                         font-weight:700;margin-bottom:10px;font-family:'JetBrains Mono',monospace;">KEY TERMS</div>""",
                         unsafe_allow_html=True)
             glossary = [
@@ -2328,29 +2328,29 @@ def main():
             for term, color, definition in glossary:
                 st.markdown(f"""
                 <div style="padding:8px 0;border-bottom:1px solid #1E2D42;">
-                  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;
+                  <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;
                                color:{color};margin-bottom:3px;">{term}</div>
-                  <div style="font-size:11px;color:#64748B;line-height:1.55;">{definition}</div>
+                  <div style="font-size:13px;color:#CBD5E1;line-height:1.55;">{definition}</div>
                 </div>""", unsafe_allow_html=True)
 
-        st.markdown("""<div style="font-size:10px;color:#374151;letter-spacing:2px;text-transform:uppercase;
+        st.markdown("""<div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     margin:16px 0 8px;font-family:'JetBrains Mono',monospace;">SYSTEM</div>""",
                     unsafe_allow_html=True)
         fmp_active = bool(st.secrets.get("FMP_API_KEY", ""))
         st.markdown(f"""
         <div style="background:#111827;border:1px solid #1E2D42;border-radius:6px;padding:8px 10px;margin-top:8px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:10px;color:#64748B;">Data source</span>
-            <span style="font-size:11px;font-weight:700;color:{'#00FF88' if fmp_active else '#FACC15'};">
+            <span style="font-size:13px;color:#CBD5E1;">Data source</span>
+            <span style="font-size:13px;font-weight:700;color:{'#00FF88' if fmp_active else '#FACC15'};">
               {'🟢 FMP + yfinance' if fmp_active else '🟡 yfinance only'}
             </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:10px;color:#64748B;">Cache TTL</span>
-            <span style="font-size:11px;color:#94A3B8;">60 min</span>
+            <span style="font-size:13px;color:#CBD5E1;">Cache TTL</span>
+            <span style="font-size:13px;color:#CBD5E1;">60 min</span>
           </div>
         </div>""", unsafe_allow_html=True)
-        st.markdown("""<div style="padding:16px 0 4px;font-size:10px;color:#243348;
+        st.markdown("""<div style="padding:16px 0 4px;font-size:13px;color:#CBD5E1;
                     line-height:1.6;text-align:center;">Educational only · Not financial advice</div>""",
                     unsafe_allow_html=True)
 
@@ -2358,7 +2358,7 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown('<div style="text-align:center;font-size:12px;color:#4A6080;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Stock Analysis · AI HUD</div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align:center;font-size:13px;color:#CBD5E1;letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;">Stock Analysis · AI HUD</div>', unsafe_allow_html=True)
             tab1, tab2, tab3 = st.tabs(["📊 Stock Analysis", "🎙️ Earnings Call Analyzer", "📈 Screener"])
 
             with tab1:
@@ -2379,22 +2379,22 @@ def main():
                         st.markdown("""<div style="background:#081510;border:2px solid #00FF88;
                             border-radius:8px;padding:9px 14px;margin-bottom:2px;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                               font-weight:800;color:#00FF88;letter-spacing:1.5px;">⚡ QUICK</span>
-                            <span style="font-size:10px;color:#00FF88;font-weight:700;">● Active</span>
+                            <span style="font-size:13px;color:#CBD5E1;font-weight:700;">● Active</span>
                           </div>
-                          <div style="font-size:10px;color:#4A6080;margin-top:3px;">
+                          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">
                             Sonnet · ~15s · Full analysis</div>
                         </div>""", unsafe_allow_html=True)
                     else:
                         st.markdown("""<div style="background:#0D1525;border:1px solid #243348;
                             border-radius:8px;padding:9px 14px;margin-bottom:2px;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                               font-weight:800;color:#374151;letter-spacing:1.5px;">⚡ QUICK</span>
-                            <span style="font-size:10px;color:#374151;">Sonnet · ~15s</span>
+                            <span style="font-size:13px;color:#CBD5E1;">Sonnet · ~15s</span>
                           </div>
-                          <div style="font-size:10px;color:#374151;margin-top:3px;">
+                          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">
                             Full technical + fundamental</div>
                         </div>""", unsafe_allow_html=True)
                     if st.button("Select Quick", key="mode_q", use_container_width=True):
@@ -2405,22 +2405,22 @@ def main():
                         st.markdown("""<div style="background:#0D0D2E;border:2px solid #A78BFA;
                             border-radius:8px;padding:9px 14px;margin-bottom:2px;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                               font-weight:800;color:#A78BFA;letter-spacing:1.5px;">🔬 DEEP</span>
-                            <span style="font-size:10px;color:#A78BFA;font-weight:700;">● Active</span>
+                            <span style="font-size:13px;color:#CBD5E1;font-weight:700;">● Active</span>
                           </div>
-                          <div style="font-size:10px;color:#4A6080;margin-top:3px;">
+                          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">
                             Opus · ~45s · Multi-step reasoning</div>
                         </div>""", unsafe_allow_html=True)
                     else:
                         st.markdown("""<div style="background:#0D1525;border:1px solid #243348;
                             border-radius:8px;padding:9px 14px;margin-bottom:2px;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;
+                            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                               font-weight:800;color:#374151;letter-spacing:1.5px;">🔬 DEEP</span>
-                            <span style="font-size:10px;color:#374151;">Opus · ~45s</span>
+                            <span style="font-size:13px;color:#CBD5E1;">Opus · ~45s</span>
                           </div>
-                          <div style="font-size:10px;color:#374151;margin-top:3px;">
+                          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">
                             Technicals → fundamentals → macro</div>
                         </div>""", unsafe_allow_html=True)
                     if st.button("Select Deep Research", key="mode_d", use_container_width=True):
@@ -2467,10 +2467,10 @@ def main():
                             <div style="font-size:14px;font-weight:700;color:{name_col};
                               margin-bottom:2px;white-space:nowrap;overflow:hidden;
                               text-overflow:ellipsis;">{name_txt}</div>
-                            <div style="font-size:11px;color:#5EEAD4;">{exch_txt}</div>
+                            <div style="font-size:13px;color:#CBD5E1;">{exch_txt}</div>
                           </div>
                           <div style="background:{badge_bg};border:1px solid {badge_col};
-                            border-radius:20px;padding:3px 10px;font-size:10px;
+                            border-radius:20px;padding:3px 10px;font-size:13px;
                             font-weight:700;color:{badge_col};white-space:nowrap;">{badge_txt}</div>
                         </div>""", unsafe_allow_html=True)
 
@@ -2481,14 +2481,14 @@ def main():
                                 border-radius:8px;padding:8px 14px;margin:8px 0 4px;
                                 display:flex;align-items:center;gap:8px;">
                               <span style="font-size:13px;">⚠️</span>
-                              <span style="font-size:12px;font-weight:700;color:#FACC15;">
+                              <span style="font-size:13px;font-weight:700;color:#FACC15;">
                                 Same symbol — different companies</span>
-                              <span style="font-size:11px;color:#94A3B8;margin-left:4px;">
+                              <span style="font-size:13px;color:#CBD5E1;margin-left:4px;">
                                 Read the full name carefully.</span>
                             </div>""", unsafe_allow_html=True)
                         st.markdown("""<div style="background:#071420;border:1px solid #14B8A6;
                             border-radius:10px;overflow:hidden;margin-top:6px;">
-                          <div style="padding:5px 14px;font-size:9px;color:#5EEAD4;letter-spacing:2px;
+                          <div style="padding:5px 14px;font-size:13px;color:#CBD5E1;letter-spacing:2px;
                             text-transform:uppercase;font-weight:700;border-bottom:1px solid #0D2030;
                             background:#040E18;">Select exchange or share class</div>
                         """, unsafe_allow_html=True)
@@ -2501,7 +2501,7 @@ def main():
                               <div style="flex:1;">
                                 <div style="font-size:13px;font-weight:600;color:#E2E8F0;
                                   margin-bottom:1px;">{row["name"]}</div>
-                                <div style="font-size:11px;color:#5EEAD4;">
+                                <div style="font-size:13px;color:#CBD5E1;">
                                   {row["exch"]} · {row["curr"]}</div>
                               </div>
                             </div>""", unsafe_allow_html=True)
@@ -2596,10 +2596,10 @@ def main():
                           <div style="font-size:15px;font-weight:700;color:{name_col};
                             margin-bottom:3px;white-space:nowrap;overflow:hidden;
                             text-overflow:ellipsis;">{name_display}</div>
-                          <div style="font-size:11px;color:#5EEAD4;">{exch_display}</div>
+                          <div style="font-size:13px;color:#CBD5E1;">{exch_display}</div>
                         </div>
                         <div style="background:{badge_bg};border:1px solid {badge_col};
-                          border-radius:20px;padding:3px 10px;font-size:10px;
+                          border-radius:20px;padding:3px 10px;font-size:13px;
                           font-weight:700;color:{badge_col};">{badge_txt}</div>
                       </div>
                     </div>""", unsafe_allow_html=True)
@@ -2623,7 +2623,7 @@ def main():
                                     st.session_state.pop(k, None)
                             st.rerun()
 
-                st.markdown('<div style="text-align:center;font-size:11px;color:#243348;margin-top:20px;">US · TSX · LSE · Euronext · HKEX · ASX — all major exchanges supported</div>', unsafe_allow_html=True)
+                st.markdown('<div style="text-align:center;font-size:13px;color:#CBD5E1;margin-top:20px;">US · TSX · LSE · Euronext · HKEX · ASX — all major exchanges supported</div>', unsafe_allow_html=True)
                 render_disclaimer()
 
 
@@ -2639,7 +2639,7 @@ def main():
                   </div>
                   <div style="display:inline-block;background:#251800;border:1px solid #FACC15;
                               border-radius:8px;padding:8px 20px;">
-                    <span style="font-size:12px;font-weight:700;color:#FACC15;letter-spacing:2px;">
+                    <span style="font-size:13px;font-weight:700;color:#FACC15;letter-spacing:2px;">
                       🚧 COMING SOON
                     </span>
                   </div>
@@ -2657,7 +2657,7 @@ def main():
                   </div>
                   <div style="display:inline-block;background:#251800;border:1px solid #FACC15;
                               border-radius:8px;padding:8px 20px;">
-                    <span style="font-size:12px;font-weight:700;color:#FACC15;letter-spacing:2px;">
+                    <span style="font-size:13px;font-weight:700;color:#FACC15;letter-spacing:2px;">
                       🚧 COMING SOON
                     </span>
                   </div>
@@ -3000,11 +3000,11 @@ def render_disclaimer():
                 padding:12px 18px;margin-top:24px;margin-bottom:8px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span style="font-size:15px;">&#9888;&#65039;</span>
-        <span style="font-size:12px;color:#FACC15;font-weight:700;letter-spacing:0.03em;">
+        <span style="font-size:13px;color:#CBD5E1;font-weight:700;letter-spacing:0.03em;">
           Educational tool only - not financial advice
         </span>
       </div>
-      <div style="font-size:11px;color:#CBD5E1;line-height:1.7;">
+      <div style="font-size:13px;color:#CBD5E1;line-height:1.7;">
         AI-generated analysis does not guarantee any outcome. Always conduct your own
         research before making any investment decision. Never risk more than you can
         afford to lose. This tool is not registered with the AMF or any other
@@ -3044,7 +3044,7 @@ def render_disclaimer():
             )
 
     st.markdown(
-        '<div style="text-align:center;font-size:10px;color:#374151;padding:8px 0;letter-spacing:1px;">'
+        '<div style="text-align:center;font-size:13px;color:#CBD5E1;padding:8px 0;letter-spacing:1px;">'
         'AI-GENERATED - NOT FINANCIAL ADVICE - EDUCATIONAL PURPOSES ONLY'
         '</div>',
         unsafe_allow_html=True
@@ -3132,7 +3132,7 @@ def render_hud():
           <div class="company-name">{company}</div>
           <div style="margin-top:4px;">
             <span class="exchange-pill">{exchange}</span>
-            <span style="font-size:11px;color:#4B5563;margin-left:8px;">{sector}</span>
+            <span style="font-size:13px;color:#CBD5E1;margin-left:8px;">{sector}</span>
           </div>
         </div>
       </div>
@@ -3140,8 +3140,8 @@ def render_hud():
         <div class="price-display">{cur}{close:.2f}</div>
         <div style="text-align:right;margin-top:6px;">{chg_badge}</div>
         <div style="margin-top:5px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
-          {"<span style='background:#0A3020;border:1px solid #00FF88;border-radius:4px;padding:2px 8px;font-size:10px;color:#00FF88;letter-spacing:1px;'>&#x26A1; FMP</span>" if st.secrets.get("FMP_API_KEY","") else "<span style='background:#2A1500;border:1px solid #FACC15;border-radius:4px;padding:2px 8px;font-size:10px;color:#FACC15;letter-spacing:1px;'>&#x26A0; yfinance</span>"}
-          <span style="background:{phase_result[3]}18;border:1px solid {phase_result[3]};border-radius:4px;padding:2px 10px;font-size:10px;color:{phase_result[3]};letter-spacing:1px;font-weight:800;font-family:'JetBrains Mono',monospace;">{phase_result[1]} · {phase_result[2]}</span>
+          {"<span style='background:#0A3020;border:1px solid #00FF88;border-radius:4px;padding:2px 8px;font-size:13px;color:#CBD5E1;letter-spacing:1px;'>&#x26A1; FMP</span>" if st.secrets.get("FMP_API_KEY","") else "<span style='background:#2A1500;border:1px solid #FACC15;border-radius:4px;padding:2px 8px;font-size:13px;color:#CBD5E1;letter-spacing:1px;'>&#x26A0; yfinance</span>"}
+          <span style="background:{phase_result[3]}18;border:1px solid {phase_result[3]};border-radius:4px;padding:2px 10px;font-size:13px;color:{phase_result[3]};letter-spacing:1px;font-weight:800;font-family:'JetBrains Mono',monospace;">{phase_result[1]} · {phase_result[2]}</span>
         </div>
       </div>
     </div>''', unsafe_allow_html=True)
@@ -3173,14 +3173,14 @@ def render_hud():
     st.markdown(f'''
     <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["Open"]:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["High"]:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">High</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["Low"]:.2f}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["VolTrend"]:.2f}x</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:12px;color:#F1F5F9;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["Open"]:.2f}</div><div style="font-size:13px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["High"]:.2f}</div><div style="font-size:13px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">High</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["Low"]:.2f}</div><div style="font-size:13px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:13px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["VolTrend"]:.2f}x</div><div style="font-size:13px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
+        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:13px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
       </div>
-      <div style="color:#5EEAD4;font-size:11px;">{analyzed}</div>
+      <div style="color:#CBD5E1;font-size:13px;">{analyzed}</div>
     </div>''', unsafe_allow_html=True)
 
     # ── Volume Breakout Flag ─────────────────────────────────
@@ -3196,7 +3196,7 @@ def render_hud():
           <span style="font-size:16px;">⚡</span>
           <div><span style="color:#00FF88;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
             BREAKOUT CONFIRMED</span>
-          <span style="color:#86EFAC;font-size:12px;margin-left:10px;">
+          <span style="color:#CBD5E1;font-size:13px;margin-left:10px;">
             Price broke 20-day high on {vol_ratio:.1f}x average volume — institutional participation confirmed</span>
           </div></div>''', unsafe_allow_html=True)
     elif price_break and not vol_confirm:
@@ -3205,7 +3205,7 @@ def render_hud():
           <span style="font-size:16px;">⚠️</span>
           <div><span style="color:#FACC15;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
             BREAKOUT UNCONFIRMED</span>
-          <span style="color:#FDE68A;font-size:12px;margin-left:10px;">
+          <span style="color:#CBD5E1;font-size:13px;margin-left:10px;">
             Price broke 20-day high but volume only {vol_ratio:.1f}x average — wait for volume confirmation</span>
           </div></div>''', unsafe_allow_html=True)
     elif vol_surge and not price_break:
@@ -3214,7 +3214,7 @@ def render_hud():
           <span style="font-size:16px;">📊</span>
           <div><span style="color:#38BDF8;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
             VOLUME SURGE</span>
-          <span style="color:#BAE6FD;font-size:12px;margin-left:10px;">
+          <span style="color:#CBD5E1;font-size:13px;margin-left:10px;">
             {vol_ratio:.1f}x average volume — unusual activity, watch for a price move</span>
           </div></div>''', unsafe_allow_html=True)
 
@@ -3237,7 +3237,7 @@ def render_hud():
           <div><span style="color:{wrb_col};font-weight:800;font-size:13px;
             font-family:'JetBrains Mono',monospace;">
             WIDE-RANGING BAR — {wrb_dir}</span>
-          <span style="color:{wrb_col}99;font-size:12px;margin-left:10px;">
+          <span style="color:{wrb_col}99;font-size:13px;margin-left:10px;">
             Range {candle_range:.2f} = {candle_range/atr_val:.1f}× ATR — {wrb_note}</span>
           </div></div>''', unsafe_allow_html=True)
 
@@ -3249,7 +3249,7 @@ def render_hud():
           <span style="font-size:16px;">📈</span>
           <div><span style="color:#00FF88;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
             BULLISH OBV DIVERGENCE</span>
-          <span style="color:#86EFAC;font-size:12px;margin-left:10px;">
+          <span style="color:#CBD5E1;font-size:13px;margin-left:10px;">
             Price declining but OBV rising — institutions accumulating quietly.</span>
           </div></div>''', unsafe_allow_html=True)
     elif obv_div == -1:
@@ -3258,7 +3258,7 @@ def render_hud():
           <span style="font-size:16px;">📉</span>
           <div><span style="color:#FF6B6B;font-weight:800;font-size:13px;font-family:'JetBrains Mono',monospace;">
             BEARISH OBV DIVERGENCE</span>
-          <span style="color:#FCA5A5;font-size:12px;margin-left:10px;">
+          <span style="color:#CBD5E1;font-size:13px;margin-left:10px;">
             Price rising but OBV falling — smart money distributing. Tighten stops.</span>
           </div></div>''', unsafe_allow_html=True)
 
@@ -3269,9 +3269,9 @@ def render_hud():
     # Analysis mode badge
     analysis_mode = st.session_state.get('analysis_mode', 'Quick')
     if analysis_mode == 'Deep Research':
-        mode_badge = '<span style="background:#1C1A50;border:1px solid #A78BFA;border-radius:4px;padding:2px 8px;font-size:10px;color:#A78BFA;font-weight:700;letter-spacing:1px;margin-left:8px;">🔬 DEEP RESEARCH</span>'
+        mode_badge = '<span style="background:#1C1A50;border:1px solid #A78BFA;border-radius:4px;padding:2px 8px;font-size:13px;color:#CBD5E1;font-weight:700;letter-spacing:1px;margin-left:8px;">🔬 DEEP RESEARCH</span>'
     else:
-        mode_badge = '<span style="background:#0A1525;border:1px solid #38BDF8;border-radius:4px;padding:2px 8px;font-size:10px;color:#38BDF8;font-weight:700;letter-spacing:1px;margin-left:8px;">⚡ QUICK</span>'
+        mode_badge = '<span style="background:#0A1525;border:1px solid #38BDF8;border-radius:4px;padding:2px 8px;font-size:13px;color:#CBD5E1;font-weight:700;letter-spacing:1px;margin-left:8px;">⚡ QUICK</span>'
 
     # Read precomputed values — no recalculation on arrow press reruns
     fs        = st.session_state.get('fs_pre') or fundamental_screen(info, a.get('verdict',''))
@@ -3320,10 +3320,10 @@ def render_hud():
           <div class="verdict-meta">Confidence: {a.get('confidence','')} &nbsp;·&nbsp; Risk: {a.get('risk','')}</div>
           <div class="verdict-note" style="color:{vc['color']};">{a.get('risk_reason','')}</div>
           <div style="margin-top:10px;padding-top:8px;border-top:1px solid {vc['border']}33;">
-            <span style="font-size:12px;color:{fs['verdict_color']};font-weight:700;">
+            <span style="font-size:13px;color:{fs['verdict_color']};font-weight:700;">
               {fs_icon} {fs['verdict_text']}{fs_score_str}
             </span>
-            <span style="font-size:10px;color:#64748B;">{fs_bucket_str}{fs_detail_str}</span>
+            <span style="font-size:13px;color:#CBD5E1;">{fs_bucket_str}{fs_detail_str}</span>
           </div>
         </div>""", unsafe_allow_html=True)
 
@@ -3365,38 +3365,38 @@ def render_hud():
         st.markdown(f"""
         <div style="background:#070F1A;border:1px solid #1A2A3A;border-radius:8px;
                     padding:12px 14px;margin-top:6px;">
-          <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+          <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                       font-weight:700;margin-bottom:10px;">📐 Swing Trade Math
-            <span style="color:#374151;font-size:9px;margin-left:8px;text-transform:none;
+            <span style="color:#CBD5E1;font-size:13px;margin-left:8px;text-transform:none;
                          letter-spacing:0;">· For educational position-sizing reference only</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;
                       margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid #1A2A3A;">
-            <span style="font-size:11px;color:#94A3B8;">Entry Zone</span>
+            <span style="font-size:13px;color:#CBD5E1;font-weight:600;">Entry Zone</span>
             <span style="font-size:13px;font-weight:800;color:#FACC15;
                          font-family:'JetBrains Mono',monospace;">{_entry_str}</span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;
                       margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid #1A2A3A;">
-            <span style="font-size:11px;color:#94A3B8;">Stop Level</span>
+            <span style="font-size:13px;color:#CBD5E1;font-weight:600;">Stop Level</span>
             <span style="font-size:13px;font-weight:800;color:#FF6B6B;
                          font-family:'JetBrains Mono',monospace;">{cur}{_stop:.2f}
-              <span style="font-size:10px;font-weight:600;color:#FF6B6B88;"> −{_risk_pct:.1f}%</span>
+              <span style="font-size:13px;font-weight:600;color:#FF6B6B88;"> −{_risk_pct:.1f}%</span>
             </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;
                       margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid #1A2A3A;">
-            <span style="font-size:11px;color:#94A3B8;">Target Level</span>
+            <span style="font-size:13px;color:#CBD5E1;font-weight:600;">Target Level</span>
             <span style="font-size:13px;font-weight:800;color:#00FF88;
                          font-family:'JetBrains Mono',monospace;">{cur}{_target:.2f}
-              <span style="font-size:10px;font-weight:600;color:#00FF8888;"> +{_reward_pct:.1f}%</span>
+              <span style="font-size:13px;font-weight:600;color:#00FF8888;"> +{_reward_pct:.1f}%</span>
             </span>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:11px;color:#94A3B8;">Risk / Reward</span>
+            <span style="font-size:13px;color:#CBD5E1;font-weight:600;">Risk / Reward</span>
             <span style="font-size:14px;font-weight:900;color:{_rr_col};
                          font-family:'JetBrains Mono',monospace;">1 : {_rr}
-              <span style="font-size:10px;font-weight:600;color:{_rr_col}88;"> {_rr_lbl}</span>
+              <span style="font-size:13px;font-weight:600;color:{_rr_col}88;"> {_rr_lbl}</span>
             </span>
           </div>
         </div>""", unsafe_allow_html=True)
@@ -3405,7 +3405,7 @@ def render_hud():
         <div class="score-card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
             <div>
-              <div style="font-size:11px;color:#818CF8;letter-spacing:2px;
+              <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;
                           text-transform:uppercase;font-weight:700;margin-bottom:2px;">Signal Score</div>
               <div style="font-size:13px;color:{score_col};font-weight:800;
                           letter-spacing:0.5px;">{tf_labels[cur_tf]}</div>
@@ -3417,11 +3417,11 @@ def render_hud():
             <div class="score-bar-fill" style="width:{tf_score*10}%;"></div>
           </div>
           <div class="score-markers"><span>AVOID</span><span>NEUTRAL</span><span>STRONG</span></div>
-          <div style="font-size:12px;color:{score_col};font-weight:700;margin-top:7px;">{tf_meaning}</div>
-          <div style="font-size:11px;color:#94A3B8;font-weight:600;margin-top:4px;line-height:1.5;">{tf_desc[cur_tf]}</div>
+          <div style="font-size:13px;color:{score_col};font-weight:700;margin-top:7px;">{tf_meaning}</div>
+          <div style="font-size:13px;color:#CBD5E1;font-weight:600;margin-top:4px;line-height:1.5;">{tf_desc[cur_tf]}</div>
           <div style="margin-top:8px;padding-top:6px;border-top:1px solid #243348;">
-            <div style="font-size:12px;color:#00FF88;font-weight:700;margin-bottom:4px;line-height:1.6;">&#9650; {bull_names}</div>
-            <div style="font-size:12px;color:#FF6B6B;font-weight:700;line-height:1.6;">&#9660; {bear_names}</div>
+            <div style="font-size:13px;color:#CBD5E1;font-weight:700;margin-bottom:4px;line-height:1.6;">&#9650; {bull_names}</div>
+            <div style="font-size:13px;color:#CBD5E1;font-weight:700;line-height:1.6;">&#9660; {bear_names}</div>
           </div>
         </div>""", unsafe_allow_html=True)
 
@@ -3483,27 +3483,27 @@ def render_hud():
             st.markdown(f"""
             <div style="background:#070F1A;border:1px solid #1A2A3A;border-radius:8px;
                         padding:10px 14px;margin-top:8px;">
-              <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+              <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                           font-weight:700;margin-bottom:8px;">Relative Performance</div>
               <div style="display:flex;justify-content:space-between;align-items:center;
                           margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid #1A2A3A;">
-                <span style="font-size:11px;color:#94A3B8;">SPY · S&P 500</span>
+                <span style="font-size:13px;color:#CBD5E1;font-weight:600;">SPY · S&P 500</span>
                 <span style="font-size:13px;font-weight:800;color:{_pc(spy_ret)};
                              font-family:'JetBrains Mono',monospace;">{_pf(spy_ret)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;
                           margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid #1A2A3A;">
-                <span style="font-size:11px;color:#94A3B8;">{sector_etf_sc} · Sector ETF</span>
+                <span style="font-size:13px;color:#CBD5E1;font-weight:600;">{sector_etf_sc} · Sector ETF</span>
                 <span style="font-size:13px;font-weight:800;color:{_pc(sec_ret)};
                              font-family:'JetBrains Mono',monospace;">{_pf(sec_ret)}</span>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-size:11px;color:#94A3B8;">{ticker} · Stock</span>
+                <span style="font-size:13px;color:#CBD5E1;font-weight:600;">{ticker} · Stock</span>
                 <span style="font-size:13px;font-weight:800;color:{_pc(stk_ret)};
                              font-family:'JetBrains Mono',monospace;">{_pf(stk_ret)}</span>
               </div>
               <div style="margin-top:8px;padding-top:6px;border-top:1px solid #1A2A3A;
-                          font-size:10px;color:{rel_col_sc};font-weight:600;">{rel_msg_sc}</div>
+                          font-size:13px;color:{rel_col_sc};font-weight:600;">{rel_msg_sc}</div>
             </div>""", unsafe_allow_html=True)
 
             # Arrow nav — same style as signal score arrows
@@ -3552,7 +3552,7 @@ def render_hud():
                     border-radius:0 8px 8px 0;padding:13px 16px;margin-bottom:8px;">
           <div style="display:flex;align-items:center;margin-bottom:8px;">
             <span style="color:{label_col};font-size:16px;margin-right:8px;">{dot_char}</span>
-            <span style="font-size:11px;color:{label_col};letter-spacing:2px;
+            <span style="font-size:13px;color:{label_col};letter-spacing:2px;
                          text-transform:uppercase;font-weight:800;">{icon} {label}</span>
           </div>
           <div style="font-size:13px;color:#CBD5E1;line-height:1.75;">{text}</div>
@@ -3571,7 +3571,7 @@ def render_hud():
     has_structured = bool(s_tech or s_lvl or s_fund or s_macro)
 
     st.markdown("""
-    <div style="font-size:10px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+    <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                 font-weight:600;margin:10px 0 6px;">AI SUMMARY</div>
     """, unsafe_allow_html=True)
 
@@ -3611,39 +3611,39 @@ def render_hud():
                 padding:14px 18px;margin:8px 0;display:grid;
                 grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
       <div style="border-right:1px solid #1E2D42;padding-right:12px;">
-        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">MARKET · SPY</div>
         <div style="font-size:16px;font-weight:800;color:{mkt_phase[3]};font-family:'JetBrains Mono',monospace;">{mkt_phase[1]}</div>
-        <div style="font-size:11px;color:{mkt_phase[3]};margin-top:2px;">{mkt_phase[2]}</div>
-        <div style="font-size:10px;color:#64748B;margin-top:4px;line-height:1.4;">{mkt_phase[6][:55]}</div>
+        <div style="font-size:13px;color:{mkt_phase[3]};margin-top:2px;">{mkt_phase[2]}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{mkt_phase[6][:55]}</div>
       </div>
       <div style="border-right:1px solid #1E2D42;padding-right:12px;">
-        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">SECTOR · {sector_etf or "N/A"}</div>
         <div style="font-size:16px;font-weight:800;color:{sec_phase[3]};font-family:'JetBrains Mono',monospace;">{sec_phase[1]}</div>
-        <div style="font-size:11px;color:{sec_phase[3]};margin-top:2px;">{sec_phase[2]}</div>
-        <div style="font-size:10px;color:#64748B;margin-top:4px;line-height:1.4;">{sec_phase[6][:55]}</div>
+        <div style="font-size:13px;color:{sec_phase[3]};margin-top:2px;">{sec_phase[2]}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{sec_phase[6][:55]}</div>
       </div>
       <div style="border-right:1px solid #1E2D42;padding-right:12px;">
-        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">STOCK · {ticker}</div>
         <div style="font-size:16px;font-weight:800;color:{ph_col};font-family:'JetBrains Mono',monospace;">{ph_label}</div>
-        <div style="font-size:11px;color:{ph_col};margin-top:2px;">{ph_sub}</div>
-        <div style="font-size:10px;color:{ph_conf_col};margin-top:4px;">{ph_conf_text}</div>
-        <div style="font-size:10px;color:#64748B;margin-top:2px;line-height:1.4;">{ph_desc[:55]}</div>
+        <div style="font-size:13px;color:{ph_col};margin-top:2px;">{ph_sub}</div>
+        <div style="font-size:13px;color:{ph_conf_col};margin-top:4px;">{ph_conf_text}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:2px;line-height:1.4;">{ph_desc[:55]}</div>
       </div>
       <div>
-        <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">THREE TAILWINDS</div>
         <div style="font-size:36px;font-weight:800;color:{tw_col};font-family:'JetBrains Mono',monospace;line-height:1;">
           {tw_score}<span style="font-size:18px;color:#4A6080;">/3</span></div>
-        <div style="font-size:11px;color:{tw_col};margin-top:4px;font-weight:700;">{tw_label}</div>
+        <div style="font-size:13px;color:{tw_col};margin-top:4px;font-weight:700;">{tw_label}</div>
         <div style="display:flex;gap:4px;margin-top:8px;">
           <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_market else "#243348"};"></div>
           <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_sector else "#243348"};"></div>
           <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_stock else "#243348"};"></div>
         </div>
-        <div style="font-size:9px;color:#374151;margin-top:4px;">Market · Sector · Stock</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;">Market · Sector · Stock</div>
       </div>
     </div>''', unsafe_allow_html=True)
 
@@ -3688,14 +3688,14 @@ def render_hud():
             f'<span style="color:{rsi_col};font-weight:700;font-family:monospace;">{rsi_val:.1f} — {rsi_lbl}</span>'
             '</div>'
             '<div style="display:flex;align-items:center;gap:8px;width:100%;">'
-            '<span style="font-size:11px;color:#00FF88;">0</span>'
+            '<span style="font-size:13px;color:#CBD5E1;">0</span>'
             '<div style="flex:1;position:relative;height:6px;background:#243348;border-radius:3px;">'
             '<div style="position:absolute;left:0;top:0;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#00FF88 0%,#FACC15 30%,#FF6B6B 70%,#FF6B6B 100%);"></div>'
             f'<div style="position:absolute;left:{min(max(rsi_pct,2),98)}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>'
             '</div>'
-            '<span style="font-size:11px;color:#FF6B6B;">100</span>'
+            '<span style="font-size:13px;color:#CBD5E1;">100</span>'
             '</div>'
-            f'<div style="text-align:center;font-size:11px;color:#94A3B8;">RSI {rsi_val:.1f} · Oversold &lt;30 · Overbought &gt;70</div>'
+            f'<div style="text-align:center;font-size:13px;color:#CBD5E1;">RSI {rsi_val:.1f} · Oversold &lt;30 · Overbought &gt;70</div>'
             '</div>'
         )
         levels_html += '</div>'
@@ -3714,7 +3714,7 @@ def render_hud():
         ups_l   = ((tgt_l / close) - 1) * 100 if tgt_l > 0 and close > 0 else 0
         up_cl   = "#00FF88" if ups_l > 10 else "#FACC15" if ups_l > 0 else "#FF6B6B"
         cn_cl   = "#00FF88" if 'Buy' in rk_l or 'Strong' in rk_l else "#FF6B6B" if 'Sell' in rk_l else "#FACC15"
-        st.markdown('<div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin:12px 0 6px;padding-left:2px;">Analyst Ratings</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;font-weight:700;margin:12px 0 6px;padding-left:2px;">Analyst Ratings</div>', unsafe_allow_html=True)
         al1, al2, al3, al4 = st.columns(4)
         for acol, lbl, val, col in [
             (al1, "Consensus",    rk_l if rk_l != 'N/A' else "N/A", cn_cl),
@@ -3730,7 +3730,7 @@ def render_hud():
             sp = 100 - bp - hp
             st.markdown(f'''<div style="background:#1A2232;border:1px solid #243348;
                 border-radius:0 0 8px 8px;padding:10px 16px;">
-              <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">
+              <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;">
                 <span style="color:#00FF88;font-weight:700;">Buy {buy_l} ({bp}%)</span>
                 <span style="color:#FACC15;font-weight:700;">Hold {hold_l} ({hp}%)</span>
                 <span style="color:#FF6B6B;font-weight:700;">Sell {sell_l} ({sp}%)</span>
@@ -3854,14 +3854,14 @@ def render_hud():
             f'<span style="color:{bb_col};font-weight:700;font-family:monospace;">{bb_pct:.0f}% — {"Oversold" if bb_pct < 20 else "Overbought" if bb_pct > 80 else "Neutral"}</span>'
             '</div>'
             '<div style="display:flex;align-items:center;gap:8px;width:100%;">'
-            f'<span style="font-size:11px;color:#00FF88;">{cur}{bb_lower:.0f}</span>'
+            f'<span style="font-size:13px;color:#CBD5E1;">{cur}{bb_lower:.0f}</span>'
             '<div style="flex:1;position:relative;height:6px;background:#243348;border-radius:3px;">'
             '<div style="position:absolute;left:0;top:0;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,#00FF88,#FACC15,#FF6B6B);"></div>'
             f'<div style="position:absolute;left:{min(max(int(bb_pct),2),98)}%;top:-4px;width:12px;height:12px;background:#F1F5F9;border-radius:50%;transform:translateX(-50%);border:2px solid #111827;"></div>'
             '</div>'
-            f'<span style="font-size:11px;color:#FF6B6B;">{cur}{bb_upper:.0f}</span>'
+            f'<span style="font-size:13px;color:#CBD5E1;">{cur}{bb_upper:.0f}</span>'
             '</div>'
-            f'<div style="text-align:center;font-size:11px;color:#94A3B8;">{cur}{cur_close:.2f} · Mid {cur}{bb_mid:.2f}</div>'
+            f'<div style="text-align:center;font-size:13px;color:#CBD5E1;">{cur}{cur_close:.2f} · Mid {cur}{bb_mid:.2f}</div>'
             '</div>'
         )
         st.markdown(bb_rows + '</div>', unsafe_allow_html=True)
@@ -3869,7 +3869,7 @@ def render_hud():
         st.markdown('<div class="vol-panel"><div class="data-header">Implied Volatility</div>', unsafe_allow_html=True)
         iv_rows  = f'<div class="vol-row"><span class="vol-lbl">IV</span><span style="color:{iv_col};font-weight:700;font-family:monospace;">{iv:.1f}%</span></div>'
         iv_rows += f'<div class="vol-row"><span class="vol-lbl">IV vs HV 30d</span><span style="color:{"#FF6B6B" if iv_vs_hv > 1.3 else "#00FF88"};font-weight:700;font-family:monospace;">{iv_vs_hv:.2f}x</span></div>'
-        iv_rows += f'<div class="vol-row" style="flex-direction:column;"><span class="vol-lbl" style="margin-bottom:4px;">Signal</span><span style="color:{"#FF6B6B" if iv_vs_hv > 1.3 else "#00FF88" if iv > 0 else "#94A3B8"};font-size:12px;">{iv_label}</span></div>'
+        iv_rows += f'<div class="vol-row" style="flex-direction:column;"><span class="vol-lbl" style="margin-bottom:4px;">Signal</span><span style="color:{"#FF6B6B" if iv_vs_hv > 1.3 else "#00FF88" if iv > 0 else "#94A3B8"};font-size:13px;">{iv_label}</span></div>'
         iv_rows += f'<div class="vol-row"><span class="vol-lbl">Day range est.</span><span style="color:#38BDF8;font-family:monospace;">{cur}{cur_close - float(row["ATR"]):.2f} – {cur}{cur_close + float(row["ATR"]):.2f}</span></div>'
         st.markdown(iv_rows + '</div>', unsafe_allow_html=True)
 
@@ -3879,8 +3879,8 @@ def render_hud():
     <div style="background:#1A1000;border:1px solid #FACC1544;border-radius:0;border-top:none;
                 padding:7px 14px;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
       <span style="font-size:13px;">⚠️</span>
-      <span style="font-size:11px;color:#FACC15;font-weight:700;">NOT FINANCIAL ADVICE</span>
-      <span style="font-size:11px;color:#CBD5E1;">These numbers are for educational position-sizing practice only.</span>
+      <span style="font-size:13px;color:#CBD5E1;font-weight:700;">NOT FINANCIAL ADVICE</span>
+      <span style="font-size:13px;color:#CBD5E1;">These numbers are for educational position-sizing practice only.</span>
     </div>""", unsafe_allow_html=True)
 
     atr_val   = float(row['ATR'])
@@ -3911,13 +3911,13 @@ def render_hud():
         return max(0.01, stp), max(entry_mid + 0.01, tgt)
 
     vc_mode       = VERDICT_COLORS.get(verdict, VERDICT_COLORS['TECHNICAL SETUP'])
-    ai_label_html = f'<span style="background:{vc_mode["bg"]};border:1px solid {vc_mode["border"]};border-radius:4px;padding:2px 8px;font-size:10px;color:{vc_mode["color"]};font-weight:700;letter-spacing:1px;">AI: {verdict}</span>'
-    cur_badge     = f'<span style="background:#1C2A3A;border:1px solid #38BDF8;border-radius:4px;padding:2px 8px;font-size:10px;color:#38BDF8;font-weight:700;letter-spacing:1px;margin-left:6px;">💱 {cur_code}</span>'
+    ai_label_html = f'<span style="background:{vc_mode["bg"]};border:1px solid {vc_mode["border"]};border-radius:4px;padding:2px 8px;font-size:13px;color:{vc_mode["color"]};font-weight:700;letter-spacing:1px;">AI: {verdict}</span>'
+    cur_badge     = f'<span style="background:#1C2A3A;border:1px solid #38BDF8;border-radius:4px;padding:2px 8px;font-size:13px;color:#CBD5E1;font-weight:700;letter-spacing:1px;margin-left:6px;">💱 {cur_code}</span>'
 
     st.markdown(f'''
     <div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 16px 10px;">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div style="font-size:12px;color:#94A3B8;">Pre-filled from AI analysis · Adjust any value to recalculate</div>
+        <div style="font-size:13px;color:#CBD5E1;">Pre-filled from AI analysis · Adjust any value to recalculate</div>
         <div>{ai_label_html}{cur_badge}</div>
       </div>
     </div>''', unsafe_allow_html=True)
@@ -3959,19 +3959,19 @@ def render_hud():
         st.markdown(f'''<div class="earn-bar" style="border-left-color:{rr_col};margin-top:6px;">
           <div class="earn-label">Risk/Reward Ratio</div>
           <div class="earn-val" style="color:{rr_col};font-size:26px;letter-spacing:1px;">1 : {rr_ratio}</div>
-          <div style="font-size:11px;color:{rr_col};margin-top:3px;font-weight:700;">{rr_label}</div>
+          <div style="font-size:13px;color:{rr_col};margin-top:3px;font-weight:700;">{rr_label}</div>
         </div>''', unsafe_allow_html=True)
     with rc2:
         st.markdown(f'''<div class="earn-bar" style="border-left-color:#38BDF8;margin-top:6px;">
           <div class="earn-label">Shares to Buy</div>
           <div class="earn-val" style="color:#38BDF8;font-size:22px;">{position_size:,} <span style="font-size:13px;">shares</span></div>
-          <div style="font-size:11px;color:#64748B;margin-top:3px;">{cur}{position_size_input:,.0f} position · {position_size:,} × {cur}{entry_price:.2f}</div>
+          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">{cur}{position_size_input:,.0f} position · {position_size:,} × {cur}{entry_price:.2f}</div>
         </div>''', unsafe_allow_html=True)
     with rc3:
         st.markdown(f'''<div class="earn-bar" style="border-left-color:#818CF8;margin-top:6px;">
           <div class="earn-label">Worst Case / Best Case</div>
-          <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{actual_loss:,.0f} <span style="font-size:10px;color:#FF6B6B88;">({loss_pct:.1f}% of position)</span></div>
-          <div style="font-size:16px;color:#00FF88;font-weight:700;font-family:monospace;margin-top:4px;">+{cur}{actual_gain:,.0f} <span style="font-size:10px;color:#00FF8888;">if target hit</span></div>
+          <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{actual_loss:,.0f} <span style="font-size:13px;color:#FF6B6B88;">({loss_pct:.1f}% of position)</span></div>
+          <div style="font-size:16px;color:#00FF88;font-weight:700;font-family:monospace;margin-top:4px;">+{cur}{actual_gain:,.0f} <span style="font-size:13px;color:#00FF8888;">if target hit</span></div>
         </div>''', unsafe_allow_html=True)
 
     try:
@@ -4019,7 +4019,7 @@ def render_hud():
     st.markdown(f'''
     <div style="background:#111827;border:1px solid #243348;border-radius:8px;
                 padding:8px 16px;margin-top:6px;display:flex;gap:20px;flex-wrap:wrap;
-                font-size:11px;font-family:'JetBrains Mono',monospace;align-items:center;">
+                font-size:13px;font-family:'JetBrains Mono',monospace;align-items:center;">
       <span style="color:#64748B;">Position <span style="color:#38BDF8;">{cur}{position_size_input:,.0f}</span></span>
       <span style="color:#64748B;">Entry <span style="color:#FACC15;">{cur}{entry_price:.2f}</span></span>
       <span style="color:#64748B;">Stop <span style="color:#FF6B6B;">{cur}{stop_price:.2f} (−{stop_pct:.1f}%)</span></span>
@@ -4049,10 +4049,10 @@ def render_hud():
     # ── EARNINGS HISTORY ──────────────────────────────────────
     st.markdown('<div class="section-header">Earnings History — Last 4 Quarters</div>', unsafe_allow_html=True)
     if not earnings_hist:
-        st.markdown('<div class="panel-body"><div style="padding:12px 14px;font-size:12px;color:#4A6080;">No earnings history available</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-body"><div style="padding:12px 14px;font-size:13px;color:#CBD5E1;">No earnings history available</div></div>', unsafe_allow_html=True)
     else:
         eh_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;">'
-        eh_html += '<div class="earn-hist-row" style="background:#131F32;font-size:11px;color:#64748B;"><span>Quarter</span><span>EPS Estimate</span><span>EPS Actual</span><span>Surprise</span></div>'
+        eh_html += '<div class="earn-hist-row" style="background:#131F32;font-size:13px;color:#CBD5E1;"><span>Quarter</span><span>EPS Estimate</span><span>EPS Actual</span><span>Surprise</span></div>'
         for e in reversed(earnings_hist):
             beat_cls = "earn-beat" if e["beat"] else "earn-miss"
             icon     = "▲" if e["beat"] else "▼"
@@ -4063,7 +4063,7 @@ def render_hud():
     # ── INSIDER TRADING ───────────────────────────────────────
     st.markdown('<div class="section-header">Insider Transactions</div>', unsafe_allow_html=True)
     if not insider_data:
-        st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:12px;color:#4A6080;">No recent insider transactions found</div>', unsafe_allow_html=True)
+        st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:13px;color:#CBD5E1;">No recent insider transactions found</div>', unsafe_allow_html=True)
     else:
         # ── Insider sentiment flag ────────────────────────────
         cutoff = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
@@ -4080,9 +4080,9 @@ def render_hud():
                 padding:8px 16px;margin:4px 0 6px;display:flex;align-items:center;gap:10px;">
               <span style="font-size:15px;">⚠️</span>
               <div>
-                <span style="color:#FF6B6B;font-weight:800;font-size:12px;
+                <span style="color:#FF6B6B;font-weight:800;font-size:13px;
                   font-family:'JetBrains Mono',monospace;">INSIDER SELLING DOMINATES</span>
-                <span style="color:#FCA5A5;font-size:11px;margin-left:10px;">
+                <span style="color:#CBD5E1;font-size:13px;margin-left:10px;">
                   {sell_cnt} sell{'s' if sell_cnt>1 else ''} ({sell_fmt}) vs {buy_cnt} buy{'s' if buy_cnt!=1 else ''} ({buy_fmt}) — last 30 days</span>
               </div>
             </div>''', unsafe_allow_html=True)
@@ -4093,19 +4093,19 @@ def render_hud():
                 padding:8px 16px;margin:4px 0 6px;display:flex;align-items:center;gap:10px;">
               <span style="font-size:15px;">✅</span>
               <div>
-                <span style="color:#00FF88;font-weight:800;font-size:12px;
+                <span style="color:#00FF88;font-weight:800;font-size:13px;
                   font-family:'JetBrains Mono',monospace;">INSIDER BUYING ACTIVE</span>
-                <span style="color:#86EFAC;font-size:11px;margin-left:10px;">
+                <span style="color:#CBD5E1;font-size:13px;margin-left:10px;">
                   {buy_cnt} purchase{'s' if buy_cnt>1 else ''} ({buy_fmt}) — insiders putting own money in</span>
               </div>
             </div>''', unsafe_allow_html=True)
 
         ins_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;">'
-        ins_html += '<div class="insider-row" style="background:#131F32;"><span style="font-size:11px;color:#64748B;flex:1;">Insider</span><span style="font-size:11px;color:#64748B;flex:1;">Role</span><span style="font-size:11px;color:#64748B;width:60px;text-align:center;">Type</span><span style="font-size:11px;color:#64748B;text-align:right;">Shares / Value</span></div>'
+        ins_html += '<div class="insider-row" style="background:#131F32;"><span style="font-size:13px;color:#CBD5E1;flex:1;">Insider</span><span style="font-size:13px;color:#CBD5E1;flex:1;">Role</span><span style="font-size:13px;color:#CBD5E1;width:60px;text-align:center;">Type</span><span style="font-size:13px;color:#CBD5E1;text-align:right;">Shares / Value</span></div>'
         for ins in insider_data:
             t_col = "#00FF88" if ins["type"]=="BUY" else "#FF6B6B"
             val_str = f'${ins["value"]:,.0f}' if ins["value"] > 0 else "N/A"
-            ins_html += f'<div class="insider-row"><span class="insider-name">{ins["name"]}</span><span class="insider-role">{ins["role"]}</span><span style="color:{t_col};font-weight:700;font-size:11px;width:60px;text-align:center;">{ins["type"]}</span><span class="insider-shares">{ins["shares"]:,} / {val_str}</span></div>'
+            ins_html += f'<div class="insider-row"><span class="insider-name">{ins["name"]}</span><span class="insider-role">{ins["role"]}</span><span style="color:{t_col};font-weight:700;font-size:13px;width:60px;text-align:center;">{ins["type"]}</span><span class="insider-shares">{ins["shares"]:,} / {val_str}</span></div>'
         st.markdown(ins_html + '</div>', unsafe_allow_html=True)
 
     # ── NEWS SENTIMENT ────────────────────────────────────────
@@ -4115,7 +4115,7 @@ def render_hud():
     st.markdown('<div class="section-header">News & Sentiment</div>', unsafe_allow_html=True)
 
     if not news_items:
-        st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:12px;color:#4A6080;">No recent news available</div>', unsafe_allow_html=True)
+        st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:13px;color:#CBD5E1;">No recent news available</div>', unsafe_allow_html=True)
     else:
         st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:4px 0;">', unsafe_allow_html=True)
         for i, news in enumerate(news_items):
@@ -4145,22 +4145,22 @@ def render_hud():
 
             # Pre-compute all conditional HTML as variables — no ternaries inside f-string
             if link:
-                title_html = f'<a href="{link}" target="_blank" style="color:#E2E8F0;text-decoration:none;font-size:12px;line-height:1.4;">{title}</a>'
+                title_html = f'<a href="{link}" target="_blank" style="color:#E2E8F0;text-decoration:none;font-size:13px;line-height:1.4;">{title}</a>'
             else:
-                title_html = f'<span style="color:#E2E8F0;font-size:12px;line-height:1.4;">{title}</span>'
+                title_html = f'<span style="color:#CBD5E1;font-size:13px;line-height:1.4;">{title}</span>'
 
             if magnitude:
-                mag_html = f'<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:{mag_col};">{magnitude}</span>'
+                mag_html = f'<span style="font-size:13px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:{mag_col};">{magnitude}</span>'
             else:
                 mag_html = ''
 
             if trigger:
-                trigger_html = f'<span style="font-size:9px;color:#374151;">· {trigger}</span>'
+                trigger_html = f'<span style="font-size:13px;color:#CBD5E1;">· {trigger}</span>'
             else:
                 trigger_html = ''
 
             if reason:
-                reason_html = f'<div style="font-size:11px;color:#64748B;margin-top:2px;">{reason}</div>'
+                reason_html = f'<div style="font-size:13px;color:#CBD5E1;margin-top:2px;">{reason}</div>'
             else:
                 reason_html = ''
 
@@ -4173,11 +4173,11 @@ def render_hud():
                 <div style="flex:1;min-width:0;">{title_html}</div>
                 <div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">
                   {mag_html}
-                  <span style="font-size:10px;font-weight:700;color:{sent_col};">{sent_icon} {sent.capitalize()}</span>
+                  <span style="font-size:13px;font-weight:700;color:{sent_col};">{sent_icon} {sent.capitalize()}</span>
                 </div>
               </div>
               <div style="display:flex;gap:8px;margin-top:3px;align-items:center;">
-                <span style="font-size:10px;color:#4A6080;">{pub_date}</span>
+                <span style="font-size:13px;color:#CBD5E1;">{pub_date}</span>
                 {trigger_html}
               </div>
               {reason_html}
@@ -4202,17 +4202,17 @@ def render_hud():
             <div style="background:#0A1020;border:1px solid #1A2A3A;border-radius:8px;
                         padding:10px 14px;margin-top:6px;">
               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                <span style="font-size:9px;color:#5EEAD4;letter-spacing:2px;
+                <span style="font-size:13px;color:#CBD5E1;letter-spacing:2px;
                              text-transform:uppercase;font-weight:700;">📰 News Impact Score</span>
-                <span style="font-size:12px;font-weight:800;color:{ns_col};
+                <span style="font-size:13px;font-weight:800;color:{ns_col};
                              font-family:'JetBrains Mono',monospace;">{ns_label}</span>
               </div>
               <div style="background:#0D1525;border-radius:4px;height:6px;overflow:hidden;">
                 <div style="height:100%;width:{ns_pct}%;background:{ns_col};border-radius:4px;"></div>
               </div>
               <div style="display:flex;justify-content:space-between;margin-top:3px;">
-                <span style="font-size:9px;color:#374151;">-5 Very Bearish</span>
-                <span style="font-size:9px;color:#374151;">+5 Very Bullish</span>
+                <span style="font-size:13px;color:#CBD5E1;">-5 Very Bearish</span>
+                <span style="font-size:13px;color:#CBD5E1;">+5 Very Bullish</span>
               </div>
             </div>""", unsafe_allow_html=True)
 
@@ -4237,7 +4237,7 @@ def render_hud():
             st.markdown(f'''<div class="earn-bar" style="border-left-color:{vcol};">
               <div class="earn-label">{lbl}</div>
               <div class="earn-val" style="color:{vcol};font-size:14px;">{sign}{chg:.1f}%</div>
-              <div style="font-size:10px;color:#6B7280;margin-top:2px;">Last month · {sig}</div>
+              <div style="font-size:13px;color:#CBD5E1;margin-top:2px;">Last month · {sig}</div>
             </div>''', unsafe_allow_html=True)
     for mcol2, lbl2, val2, col2, desc2 in [
         (mc4, "Cycle Phase", cycle,    cycle_col, a.get("cycle_desc","")),
@@ -4247,7 +4247,7 @@ def render_hud():
             st.markdown(f'''<div class="earn-bar" style="border-left-color:{col2};">
               <div class="earn-label">{lbl2}</div>
               <div class="earn-val" style="color:{col2};font-size:13px;">{val2 or "—"}</div>
-              <div style="font-size:10px;color:#6B7280;margin-top:2px;">{desc2[:60]}</div>
+              <div style="font-size:13px;color:#CBD5E1;margin-top:2px;">{desc2[:60]}</div>
             </div>''', unsafe_allow_html=True)
 
     # ── LIVE CHART ────────────────────────────────────────────
@@ -4259,7 +4259,7 @@ def render_hud():
     chart_pats = a.get('chart_patterns', [])
     st.markdown('<div class="section-header">Chart Patterns Detected</div>', unsafe_allow_html=True)
     if not chart_pats:
-        st.markdown('<div class="panel-body"><div style="padding:14px;text-align:center;font-size:12px;color:#4A6080;">No significant chart patterns detected in current price action</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-body"><div style="padding:14px;text-align:center;font-size:13px;color:#CBD5E1;">No significant chart patterns detected in current price action</div></div>', unsafe_allow_html=True)
     else:
         cols = st.columns(min(len(chart_pats), 3))
         for i, p in enumerate(chart_pats[:3]):
@@ -4281,26 +4281,26 @@ def render_hud():
                 <div class="{pcls}">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
                     <div class="pat-name" style="color:{pcol};">{pat_name}</div>
-                    <a href="{inv_url}" target="_blank" style="font-size:10px;color:#4A6080;text-decoration:none;">ⓘ</a>
+                    <a href="{inv_url}" target="_blank" style="font-size:13px;color:#CBD5E1;text-decoration:none;">ⓘ</a>
                   </div>
-                  <div style="font-size:11px;font-weight:700;color:{pcol};margin-bottom:6px;">{bias_label}</div>
+                  <div style="font-size:13px;font-weight:700;color:{pcol};margin-bottom:6px;">{bias_label}</div>
                   <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-                    <div style="font-size:10px;color:#6B7280;">Confidence: {conf}%</div>
+                    <div style="font-size:13px;color:#CBD5E1;">Confidence: {conf}%</div>
                     <div style="flex:1;height:3px;background:#243348;border-radius:2px;">
                       <div style="width:{conf}%;height:3px;background:{pcol};border-radius:2px;"></div>
                     </div>
                   </div>
-                  {f'<div style="font-size:11px;color:#64748B;font-style:italic;margin-bottom:5px;">{conf_reason}</div>' if conf_reason else ''}
+                  {f'<div style="font-size:13px;color:#CBD5E1;font-style:italic;margin-bottom:5px;">{conf_reason}</div>' if conf_reason else ''}
                   <div class="pat-desc" style="margin-bottom:6px;">{p.get("description","")}</div>
-                  <div style="font-size:11px;color:{valid_col};font-weight:600;margin-bottom:3px;">{valid_label}</div>
-                  {f'<div style="font-size:11px;color:#64748B;">{validity_note}</div>' if validity_note else ''}
+                  <div style="font-size:13px;color:{valid_col};font-weight:600;margin-bottom:3px;">{valid_label}</div>
+                  {f'<div style="font-size:13px;color:#CBD5E1;">{validity_note}</div>' if validity_note else ''}
                   {target_html}
                 </div>""", unsafe_allow_html=True)
 
     candle_pats = a.get('candle_patterns', [])
     st.markdown('<div class="section-header">Candlestick Patterns · Last 5 Sessions</div>', unsafe_allow_html=True)
     if not candle_pats:
-        st.markdown('<div class="panel-body"><div style="padding:14px;text-align:center;font-size:12px;color:#4A6080;">No significant candlestick patterns in the last 5 sessions</div></div>', unsafe_allow_html=True)
+        st.markdown('<div class="panel-body"><div style="padding:14px;text-align:center;font-size:13px;color:#CBD5E1;">No significant candlestick patterns in the last 5 sessions</div></div>', unsafe_allow_html=True)
     else:
         cols = st.columns(min(len(candle_pats), 4))
         for i, c in enumerate(candle_pats[:4]):
@@ -4314,10 +4314,10 @@ def render_hud():
                 <div class="{ccls}">
                   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
                     <div style="font-size:13px;font-weight:700;color:{ccol};">{c.get("name","")}</div>
-                    <a href="{inv_c}" target="_blank" style="font-size:10px;color:#4A6080;text-decoration:none;">ⓘ</a>
+                    <a href="{inv_c}" target="_blank" style="font-size:13px;color:#CBD5E1;text-decoration:none;">ⓘ</a>
                   </div>
-                  <div style="font-size:11px;color:{ccol};font-weight:700;margin-bottom:5px;">{clabel} · {c.get("session","")}</div>
-                  <div style="font-size:12px;color:#CBD5E1;line-height:1.5;">{c.get("meaning","")}</div>
+                  <div style="font-size:13px;color:{ccol};font-weight:700;margin-bottom:5px;">{clabel} · {c.get("session","")}</div>
+                  <div style="font-size:13px;color:#CBD5E1;line-height:1.5;">{c.get("meaning","")}</div>
                 </div>''', unsafe_allow_html=True)
 
     st.markdown('<div class="section-header">Trend Context</div>', unsafe_allow_html=True)
@@ -4385,8 +4385,8 @@ def render_earnings_analyzer():
                     c1,c2,c3 = st.columns(3)
                     c1.markdown(f'<div class="earn-bar" style="border-left-color:{tone_col};"><div class="earn-label">Overall Tone</div><div class="earn-val" style="color:{tone_col};">{ea.get("tone","")}</div></div>', unsafe_allow_html=True)
                     c2.markdown(f'<div class="earn-bar" style="border-left-color:{conf_col};"><div class="earn-label">Mgmt Confidence</div><div class="earn-val" style="color:{conf_col};">{ea.get("management_confidence","")}</div></div>', unsafe_allow_html=True)
-                    c3.markdown(f'<div class="earn-bar" style="border-left-color:#818CF8;"><div class="earn-label">Analyst Reception</div><div class="earn-val" style="color:#818CF8;font-size:12px;">{ea.get("analyst_reception","")[:60]}</div></div>', unsafe_allow_html=True)
-                    st.markdown(f'<div style="background:#1A2232;border:1px solid #14B8A6;border-radius:8px;padding:14px 18px;margin:8px 0;"><div style="font-size:10px;color:#5EEAD4;margin-bottom:6px;">VERDICT</div><div style="font-size:14px;color:#E2E8F0;line-height:1.6;">{ea.get("verdict","")}</div></div>', unsafe_allow_html=True)
+                    c3.markdown(f'<div class="earn-bar" style="border-left-color:#818CF8;"><div class="earn-label">Analyst Reception</div><div class="earn-val" style="color:#CBD5E1;font-size:13px;">{ea.get("analyst_reception","")[:60]}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="background:#1A2232;border:1px solid #14B8A6;border-radius:8px;padding:14px 18px;margin:8px 0;"><div style="font-size:13px;color:#CBD5E1;margin-bottom:6px;">VERDICT</div><div style="font-size:14px;color:#E2E8F0;line-height:1.6;">{ea.get("verdict","")}</div></div>', unsafe_allow_html=True)
                     c1,c2 = st.columns(2)
                     with c1:
                         st.markdown('<div class="section-header">Key Wins</div>', unsafe_allow_html=True)
@@ -4398,7 +4398,7 @@ def render_earnings_analyzer():
                             st.markdown(f'<div class="reason-bear">- {r}</div>', unsafe_allow_html=True)
                     if ea.get("guidance"):
                         st.markdown(f'<div style="background:#251800;border-left:3px solid #FACC15;border-radius:0 6px 6px 0;padding:10px 14px;font-size:13px;color:#E2E8F0;"><b style="color:#FACC15;">Guidance:</b> {ea["guidance"]}</div>', unsafe_allow_html=True)
-                    st.markdown(f'<div class="summary-box"><div style="font-size:10px;color:#5EEAD4;margin-bottom:6px;">FULL ANALYSIS</div><div class="summary-text">{ea.get("summary","")}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div class="summary-box"><div style="font-size:13px;color:#CBD5E1;margin-bottom:6px;">FULL ANALYSIS</div><div class="summary-text">{ea.get("summary","")}</div></div>', unsafe_allow_html=True)
                 except Exception as e:
                     st.error(f"Analysis error: {e}")
 
@@ -4504,7 +4504,7 @@ def render_screener():
         with c2:
             ai_theme = st.text_input("Theme (AI)", placeholder="e.g. oversold small caps with high volume surge", key="sns_theme")
 
-        st.markdown('<div style="font-size:11px;color:#4A6080;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Quick Templates</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size:13px;color:#CBD5E1;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Quick Templates</div>', unsafe_allow_html=True)
         tpl_cols = st.columns(len(SNS_TEMPLATES))
         chosen_filter = None
 
@@ -4523,8 +4523,8 @@ def render_screener():
                 st.markdown(f'''
                 <div class="tpl-wrap-{color_key}">
                   <div class="tpl-card" style="background:{bg_col};border:1px solid {txt_col}44;">
-                    <div style="font-size:11px;font-weight:800;color:{txt_col};margin-bottom:3px;">{tname}</div>
-                    <div style="font-size:10px;color:#64748B;line-height:1.5;">{tdata["desc"]}</div>
+                    <div style="font-size:13px;font-weight:800;color:{txt_col};margin-bottom:3px;">{tname}</div>
+                    <div style="font-size:13px;color:#CBD5E1;line-height:1.5;">{tdata["desc"]}</div>
                   </div>
                 </div>''', unsafe_allow_html=True)
                 st.markdown(f'<div class="tpl-select tpl-select-{color_key}">', unsafe_allow_html=True)
@@ -4546,9 +4546,9 @@ def render_screener():
             st.markdown(f'''
             <div style="background:#0A1E2C;border:1px solid #38BDF8;border-radius:8px;
                         padding:8px 16px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;">
-              <div style="font-size:12px;color:#38BDF8;font-weight:700;">{chosen_name}</div>
-              <div style="font-size:11px;color:#64748B;">{chosen_filter.get("desc","")}</div>
-              <div style="font-size:11px;color:#4A6080;">Universe: <span style="color:#5EEAD4;font-weight:600;">{selected_universe} ({len(SNS_UNIVERSES[selected_universe])} stocks)</span></div>
+              <div style="font-size:13px;color:#CBD5E1;font-weight:700;">{chosen_name}</div>
+              <div style="font-size:13px;color:#CBD5E1;">{chosen_filter.get("desc","")}</div>
+              <div style="font-size:13px;color:#CBD5E1;">Universe: <span style="color:#5EEAD4;font-weight:600;">{selected_universe} ({len(SNS_UNIVERSES[selected_universe])} stocks)</span></div>
             </div>''', unsafe_allow_html=True)
 
             if st.button("▶ Run Screener", type="primary", use_container_width=True, key="sns_run"):
@@ -4590,7 +4590,7 @@ def render_screener():
             if not results:
                 st.warning("No stocks matched the filter in this universe. Try a different template or universe.")
             else:
-                st.markdown(f'<div style="font-size:12px;color:#5EEAD4;font-weight:700;margin:8px 0;">{len(results)} stocks passed the filter</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="font-size:13px;color:#CBD5E1;font-weight:700;margin:8px 0;">{len(results)} stocks passed the filter</div>', unsafe_allow_html=True)
                 for r in results[:15]:
                     sc_col  = "#00FF88" if r["score"]>=7 else "#FACC15" if r["score"]>=4 else "#FF6B6B"
                     chg_col = "#00FF88" if r["chg"] >= 0 else "#FF6B6B"
@@ -4602,24 +4602,24 @@ def render_screener():
                                 padding:10px 16px;margin-bottom:6px;display:flex;align-items:center;gap:16px;">
                       <div style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#00FF88;min-width:80px;">{r["ticker"]}</div>
                       <div style="flex:1;min-width:0;">
-                        <div style="font-size:12px;font-weight:600;color:#E2E8F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{r["name"]}</div>
-                        <div style="font-size:11px;color:#64748B;margin-top:2px;">{r["one_liner"]}</div>
+                        <div style="font-size:13px;font-weight:600;color:#E2E8F0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{r["name"]}</div>
+                        <div style="font-size:13px;color:#CBD5E1;margin-top:2px;">{r["one_liner"]}</div>
                       </div>
                       <div style="text-align:center;min-width:50px;">
                         <div style="font-size:18px;font-weight:800;color:{sc_col};font-family:'JetBrains Mono',monospace;">{r["score"]}</div>
-                        <div style="font-size:9px;color:#64748B;">SCORE</div>
+                        <div style="font-size:13px;color:#CBD5E1;">SCORE</div>
                       </div>
                       <div style="text-align:right;min-width:90px;">
                         <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#F1F5F9;">{cur_sym}{r["close"]:.2f}</div>
-                        <div style="font-size:12px;color:{chg_col};font-weight:600;">{sign}{r["chg"]:.2f}%</div>
+                        <div style="font-size:13px;color:{chg_col};font-weight:600;">{sign}{r["chg"]:.2f}%</div>
                       </div>
                       <div style="text-align:center;min-width:60px;">
                         <div style="font-size:13px;color:#A78BFA;font-family:monospace;font-weight:700;">{r["rsi"]:.0f}</div>
-                        <div style="font-size:9px;color:#64748B;">RSI</div>
+                        <div style="font-size:13px;color:#CBD5E1;">RSI</div>
                       </div>
                       <div style="text-align:center;min-width:50px;">
                         <div style="font-size:13px;color:{vol_col};font-family:monospace;font-weight:700;">{r["vol_t"]:.1f}x</div>
-                        <div style="font-size:9px;color:#64748B;">VOL</div>
+                        <div style="font-size:13px;color:#CBD5E1;">VOL</div>
                       </div>
                     </div>''', unsafe_allow_html=True)
                     if st.button(f"📊 Full Analysis → {r['ticker']}", key=f"sns_analyze_{r['ticker']}", use_container_width=False):
@@ -4668,7 +4668,7 @@ def render_screener():
                         <div style="background:#1A2232;border:1px solid #243348;border-radius:8px;
                                     padding:10px 16px;margin-bottom:6px;display:flex;align-items:center;gap:16px;">
                           <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:800;color:#00FF88;min-width:72px;">{sym}</div>
-                          <div style="flex:1;font-size:12px;color:#94A3B8;">{cname}</div>
+                          <div style="flex:1;font-size:13px;color:#CBD5E1;">{cname}</div>
                           <div style="font-size:19px;font-weight:800;color:{sc_col};font-family:monospace;min-width:30px;">{sc}</div>
                           <div style="font-family:monospace;font-size:15px;font-weight:700;color:#F1F5F9;">{cur_w}{close:.2f}</div>
                           <div style="font-size:13px;color:{chg_col};font-weight:700;">{sign}{chg_pct:.2f}%</div>
