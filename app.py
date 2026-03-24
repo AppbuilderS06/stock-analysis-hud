@@ -2590,21 +2590,25 @@ def main():
                         elif fmp_key_lp:
                             results = search_ticker_fmp(ticker_upper, fmp_key_lp)
                             # If no results, try treating input as a company name
-                            # e.g. "Google" → finds GOOGL, "Apple" → finds AAPL
+                            # e.g. "Tesla" → finds TSLA, "Google" → finds GOOGL
+                            _name_search = False
                             if not results and len(ticker_upper) > 3:
                                 results = search_ticker_fmp(ticker_upper.title(), fmp_key_lp)
+                                _name_search = bool(results)
                             if results:
+                                # Exact ticker match AND not a name search → auto-confirm
                                 exact = next((r for r in results
                                               if r.get("symbol","").upper() == ticker_upper), None)
-                                if exact and len({r.get("symbol","").upper() for r in results
+                                if exact and not _name_search and len({r.get("symbol","").upper() for r in results
                                                   if r.get("symbol","").upper() == ticker_upper}) == 1:
-                                    # Single unambiguous match — auto-confirm
+                                    # Single unambiguous ticker match — auto-confirm
                                     nm = exact.get("name","")[:52]
                                     ex = exact.get("exchangeShortName","")
                                     cu = exact.get("currency","USD")
                                     _confirm(ticker_upper, nm, ex, cu)
                                 else:
-                                    # Multiple results — user must choose
+                                    # Name search or multiple results — always show dropdown
+                                    # so user picks the real symbol (e.g. TSLA not TESLA)
                                     rows = [{"sym": r.get("symbol",""), "name": r.get("name","")[:45],
                                              "exch": r.get("exchangeShortName",""), "curr": r.get("currency","USD"),
                                              "key": f'fmp_{r.get("symbol","")}_{r.get("exchangeShortName","")}'}
