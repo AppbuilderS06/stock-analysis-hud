@@ -1318,7 +1318,7 @@ def calc_timeframe_scores(row, prev, df, info, signals, phase_result,
     dt_base = min(dt, 10.0)
     # Day trade uses reduced regime multiplier (less relevant than swing)
     dt_mult = 1.0 + (regime_mult - 1.0) * 0.5
-    dt_final = max(0.0, min(10.0, dt_base * dt_mult))
+    dt_final = max(1.0, min(10.0, dt_base * dt_mult))
 
     # ────────────────────────────────────────────────────────
     # SWING TRADE SCORE (max 10 pts before multiplier)
@@ -1386,7 +1386,7 @@ def calc_timeframe_scores(row, prev, df, info, signals, phase_result,
     else:
         fs_mult = 0.90  # no data — neutral
 
-    sw_final = max(0.0, min(10.0, sw_base * regime_mult * fs_mult))
+    sw_final = max(1.0, min(10.0, sw_base * regime_mult * fs_mult))
 
     # ────────────────────────────────────────────────────────
     # POSITION SCORE (max 10 pts before multiplier)
@@ -1458,7 +1458,7 @@ def calc_timeframe_scores(row, prev, df, info, signals, phase_result,
     if fs_pct >= 65 and tw == 0:
         pos_mult = max(pos_mult, 0.75)  # quality floor in bad macro
 
-    pos_final = max(0.0, min(10.0, pos_base * pos_mult))
+    pos_final = max(1.0, min(10.0, pos_base * pos_mult))
 
     # ── Score labels ────────────────────────────────────────
     def _label(s, tf):
@@ -3507,8 +3507,8 @@ def render_hud():
           <div style="font-size:13px;color:{score_col};font-weight:700;margin-top:7px;">{tf_meaning}</div>
           <div style="font-size:13px;color:#CBD5E1;font-weight:600;margin-top:4px;line-height:1.5;">{tf_desc[cur_tf]}</div>
           <div style="margin-top:8px;padding-top:6px;border-top:1px solid #243348;">
-            <div style="font-size:13px;color:#CBD5E1;font-weight:700;margin-bottom:4px;line-height:1.6;">&#9650; {bull_names}</div>
-            <div style="font-size:13px;color:#CBD5E1;font-weight:700;line-height:1.6;">&#9660; {bear_names}</div>
+            <div style="font-size:13px;color:#00FF88;font-weight:700;margin-bottom:4px;line-height:1.6;">&#9650; {bull_names}</div>
+            <div style="font-size:13px;color:#FF6B6B;font-weight:700;line-height:1.6;">&#9660; {bear_names}</div>
           </div>
         </div>""", unsafe_allow_html=True)
 
