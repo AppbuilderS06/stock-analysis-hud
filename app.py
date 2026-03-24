@@ -2122,9 +2122,9 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         end   = raw.rfind('}')
         if start != -1 and end != -1 and end > start:
             raw = raw[start:end+1]
-       import re
-       raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', raw)
-       parsed = json.loads(raw.strip())
+        import re
+        raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', raw)
+        parsed = json.loads(raw.strip())
         # Validate minimum required keys
         if 'verdict' not in parsed:
             return {"error": "Claude response missing required fields"}
