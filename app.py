@@ -2388,7 +2388,7 @@ def main():
                 ("P/E Ratio","#38BDF8","Price-to-Earnings. Stock price divided by annual EPS. High P/E = expensive or high growth expected."),
                 ("PEG Ratio","#A78BFA","P/E divided by earnings growth rate. Under 1 = potentially undervalued relative to growth."),
                 ("Phase","#F97316","Weinstein Phase. Stocks cycle: 1=Base, 2=Uptrend (buy zone), 3=Top, 4=Downtrend (avoid)."),
-                ("R:R Ratio","#FACC15","Risk-to-Reward. How much you can gain vs how much you risk. Never take a trade below 1:1."),
+                ("R:R Ratio","#FACC15","Risk-to-Reward ratio — the most important number in any trade. It compares how much you stand to gain against how much you risk losing. \n\nThe minimum acceptable ratio is 1:2 — meaning for every $1 you risk, you need a realistic path to $2 of profit. Anything below 1:2 means the math works against you even if you win more than you lose. \n\n· Stop loss is placed below the nearest meaningful support level — the price where the original trade thesis is proven wrong. \n· Target is placed at the next significant resistance level — where sellers are likely to emerge and limit upside. \n· Entry is the current price zone where you're willing to buy. \n\nExample: Entry $100 · Stop $95 · Target $110. Risk = $5, Reward = $10. R:R = 1:2. If you take 10 trades at 1:2 and win only 4, you still break even. Win 5 out of 10 and you're profitable. This is why R:R matters more than win rate."),
                 ("RSI","#A78BFA","Relative Strength Index (0–100). Above 70 = overbought. Below 30 = oversold."),
                 ("Support","#00FF88","A price level where buying tends to outweigh selling — the stock has bounced from here before."),
                 ("Resistance","#FF6B6B","A price level where selling tends to outweigh buying — the stock has struggled to break through here."),
@@ -2589,6 +2589,10 @@ def main():
                                 render_dropdown_search(rows)
                         elif fmp_key_lp:
                             results = search_ticker_fmp(ticker_upper, fmp_key_lp)
+                            # If no results, try treating input as a company name
+                            # e.g. "Google" → finds GOOGL, "Apple" → finds AAPL
+                            if not results and len(ticker_upper) > 3:
+                                results = search_ticker_fmp(ticker_upper.title(), fmp_key_lp)
                             if results:
                                 exact = next((r for r in results
                                               if r.get("symbol","").upper() == ticker_upper), None)
@@ -3552,9 +3556,9 @@ def render_hud():
 
         # Correct professional thresholds
         if _rr >= 3:    _rr_col, _rr_lbl = '#00FF88', 'Excellent'
-        elif _rr >= 2:  _rr_col, _rr_lbl = '#00FF88', 'Good'
-        elif _rr >= 1.5:_rr_col, _rr_lbl = '#FACC15', 'Marginal'
-        else:           _rr_col, _rr_lbl = '#FF6B6B', 'Poor — avoid'
+        elif _rr >= 2:  _rr_col, _rr_lbl = '#00FF88', 'Good — minimum standard'
+        elif _rr >= 1.5:_rr_col, _rr_lbl = '#FACC15', 'Below minimum — reconsider'
+        else:           _rr_col, _rr_lbl = '#FF6B6B', 'Poor — do not trade'
 
         _entry_str = f'{cur}{_entry_low:.2f} – {cur}{_entry_high:.2f}'
 
@@ -4180,7 +4184,7 @@ def render_hud():
     stop_pct         = round((risk_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
     target_pct       = round((reward_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
     rr_col   = '#00FF88' if rr_ratio >= 2 else '#FACC15' if rr_ratio >= 1.5 else '#FF6B6B'
-    rr_label = 'Excellent' if rr_ratio >= 3 else 'Good' if rr_ratio >= 2 else 'Marginal' if rr_ratio >= 1.5 else 'Poor — avoid'
+    rr_label = 'Excellent' if rr_ratio >= 3 else 'Good — minimum standard' if rr_ratio >= 2 else 'Below minimum — reconsider' if rr_ratio >= 1.5 else 'Poor — do not trade'
 
     rc1, rc2, rc3 = st.columns(3)
     with rc1:
