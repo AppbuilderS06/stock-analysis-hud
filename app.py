@@ -408,7 +408,8 @@ def fetch_ticker_data(ticker, fmp_key="", _v=17):
                         ('forwardPE', p.get('pe', 0)),
                         ('beta',      p.get('beta', 0)),
                     ]:
-                        if val and key not in info:
+                        # Fill if key missing OR if yfinance left it empty/None
+                        if val and (key not in info or not info.get(key)):
                             info[key] = val
             except: pass
 
@@ -1504,6 +1505,7 @@ def val_color(val, good="g"):
 
 # ── PATCH: Sector ETF Map ─────────────────────────────────────
 SECTOR_ETF_MAP = {
+    # Standard yfinance sector names
     "Technology":                  "XLK",
     "Healthcare":                  "XLV",
     "Financials":                  "XLF",
@@ -1524,6 +1526,37 @@ SECTOR_ETF_MAP = {
     "Telecommunication Services":  "XLC",
     "Electronic Components":       "XLK",
     "Semiconductors":              "XLK",
+    # FMP sector names (often different from yfinance)
+    "Semiconductor":               "XLK",
+    "Software":                    "XLK",
+    "Technology Services":         "XLK",
+    "Hardware":                    "XLK",
+    "Electronic Technology":       "XLK",
+    "Producer Manufacturing":      "XLI",
+    "Commercial Services":         "XLI",
+    "Transportation":              "XLI",
+    "Retail Trade":                "XLY",
+    "Consumer Services":           "XLY",
+    "Distribution Services":       "XLY",
+    "Health Services":             "XLV",
+    "Health Technology":           "XLV",
+    "Pharmaceutical":              "XLV",
+    "Biotechnology":               "XLV",
+    "Biotech":                     "XLV",
+    "Finance":                     "XLF",
+    "Banking":                     "XLF",
+    "Insurance":                   "XLF",
+    "Investment":                  "XLF",
+    "Oil & Gas":                   "XLE",
+    "Oil Gas":                     "XLE",
+    "Mining":                      "XLB",
+    "Chemicals":                   "XLB",
+    "Metals":                      "XLB",
+    "Utilities - Regulated":       "XLU",
+    "Telecom":                     "XLC",
+    "Media":                       "XLC",
+    "Entertainment":               "XLC",
+    "Internet":                    "XLC",
 }
 
 
@@ -2957,8 +2990,19 @@ def run_analysis(ticker):
 
         prog.empty()
         # Pre-fetch comparison data for relative performance panel — zero-cost on arrow press
-        sector_name_run = str(info.get('sector') or '')
+        # Try multiple sector field sources — yfinance and FMP use different field names
+        sector_name_run = (
+            str(info.get('sector') or '') or
+            str(info.get('sectorDisp') or '') or
+            str(info.get('industry') or '')
+        ).strip()
         sector_etf_run  = SECTOR_ETF_MAP.get(sector_name_run, '')
+        # If still no match, try case-insensitive lookup
+        if not sector_etf_run and sector_name_run:
+            for k, v in SECTOR_ETF_MAP.items():
+                if k.lower() in sector_name_run.lower() or sector_name_run.lower() in k.lower():
+                    sector_etf_run = v
+                    break
         comp_data = fetch_comparison_data(sector_etf_run) if sector_etf_run else {'spy': {}, 'sec': {}}
         # Stock returns precomputed from df
         TFS_RUN = ['1W', '1M', 'QTD', 'YTD', '1Y']
@@ -3490,10 +3534,20 @@ def render_hud():
 
         # ── Relative Performance — arrow nav (1W/1M/QTD/YTD/1Y) ──
         sector_etf_sc  = st.session_state.get('sector_etf_run', '')
-        sector_name_sc = str(info.get('sector') or '')
-        # Fallback: re-derive if session state missing (e.g. after hot reload)
+        sector_name_sc = (
+            str(info.get('sector') or '') or
+            str(info.get('sectorDisp') or '') or
+            str(info.get('industry') or '')
+        ).strip()
+        # Fallback: re-derive if session state missing
         if not sector_etf_sc and sector_name_sc:
             sector_etf_sc = SECTOR_ETF_MAP.get(sector_name_sc, '')
+        # Case-insensitive fallback — catches "semiconductor" vs "Semiconductors"
+        if not sector_etf_sc and sector_name_sc:
+            for k, v in SECTOR_ETF_MAP.items():
+                if k.lower() in sector_name_sc.lower() or sector_name_sc.lower() in k.lower():
+                    sector_etf_sc = v
+                    break
 
         if sector_etf_sc:
             # Timeframe nav state
