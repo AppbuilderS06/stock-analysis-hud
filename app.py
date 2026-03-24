@@ -3326,6 +3326,17 @@ def render_hud():
             <span style="font-size:10px;color:#64748B;">{fs_bucket_str}{fs_detail_str}</span>
           </div>
         </div>""", unsafe_allow_html=True)
+
+        # Timeframe notes — stacked vertically under verdict, fill the left column
+        day_note   = a.get('day_trade_note', '')
+        swing_note = a.get('swing_note', '')
+        inv_note   = a.get('invest_note', '')
+        if day_note:
+            st.markdown(f'<div class="tf-day"><div class="tf-label" style="color:#FACC15;">⚡ Day Trade</div><div class="tf-note">{day_note}</div></div>', unsafe_allow_html=True)
+        if swing_note:
+            st.markdown(f'<div class="tf-swing"><div class="tf-label" style="color:#38BDF8;">🔄 Swing Trade</div><div class="tf-note">{swing_note}</div></div>', unsafe_allow_html=True)
+        if inv_note:
+            st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">📈 Position</div><div class="tf-note">{inv_note}</div></div>', unsafe_allow_html=True)
     with c2:
         st.markdown(f"""
         <div class="score-card">
@@ -3370,22 +3381,6 @@ def render_hud():
                 st.session_state['score_timeframe'] = tf_order[(cur_idx + 1) % 3]
                 st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-
-        # Timeframe notes — horizontal 3 pills side by side
-        day_note   = a.get('day_trade_note', '')
-        swing_note = a.get('swing_note', '')
-        inv_note   = a.get('invest_note', '')
-        if day_note or swing_note or inv_note:
-            tf1, tf2, tf3 = st.columns(3)
-            with tf1:
-                if day_note:
-                    st.markdown(f'<div class="tf-day" style="height:100%;"><div class="tf-label" style="color:#FACC15;">⚡ Day Trade</div><div class="tf-note">{day_note}</div></div>', unsafe_allow_html=True)
-            with tf2:
-                if swing_note:
-                    st.markdown(f'<div class="tf-swing" style="height:100%;"><div class="tf-label" style="color:#38BDF8;">🔄 Swing Trade</div><div class="tf-note">{swing_note}</div></div>', unsafe_allow_html=True)
-            with tf3:
-                if inv_note:
-                    st.markdown(f'<div class="tf-inv" style="height:100%;"><div class="tf-label" style="color:#00FF88;">📈 Position</div><div class="tf-note">{inv_note}</div></div>', unsafe_allow_html=True)
 
         # ── Relative Performance — arrow nav (1W/1M/QTD/YTD/1Y) ──
         sector_name_sc = str(info.get('sector') or '')
