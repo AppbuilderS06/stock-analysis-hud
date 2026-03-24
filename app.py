@@ -1838,24 +1838,30 @@ def _perf_ret(series, tf):
 @st.cache_data(ttl=900, show_spinner=False)
 def fetch_comparison_data(sector_etf):
     """
-    Download SPY + sector ETF once, precompute all 5 timeframe returns.
-    Cached 15 min. Arrow presses read from session state — zero network calls.
+    Download SPY + sector ETF, precompute all 5 timeframe returns.
+    Cached 15 min. If sector_etf == 'SPY' or download fails, SPY-only is returned.
     """
-    TFS = ['1W', '1M', 'QTD', 'YTD', '1Y']
+    TFS   = ['1W', '1M', 'QTD', 'YTD', '1Y']
     empty = {tf: 0.0 for tf in TFS}
+    spy_data = empty.copy()
+    sec_data = empty.copy()
     try:
-        comp_df = yf.download(
-            [sector_etf, 'SPY'], period='2y',
-            auto_adjust=True, progress=False, threads=True
-        )
-        spy_s = comp_df['Close']['SPY'].dropna()
-        sec_s = comp_df['Close'][sector_etf].dropna()
-        return {
-            'spy': {tf: _perf_ret(spy_s, tf) for tf in TFS},
-            'sec': {tf: _perf_ret(sec_s, tf) for tf in TFS},
-        }
+        tickers = ['SPY'] if sector_etf in ('', 'SPY') else [sector_etf, 'SPY']
+        comp_df = yf.download(tickers, period='2y', auto_adjust=True, progress=False, threads=True)
+        # Handle both single and multi-ticker download shapes
+        if 'Close' in comp_df.columns and not isinstance(comp_df['Close'], pd.DataFrame):
+            # Single ticker — only SPY
+            spy_s    = comp_df['Close'].dropna()
+            spy_data = {tf: _perf_ret(spy_s, tf) for tf in TFS}
+        else:
+            close_df = comp_df['Close']
+            if 'SPY' in close_df.columns:
+                spy_data = {tf: _perf_ret(close_df['SPY'].dropna(), tf) for tf in TFS}
+            if sector_etf and sector_etf != 'SPY' and sector_etf in close_df.columns:
+                sec_data = {tf: _perf_ret(close_df[sector_etf].dropna(), tf) for tf in TFS}
     except:
-        return {'spy': empty, 'sec': empty}
+        pass
+    return {'spy': spy_data, 'sec': sec_data}
 
 
 
@@ -3003,7 +3009,7 @@ def run_analysis(ticker):
                 if k.lower() in sector_name_run.lower() or sector_name_run.lower() in k.lower():
                     sector_etf_run = v
                     break
-        comp_data = fetch_comparison_data(sector_etf_run) if sector_etf_run else {'spy': {}, 'sec': {}}
+        comp_data = fetch_comparison_data(sector_etf_run) if sector_etf_run else fetch_comparison_data('SPY')
         # Stock returns precomputed from df
         TFS_RUN = ['1W', '1M', 'QTD', 'YTD', '1Y']
         stk_returns = {tf: _perf_ret(df['Close'], tf) for tf in TFS_RUN}
@@ -3549,24 +3555,23 @@ def render_hud():
                     sector_etf_sc = v
                     break
 
-        if sector_etf_sc:
-            # Timeframe nav state
-            perf_tf_order  = ['1W', '1M', 'QTD', 'YTD', '1Y']
-            perf_tf_labels = {'1W':'1 Week', '1M':'1 Month', 'QTD':'This Quarter', 'YTD':'Year to Date', '1Y':'1 Year'}
-            if 'perf_timeframe' not in st.session_state:
-                st.session_state['perf_timeframe'] = '1M'
-            perf_tf   = st.session_state['perf_timeframe']
-            perf_idx  = perf_tf_order.index(perf_tf)
+        # Always show panel — fall back to SPY-only if no sector ETF
+        perf_tf_order  = ['1W', '1M', 'QTD', 'YTD', '1Y']
+        perf_tf_labels = {'1W':'1 Week', '1M':'1 Month', 'QTD':'This Quarter', 'YTD':'Year to Date', '1Y':'1 Year'}
+        if 'perf_timeframe' not in st.session_state:
+            st.session_state['perf_timeframe'] = '1M'
+        perf_tf   = st.session_state['perf_timeframe']
+        perf_idx  = perf_tf_order.index(perf_tf)
 
-            # Read from precomputed session state — zero network calls on arrow press
-            comp_data   = st.session_state.get('comp_data', {'spy': {}, 'sec': {}})
-            stk_returns = st.session_state.get('stk_returns', {})
-            # Fallback: if comp_data empty (e.g. sector changed), fetch now (cached anyway)
-            if not comp_data.get('spy'):
-                comp_data = fetch_comparison_data(sector_etf_sc)
-            spy_ret = float(comp_data.get('spy', {}).get(perf_tf, 0) or 0)
-            sec_ret = float(comp_data.get('sec', {}).get(perf_tf, 0) or 0)
-            stk_ret = float(stk_returns.get(perf_tf, 0) or 0)
+        comp_data   = st.session_state.get('comp_data', {'spy': {}, 'sec': {}})
+        stk_returns = st.session_state.get('stk_returns', {})
+        if not comp_data.get('spy'):
+            _fetch_etf = sector_etf_sc if sector_etf_sc else 'SPY'
+            comp_data  = fetch_comparison_data(_fetch_etf)
+        spy_ret = float(comp_data.get('spy', {}).get(perf_tf, 0) or 0)
+        sec_ret = float(comp_data.get('sec', {}).get(perf_tf, 0) or 0)
+        stk_ret = float(stk_returns.get(perf_tf, 0) or 0)
+        if True:  # always render
 
             def _pc(v): return '#00FF88' if v > 0 else '#FF6B6B' if v < 0 else '#FACC15'
             def _pf(v): return f'{v:+.1f}%'
@@ -3596,9 +3601,9 @@ def render_hud():
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;
                           margin-bottom:5px;padding-bottom:5px;border-bottom:1px solid #1A2A3A;">
-                <span style="font-size:13px;color:#CBD5E1;font-weight:600;">{sector_etf_sc} · Sector ETF</span>
+                <span style="font-size:13px;color:#CBD5E1;font-weight:600;">{sector_etf_sc + ' · Sector ETF' if sector_etf_sc else 'Sector ETF · N/A'}</span>
                 <span style="font-size:13px;font-weight:800;color:{_pc(sec_ret)};
-                             font-family:'JetBrains Mono',monospace;">{_pf(sec_ret)}</span>
+                             font-family:'JetBrains Mono',monospace;">{_pf(sec_ret) if sector_etf_sc else '—'}</span>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;">
                 <span style="font-size:13px;color:#CBD5E1;font-weight:600;">{ticker} · Stock</span>
