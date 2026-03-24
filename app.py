@@ -2593,8 +2593,13 @@ def main():
                             # e.g. "Tesla" → finds TSLA, "Google" → finds GOOGL
                             _name_search = False
                             if not results and len(ticker_upper) > 3:
-                                results = search_ticker_fmp(ticker_upper.title(), fmp_key_lp)
-                                _name_search = bool(results)
+                                # Try as company name — multiple case variants
+                                for _q in [ticker_upper.title(), ticker_upper.lower(),
+                                           ticker_upper.title().replace(' Inc','').replace(' Corp','').strip()]:
+                                    results = search_ticker_fmp(_q, fmp_key_lp)
+                                    if results:
+                                        _name_search = True
+                                        break
                             if results:
                                 # Exact ticker match AND not a name search → auto-confirm
                                 exact = next((r for r in results
