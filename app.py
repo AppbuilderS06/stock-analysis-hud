@@ -2814,9 +2814,16 @@ def run_analysis(ticker):
             rs = data.get('rec_summary')
             if rs is not None and not (hasattr(rs,'empty') and rs.empty):
                 r = rs.iloc[0]
-                buy_cnt  = int((r.get('strongBuy',0) or 0) + (r.get('buy',0) or 0))
-                hold_cnt = int(r.get('hold', 0) or 0)
-                sell_cnt = int((r.get('strongSell',0) or 0) + (r.get('sell',0) or 0))
+                def _rs(row, *keys):
+                    for k in keys:
+                        try:
+                            v = row[k]
+                            if v is not None: return int(v or 0)
+                        except: pass
+                    return 0
+                buy_cnt  = _rs(r,'strongBuy') + _rs(r,'buy')
+                hold_cnt = _rs(r,'hold')
+                sell_cnt = _rs(r,'strongSell') + _rs(r,'sell')
                 num_ana  = buy_cnt + hold_cnt + sell_cnt
         except: pass
 
@@ -2873,9 +2880,16 @@ def run_analysis(ticker):
 
         if buy_cnt == 0 and _yf_recs_r is not None and not _yf_recs_r.empty:
             r = _yf_recs_r.iloc[0]
-            buy_cnt  = int((r.get('strongBuy', r.get('strong_buy', 0)) or 0) + (r.get('buy', 0) or 0))
-            hold_cnt = int(r.get('hold', 0) or 0)
-            sell_cnt = int((r.get('strongSell', r.get('strong_sell', 0)) or 0) + (r.get('sell', 0) or 0))
+            def _rc(row, *keys):
+                for k in keys:
+                    try:
+                        v = row[k]
+                        if v is not None: return int(v or 0)
+                    except: pass
+                return 0
+            buy_cnt  = _rc(r,'strongBuy','strong_buy') + _rc(r,'buy')
+            hold_cnt = _rc(r,'hold')
+            sell_cnt = _rc(r,'strongSell','strong_sell') + _rc(r,'sell')
             num_ana  = max(num_ana, buy_cnt + hold_cnt + sell_cnt)
 
         rec_mean = float(info.get('recommendationMean') or 0)
@@ -2912,15 +2926,22 @@ def run_analysis(ticker):
         try:
             if eh is not None and not eh.empty:
                 for _, er in eh.head(4).iterrows():
-                    est = float(er.get('epsEstimate', er.get('EPS Estimate', er.get('estimate', 0))) or 0)
-                    act = float(er.get('epsActual',   er.get('Reported EPS', er.get('actual',   0))) or 0)
-                    surp_raw = er.get('surprisePercent', er.get('Surprise(%)', er.get('surprise', None)))
+                    def _er(row, *keys, default=0):
+                        for k in keys:
+                            try:
+                                v = row[k]
+                                if v is not None and str(v) not in ('nan','NaT',''): return v
+                            except: pass
+                        return default
+                    est = float(_er(er,'epsEstimate','EPS Estimate','estimate') or 0)
+                    act = float(_er(er,'epsActual','Reported EPS','actual') or 0)
+                    surp_raw = _er(er,'surprisePercent','Surprise(%)','surprise', default=None)
                     if surp_raw is not None:
                         sv = float(surp_raw or 0)
                         surp = sv * 100 if abs(sv) <= 2 else sv
                     else:
                         surp = ((act - est) / abs(est) * 100) if est != 0 else 0
-                    qtr = str(er.get('period', er.get('Date', er.name if hasattr(er, 'name') else '')))[:10]
+                    qtr = str(_er(er,'period','Date', default=er.name if hasattr(er,'name') else ''))[:10]
                     if act != 0 or est != 0:
                         earnings_hist.append({'quarter': qtr, 'estimate': est,
                                               'actual': act, 'surprise': surp, 'beat': surp > 0})
@@ -2932,13 +2953,20 @@ def run_analysis(ticker):
                 ins = _yf_ins_r
             if ins is not None and not ins.empty:
                 for _, ri in ins.head(5).iterrows():
-                    shares = int(ri.get('Shares', ri.get('shares', 0)) or 0)
-                    val    = float(ri.get('Value', ri.get('value', 0)) or 0)
-                    text   = str(ri.get('Text',   ri.get('text', '')) or '')
-                    trans  = str(ri.get('Transaction', ri.get('transaction', '')) or '')
-                    name   = str(ri.get('Insider', ri.get('filerName', ri.get('insider', ''))) or '')
-                    role   = str(ri.get('Position', ri.get('filerRelation', '')) or '')
-                    date_i = str(ri.get('Date', ri.get('startDate', '')) or '')
+                    def _ri(row, *keys, default=''):
+                        for k in keys:
+                            try:
+                                v = row[k]
+                                if v is not None and str(v) not in ('nan','NaT',''): return v
+                            except: pass
+                        return default
+                    shares = int(float(_ri(ri,'Shares','shares', default=0) or 0))
+                    val    = float(_ri(ri,'Value','value', default=0) or 0)
+                    text   = str(_ri(ri,'Text','text') or '')
+                    trans  = str(_ri(ri,'Transaction','transaction') or '')
+                    name   = str(_ri(ri,'Insider','filerName','insider') or '')
+                    role   = str(_ri(ri,'Position','filerRelation') or '')
+                    date_i = str(_ri(ri,'Date','startDate') or '')
                     combined = (text + trans).lower()
                     is_sell = any(w in combined for w in ('sale','sell','dispose','disposed'))
                     is_buy  = (not is_sell and
@@ -3056,8 +3084,17 @@ def run_analysis(ticker):
         st.session_state.sector_etf_run = sector_etf_run  # store for render — avoids re-derive issue
 
         # Precompute expensive render-time values once — avoids recomputing on every rerun
-        _sector_name_s = str(info.get('sector','') or '')
-        _sector_etf_s  = SECTOR_ETF_MAP.get(_sector_name_s, '')
+        _sector_name_s = (
+            str(info.get('sector','') or '') or
+            str(info.get('sectorDisp','') or '') or
+            str(info.get('industry','') or '')
+        ).strip()
+        _sector_etf_s = SECTOR_ETF_MAP.get(_sector_name_s, '')
+        if not _sector_etf_s and _sector_name_s:
+            for k, v in SECTOR_ETF_MAP.items():
+                if k.lower() in _sector_name_s.lower() or _sector_name_s.lower() in k.lower():
+                    _sector_etf_s = v
+                    break
         _mkt_phase_s   = get_market_phase()
         _sec_phase_s   = get_sector_phase(_sector_etf_s) if _sector_etf_s else (0,'N/A','No ETF','#94A3B8',0,'','')
         _fs_s          = fundamental_screen(info, analysis.get('verdict',''))
@@ -3726,8 +3763,17 @@ def render_hud():
 
     # ── WEINSTEIN PHASE + THREE TAILWINDS ────────────────────
     ph_num, ph_label, ph_sub, ph_col, ph_conf, ph_conf_text, ph_desc = phase_result
-    sector_name = info.get('sector', '')
-    sector_etf  = SECTOR_ETF_MAP.get(sector_name, '')
+    sector_name = (
+        str(info.get('sector','') or '') or
+        str(info.get('sectorDisp','') or '') or
+        str(info.get('industry','') or '')
+    ).strip()
+    sector_etf = SECTOR_ETF_MAP.get(sector_name, '')
+    if not sector_etf and sector_name:
+        for k, v in SECTOR_ETF_MAP.items():
+            if k.lower() in sector_name.lower() or sector_name.lower() in k.lower():
+                sector_etf = v
+                break
 
     mkt_phase = mkt_phase_hud   # already read from session state above
     sec_phase = sec_phase_hud   # already read from session state above
@@ -4087,8 +4133,8 @@ def render_hud():
     loss_pct         = round((actual_loss / position_size_input) * 100, 1) if position_size_input > 0 else 0
     stop_pct         = round((risk_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
     target_pct       = round((reward_per_share / entry_price) * 100, 2) if entry_price > 0 else 0
-    rr_col           = "#00FF88" if rr_ratio >= 2 else "#FACC15" if rr_ratio >= 1 else "#FF6B6B"
-    rr_label         = "Excellent" if rr_ratio >= 3 else "Good" if rr_ratio >= 2 else "Acceptable" if rr_ratio >= 1 else "Poor — avoid"
+    rr_col   = '#00FF88' if rr_ratio >= 2 else '#FACC15' if rr_ratio >= 1.5 else '#FF6B6B'
+    rr_label = 'Excellent' if rr_ratio >= 3 else 'Good' if rr_ratio >= 2 else 'Marginal' if rr_ratio >= 1.5 else 'Poor — avoid'
 
     rc1, rc2, rc3 = st.columns(3)
     with rc1:
