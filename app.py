@@ -632,7 +632,7 @@ st.markdown("""
 
   .identity-bar {
     background: linear-gradient(135deg, #112D20 0%, #112240 100%);
-    border: 1px solid #14B8A6;
+    border: 1px solid #5EEAD4;
     border-radius: 10px;
     padding: 16px 22px;
     display: flex;
@@ -642,7 +642,7 @@ st.markdown("""
   }
   .ticker-name { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 800; color: #00FF88; letter-spacing: 4px; text-shadow: 0 0 20px #00FF8840; }
   .company-name { font-size: 16px; font-weight: 600; color: #E2E8F0; }
-  .exchange-pill { font-size: 11px; color: #99F6E4; background: #0F3030; border: 1px solid #14B8A6; padding: 3px 10px; border-radius: 4px; letter-spacing: 1px; }
+  .exchange-pill { font-size:13px; color: #99F6E4; background: #0F3030; border: 1px solid #5EEAD4; padding: 3px 10px; border-radius: 4px; letter-spacing: 1px; }
   .price-display { font-family: 'JetBrains Mono', monospace; font-size: 36px; font-weight: 800; color: #FACC15; text-align: right; }
   .price-change-up { display: inline-block; background: #052A14; border: 1px solid #00FF8844; border-radius: 6px; padding: 4px 12px; font-size: 14px; font-weight: 700; color: #00FF88; font-family: 'JetBrains Mono', monospace; }
   .price-change-dn { display: inline-block; background: #2D0A0A; border: 1px solid #FF6B6B44; border-radius: 6px; padding: 4px 12px; font-size: 14px; font-weight: 700; color: #FF6B6B; font-family: 'JetBrains Mono', monospace; }
@@ -651,7 +651,7 @@ st.markdown("""
     background: linear-gradient(90deg, #0E2218 0%, #0E1C30 100%);
     border-radius: 6px; padding: 7px 16px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; color: #3D6050;
+    font-size:13px; color: #3D6050;
     margin-bottom: 10px;
   }
   .status-bar span { color: #99F6E4; font-weight: 600; }
@@ -659,10 +659,10 @@ st.markdown("""
   .section-header {
     background: #0F3030;
     padding: 7px 14px;
-    font-size: 11px; color: #5EEAD4;
+    font-size:13px; color: #5EEAD4;
     letter-spacing: 2px; text-transform: uppercase;
     border-radius: 8px 8px 0 0;
-    border-bottom: 1px solid #14B8A633;
+    border-bottom: 1px solid #5EEAD433;
     margin-top: 8px;
   }
   .panel-body {
@@ -701,38 +701,38 @@ st.markdown("""
   .sig-val-y { font-size: 14px; font-weight: 700; color: #FACC15; font-family: 'JetBrains Mono', monospace; }
 
   .verdict-card { border-radius: 8px; padding: 16px 18px; border-left-width: 3px; border-left-style: solid; }
-  .verdict-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; margin-bottom: 5px; }
+  .verdict-label { font-size:13px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; margin-bottom: 5px; }
   .verdict-value { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
-  .verdict-meta { font-size: 12px; color: #94A3B8; margin-top: 4px; }
-  .verdict-note { font-size: 12px; margin-top: 6px; line-height: 1.5; opacity: 0.9; }
+  .verdict-meta { font-size:13px; color: #94A3B8; margin-top: 4px; }
+  .verdict-note { font-size:13px; margin-top: 6px; line-height: 1.5; opacity: 0.9; }
 
-  .score-card { background: #1C1A50; border: 1px solid #3730A3; border-left: 3px solid #818CF8; border-radius: 8px; padding: 16px 18px; }
-  .score-label { font-size: 11px; color: #818CF8; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .score-card { background: #0A1525; border: 1px solid #1E2D42; border-left: 3px solid #38BDF8; border-radius: 8px; padding: 16px 18px; }
+  .score-label { font-size:13px; color: #38BDF8; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
   .score-num { font-family: 'JetBrains Mono', monospace; font-size: 52px; font-weight: 800; line-height: 1; }
   .score-denom { font-size: 20px; color: #4A6080; }
 
-  .reason-bull { background: #0D2818; border-left: 2px solid #00FF88; padding: 8px 12px; font-size: 12px; color: #86EFAC; border-radius: 0 6px 6px 0; line-height: 1.5; margin-bottom: 4px; }
-  .reason-bear { background: #2D1015; border-left: 2px solid #FF6B6B; padding: 8px 12px; font-size: 12px; color: #FCA5A5; border-radius: 0 6px 6px 0; line-height: 1.5; margin-bottom: 4px; }
+  .reason-bull { background: #0D2818; border-left: 2px solid #00FF88; padding: 8px 12px; font-size:13px; color: #86EFAC; border-radius: 0 6px 6px 0; line-height: 1.5; margin-bottom: 4px; }
+  .reason-bear { background: #2D1015; border-left: 2px solid #FF6B6B; padding: 8px 12px; font-size:13px; color: #FCA5A5; border-radius: 0 6px 6px 0; line-height: 1.5; margin-bottom: 4px; }
 
   .tf-day   { background: #1A1000; border: 1px solid #FACC1533; border-radius: 8px; padding: 12px 14px; }
   .tf-swing { background: #0D1525; border: 1px solid #38BDF833; border-radius: 8px; padding: 12px 14px; }
   .tf-inv   { background: #0D2010; border: 1px solid #00FF8833; border-radius: 8px; padding: 12px 14px; }
-  .tf-label { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .tf-label { font-size:13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
   .tf-note  { font-size: 13px; color: #CBD5E1; line-height: 1.6; }
 
-  .earn-bar { background: #1A2232; border: 1px solid #243348; border-left: 3px solid #818CF8; border-radius: 8px; padding: 10px 16px; }
+  .earn-bar { background: #1A2232; border: 1px solid #243348; border-left: 3px solid #38BDF8; border-radius: 8px; padding: 10px 16px; }
   .earn-label { font-size: 9px; color: #4A6080; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
   .earn-val { font-size: 13px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 
-  .summary-box { background: #1A2232; border-top: 2px solid #14B8A6; border-radius: 0 0 8px 8px; padding: 14px 16px; }
+  .summary-box { background: #1A2232; border-top: 2px solid #5EEAD4; border-radius: 0 0 8px 8px; padding: 14px 16px; }
   .summary-text { font-size: 13px; color: #E2E8F0; line-height: 1.8; }
 
   .pat-bull { background: #0D2818; border: 1px solid #00FF8830; border-radius: 8px; padding: 12px 14px; }
   .pat-bear { background: #2D0A0A; border: 1px solid #FF6B6B30; border-radius: 8px; padding: 12px 14px; }
   .pat-neut { background: #251800; border: 1px solid #FACC1530; border-radius: 8px; padding: 12px 14px; }
   .pat-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
-  .pat-desc { font-size: 12px; color: #CBD5E1; line-height: 1.5; margin-top: 5px; }
-  .pat-target { font-size: 12px; font-weight: 600; margin-top: 6px; }
+  .pat-desc { font-size:13px; color: #CBD5E1; line-height: 1.5; margin-top: 5px; }
+  .pat-target { font-size:13px; font-weight: 600; margin-top: 6px; }
 
   .candle-card { background: #1A2232; border: 1px solid #2A3F5A; border-radius: 8px; padding: 12px 14px; text-align: center; }
   .candle-card-bull { background: #0D2818; border: 1px solid #00FF8830; border-radius: 8px; padding: 12px 14px; text-align: center; }
@@ -742,7 +742,7 @@ st.markdown("""
   .trend-tile { background: #1A2232; border: 1px solid #2A3F5A; border-radius: 8px; padding: 12px 14px; }
   .trend-tile-label { font-size: 10px; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
   .trend-tile-val { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
-  .trend-tile-desc { font-size: 12px; color: #CBD5E1; line-height: 1.5; }
+  .trend-tile-desc { font-size:13px; color: #CBD5E1; line-height: 1.5; }
 
   .range-wrap { position: relative; height: 6px; background: #243348; border-radius: 3px; margin: 6px 0; }
   .range-fill { position: absolute; left: 0; top: 0; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #FF6B6B, #FACC15, #00FF88); }
@@ -824,9 +824,9 @@ st.markdown("""
   .tpl-select-gold  .stButton button:hover { background: #FACC1522 !important; opacity: 1 !important; }
   /* Arrow nav buttons for timeframe switcher */
   .tf-arrow .stButton button {
-    background: #13103A !important;
-    color: #818CF8 !important;
-    border: 1px solid #3730A3 !important;
+    background: #0A1525 !important;
+    color: #38BDF8 !important;
+    border: 1px solid #1E2D42 !important;
     font-size: 16px !important;
     font-weight: 900 !important;
     padding: 6px !important;
@@ -834,8 +834,8 @@ st.markdown("""
     width: 100% !important;
   }
   .tf-arrow .stButton button:hover {
-    background: #1C1A50 !important;
-    border-color: #818CF8 !important;
+    background: #0A1525 !important;
+    border-color: #38BDF8 !important;
     opacity: 1 !important;
   }
   .reset-btn .stButton button {
@@ -869,22 +869,24 @@ st.markdown("""
   .analyst-seg-hold { background: #FACC15; }
   .analyst-seg-sell { background: #FF6B6B; }
 
-  .earn-hist-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px; padding: 8px 14px; border-bottom: 1px solid #111827; font-size: 12px; }
+  .earn-hist-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px; padding: 8px 14px; border-bottom: 1px solid #111827; font-size:13px; }
   .earn-hist-row:last-child { border-bottom: none; }
   .earn-beat { color: #00FF88; font-weight: 700; }
   .earn-miss { color: #FF6B6B; font-weight: 700; }
 
-  .insider-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 14px; border-bottom: 1px solid #111827; font-size: 12px; }
+  .insider-row { display: grid; grid-template-columns: 2fr 1.5fr 80px 1.2fr 1.2fr; align-items: center; padding: 11px 16px; border-bottom: 1px solid #111827; gap: 8px; }
   .insider-row:last-child { border-bottom: none; }
-  .insider-buy  { color: #00FF88; font-weight: 700; font-size: 11px; }
-  .insider-sell { color: #FF6B6B; font-weight: 700; font-size: 11px; }
-  .insider-name { color: #E2E8F0; flex: 1; }
-  .insider-role { color: #64748B; font-size: 11px; flex: 1; }
-  .insider-shares { color: #94A3B8; font-size: 11px; text-align: right; }
+  .insider-header { background: #131F32; border-radius: 0; }
+  .insider-name { color: #E2E8F0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .insider-role { color: #94A3B8; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .insider-badge-buy  { display: inline-block; background: #052A14; border: 1px solid #00FF88; color: #00FF88; font-weight: 800; font-size:13px; padding: 3px 10px; border-radius: 4px; letter-spacing: 1px; text-align: center; }
+  .insider-badge-sell { display: inline-block; background: #2D0A0A; border: 1px solid #FF6B6B; color: #FF6B6B; font-weight: 800; font-size:13px; padding: 3px 10px; border-radius: 4px; letter-spacing: 1px; text-align: center; }
+  .insider-shares { color: #E2E8F0; font-size: 13px; font-family: 'JetBrains Mono', monospace; text-align: right; }
+  .insider-value  { color: #FACC15; font-size: 13px; font-weight: 700; font-family: 'JetBrains Mono', monospace; text-align: right; }
 
   .news-row { padding: 8px 14px; border-bottom: 1px solid #111827; }
   .news-row:last-child { border-bottom: none; }
-  .news-headline { font-size: 12px; color: #E2E8F0; line-height: 1.4; margin-bottom: 3px; }
+  .news-headline { font-size:13px; color: #E2E8F0; line-height: 1.4; margin-bottom: 3px; }
   .news-meta { display: flex; justify-content: space-between; font-size: 10px; color: #4A6080; }
 
   .score-bar-wrap { position: relative; height: 8px; background: #111827; border-radius: 4px; margin: 8px 0; overflow: hidden; }
@@ -900,14 +902,14 @@ st.markdown("""
     border: 1px solid #243348;
     color: #94A3B8;
     border-radius: 6px;
-    font-size: 11px;
+    font-size:13px;
     font-weight: 600;
     letter-spacing: 0.05em;
     padding: 6px 12px;
     transition: border-color 150ms, color 150ms, background 150ms;
   }
   div[data-testid="stButton"] button:hover {
-    border-color: #14B8A6;
+    border-color: #5EEAD4;
     color: #5EEAD4;
     background: #0F3030;
   }
@@ -927,7 +929,7 @@ st.markdown("""
   }
 
   div[data-testid="stTabs"] button[role="tab"] {
-    font-size: 12px;
+    font-size:13px;
     color: #64748B;
     font-weight: 500;
   }
@@ -962,7 +964,7 @@ st.markdown("""
   }
 
   div[data-testid="stProgress"] > div > div {
-    background: linear-gradient(90deg, #14B8A6, #00FF88) !important;
+    background: linear-gradient(90deg, #5EEAD4, #00FF88) !important;
   }
 
   section[data-testid="stSidebar"] .stExpander {
@@ -2432,59 +2434,54 @@ def main():
                 if "_confirmed_ticker" not in st.session_state:
                     st.session_state["_confirmed_ticker"] = None
 
-                # ── MODE PILLS — always visible, above everything ──
+                # ── MODE PILLS — clicking the card activates the mode ──
                 cur_mode = st.session_state["analysis_mode"]
                 mp1, mp2 = st.columns(2)
                 with mp1:
                     if cur_mode == "Quick":
                         st.markdown("""<div style="background:#081510;border:2px solid #00FF88;
-                            border-radius:8px;padding:9px 14px;margin-bottom:2px;">
+                            border-radius:8px;padding:12px 14px;margin-bottom:2px;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                               font-weight:800;color:#00FF88;letter-spacing:1.5px;">⚡ QUICK</span>
-                            <span style="font-size:13px;color:#CBD5E1;font-weight:700;">● Active</span>
+                            <span style="font-size:13px;color:#00FF88;font-weight:700;">● ACTIVE</span>
                           </div>
-                          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">
-                            Sonnet · ~15s · Full analysis</div>
+                          <div style="font-size:13px;color:#CBD5E1;margin-top:4px;">Sonnet · ~15s · Full analysis</div>
                         </div>""", unsafe_allow_html=True)
                     else:
                         st.markdown("""<div style="background:#0D1525;border:1px solid #243348;
-                            border-radius:8px;padding:9px 14px;margin-bottom:2px;">
+                            border-radius:8px;padding:12px 14px;margin-bottom:2px;opacity:0.7;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
-                              font-weight:800;color:#374151;letter-spacing:1.5px;">⚡ QUICK</span>
-                            <span style="font-size:13px;color:#CBD5E1;">Sonnet · ~15s</span>
+                              font-weight:800;color:#CBD5E1;letter-spacing:1.5px;">⚡ QUICK</span>
                           </div>
-                          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">
-                            Full technical + fundamental</div>
+                          <div style="font-size:13px;color:#94A3B8;margin-top:4px;">Sonnet · ~15s · Full analysis</div>
                         </div>""", unsafe_allow_html=True)
-                    if st.button("Select Quick", key="mode_q", use_container_width=True):
+                    if st.button("⚡ Select Quick", key="mode_q", use_container_width=True):
                         st.session_state["analysis_mode"] = "Quick"
                         st.rerun()
                 with mp2:
                     if cur_mode == "Deep Research":
-                        st.markdown("""<div style="background:#0D0D2E;border:2px solid #A78BFA;
-                            border-radius:8px;padding:9px 14px;margin-bottom:2px;">
+                        st.markdown("""<div style="background:#060818;border:2px solid #38BDF8;
+                            border-radius:8px;padding:12px 14px;margin-bottom:2px;
+                            box-shadow:0 0 18px rgba(56,189,248,0.15);">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
-                              font-weight:800;color:#A78BFA;letter-spacing:1.5px;">🔬 DEEP</span>
-                            <span style="font-size:13px;color:#CBD5E1;font-weight:700;">● Active</span>
+                              font-weight:800;color:#38BDF8;letter-spacing:1.5px;">🔬 DEEP RESEARCH</span>
+                            <span style="font-size:13px;color:#38BDF8;font-weight:700;">● ACTIVE</span>
                           </div>
-                          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">
-                            Opus · ~45s · Multi-step reasoning</div>
+                          <div style="font-size:13px;color:#CBD5E1;margin-top:4px;">Opus · ~45s · 4× more thorough</div>
                         </div>""", unsafe_allow_html=True)
                     else:
                         st.markdown("""<div style="background:#0D1525;border:1px solid #243348;
-                            border-radius:8px;padding:9px 14px;margin-bottom:2px;">
+                            border-radius:8px;padding:12px 14px;margin-bottom:2px;opacity:0.7;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
-                              font-weight:800;color:#374151;letter-spacing:1.5px;">🔬 DEEP</span>
-                            <span style="font-size:13px;color:#CBD5E1;">Opus · ~45s</span>
+                              font-weight:800;color:#CBD5E1;letter-spacing:1.5px;">🔬 DEEP RESEARCH</span>
                           </div>
-                          <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">
-                            Technicals → fundamentals → macro</div>
+                          <div style="font-size:13px;color:#94A3B8;margin-top:4px;">Opus · ~45s · Multi-step reasoning</div>
                         </div>""", unsafe_allow_html=True)
-                    if st.button("Select Deep Research", key="mode_d", use_container_width=True):
+                    if st.button("🔬 Select Deep Research", key="mode_d", use_container_width=True):
                         st.session_state["analysis_mode"] = "Deep Research"
                         st.rerun()
 
@@ -2512,8 +2509,8 @@ def main():
                         st.rerun()
 
                     def render_preview_card(sym, name, exch, curr, name_found=True):
-                        border    = "#14B8A6" if name_found else "#FACC15"
-                        badge_col = "#14B8A6" if name_found else "#FACC15"
+                        border    = "#5EEAD4" if name_found else "#FACC15"
+                        badge_col = "#5EEAD4" if name_found else "#FACC15"
                         badge_bg  = "#071A18" if name_found else "#1A1000"
                         badge_txt = "✓ Confirmed" if name_found else "⚠ Verify"
                         name_col  = "#F1F5F9" if name_found else "#FACC15"
@@ -2547,7 +2544,7 @@ def main():
                               <span style="font-size:13px;color:#CBD5E1;margin-left:4px;">
                                 Read the full name carefully.</span>
                             </div>""", unsafe_allow_html=True)
-                        st.markdown("""<div style="background:#071420;border:1px solid #14B8A6;
+                        st.markdown("""<div style="background:#071420;border:1px solid #5EEAD4;
                             border-radius:10px;overflow:hidden;margin-top:6px;">
                           <div style="padding:5px 14px;font-size:13px;color:#CBD5E1;letter-spacing:2px;
                             text-transform:uppercase;font-weight:700;border-bottom:1px solid #0D2030;
@@ -2637,8 +2634,8 @@ def main():
                     curr       = st.session_state.get("_confirmed_curr", "")
                     name_found = st.session_state.get("_confirm_name_found", True)
 
-                    card_border  = "#14B8A6" if name_found else "#FACC15"
-                    badge_col    = "#14B8A6" if name_found else "#FACC15"
+                    card_border  = "#5EEAD4" if name_found else "#FACC15"
+                    badge_col    = "#5EEAD4" if name_found else "#FACC15"
                     badge_bg     = "#071A18" if name_found else "#1A1000"
                     badge_txt    = "✓ Confirmed" if name_found else "⚠ Verify"
                     name_col     = "#F1F5F9" if name_found else "#FACC15"
@@ -2671,7 +2668,7 @@ def main():
                                      use_container_width=True, key="analyze_confirm"):
                             run_analysis(sym)
                     with cb:
-                        if st.button("← Change", use_container_width=True,
+                        if st.button("← Back", use_container_width=True,
                                      key="change_ticker"):
                             for k in ["_confirmed_ticker","_confirmed_name",
                                       "_confirmed_exch","_confirmed_curr",
@@ -3248,7 +3245,7 @@ def render_hud():
     sector   = info.get('sector', a.get('sector',''))
     exchange = 'TSX' if ticker.endswith('.TO') else 'LSE' if ticker.endswith('.L') else 'NYSE / NASDAQ'
 
-    if st.button("← New ticker", key="btn_new_ticker"):
+    if st.button("← New Analysis", key="btn_new_ticker"):
         for k in ['analysis','df','info','ticker','signals','score','fibs','row','prev',
                   '_prev_ticker_val','rr_mode','_rr_ticker','_resolved_name',
                   '_resolved_exch','_resolved_curr','analysis_mode',
@@ -3400,7 +3397,7 @@ def render_hud():
     # Analysis mode badge
     analysis_mode = st.session_state.get('analysis_mode', 'Quick')
     if analysis_mode == 'Deep Research':
-        mode_badge = '<span style="background:#1C1A50;border:1px solid #A78BFA;border-radius:4px;padding:2px 8px;font-size:13px;color:#CBD5E1;font-weight:700;letter-spacing:1px;margin-left:8px;">🔬 DEEP RESEARCH</span>'
+        mode_badge = '<span style="background:#0A1525;border:1px solid #A78BFA;border-radius:4px;padding:2px 8px;font-size:13px;color:#CBD5E1;font-weight:700;letter-spacing:1px;margin-left:8px;">🔬 DEEP RESEARCH</span>'
     else:
         mode_badge = '<span style="background:#0A1525;border:1px solid #38BDF8;border-radius:4px;padding:2px 8px;font-size:13px;color:#CBD5E1;font-weight:700;letter-spacing:1px;margin-left:8px;">⚡ QUICK</span>'
 
@@ -3751,7 +3748,7 @@ def render_hud():
 
     else:
         st.markdown(f"""
-        <div style="background:#1A2232;border:1px solid #14B8A6;border-top:2px solid #14B8A6;
+        <div style="background:#1A2232;border:1px solid #5EEAD4;border-top:2px solid #5EEAD4;
                     border-radius:8px;padding:14px 18px;">
           <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{s_fall}</div>
         </div>""", unsafe_allow_html=True)
@@ -3831,13 +3828,18 @@ def render_hud():
         with cols[i]:
             st.markdown(sig_html(s['label'], s['val'], s['bull'], s.get('neut', False), s.get('subtitle', '')), unsafe_allow_html=True)
 
+    # ── LIVE CHART ────────────────────────────────────────────
+    st.markdown('<div class="section-header" style="margin-top:8px;">LIVE CHART · DAILY CANDLES · 1 YEAR</div>', unsafe_allow_html=True)
+    chart_df = df.tail(252).copy()
+    st.plotly_chart(build_chart(chart_df, ticker), use_container_width=True, config={'displayModeBar': True})
+
     vwap   = float(a.get('vwap', close))
     ema100 = float(a.get('ema100', float(row['MA100'])))
     fib382, fib500, fib618 = fibs
 
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown('<div class="section-header">Key Levels & Technical Indicators</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">KEY LEVELS & TECHNICAL INDICATORS</div>', unsafe_allow_html=True)
         levels_html = '<div class="panel-body">'
         atr_dollar = float(row['ATR'])
         atr_low    = round(close - atr_dollar, 2)
@@ -3920,7 +3922,7 @@ def render_hud():
             </div>''', unsafe_allow_html=True)
 
     with c2:
-        st.markdown('<div class="section-header">Fundamentals & Growth</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">FUNDAMENTALS & GROWTH</div>', unsafe_allow_html=True)
         def _get(keys, default=0):
             for k in (keys if isinstance(keys, list) else [keys]):
                 v = info.get(k)
@@ -4009,7 +4011,7 @@ def render_hud():
                  "IV > HV — big move expected" if iv_vs_hv > 1.3 else
                  "IV < HV — calm expected" if iv_vs_hv < 0.7 else
                  "IV ≈ HV — normal")
-    st.markdown('<div class="section-header">Volatility Analysis</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">VOLATILITY ANALYSIS</div>', unsafe_allow_html=True)
     vc1, vc2, vc3 = st.columns(3)
     with vc1:
         st.markdown('<div class="vol-panel"><div class="data-header">Historical Volatility</div>', unsafe_allow_html=True)
@@ -4051,14 +4053,8 @@ def render_hud():
         st.markdown(iv_rows + '</div>', unsafe_allow_html=True)
 
     # ── R/R CALCULATOR — tabs removed ────────────────────────
-    st.markdown('<div class="section-header" style="margin-top:8px;">⚡ Risk / Reward Calculator</div>', unsafe_allow_html=True)
-    st.markdown("""
-    <div style="background:#1A1000;border:1px solid #FACC1544;border-radius:0;border-top:none;
-                padding:7px 14px;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
-      <span style="font-size:13px;">⚠️</span>
-      <span style="font-size:13px;color:#CBD5E1;font-weight:700;">NOT FINANCIAL ADVICE</span>
-      <span style="font-size:13px;color:#CBD5E1;">These numbers are for educational position-sizing practice only.</span>
-    </div>""", unsafe_allow_html=True)
+    st.markdown('<div class="section-header" style="margin-top:8px;">⚡ RISK / REWARD CALCULATOR</div>', unsafe_allow_html=True)
+
 
     atr_val   = float(row['ATR'])
     verdict   = a.get('verdict', 'TECHNICAL SETUP')
@@ -4145,7 +4141,7 @@ def render_hud():
           <div style="font-size:13px;color:#CBD5E1;margin-top:3px;">{cur}{position_size_input:,.0f} position · {position_size:,} × {cur}{entry_price:.2f}</div>
         </div>''', unsafe_allow_html=True)
     with rc3:
-        st.markdown(f'''<div class="earn-bar" style="border-left-color:#818CF8;margin-top:6px;">
+        st.markdown(f'''<div class="earn-bar" style="border-left-color:#38BDF8;margin-top:6px;">
           <div class="earn-label">Worst Case / Best Case</div>
           <div class="earn-val" style="color:#FF6B6B;font-size:18px;">−{cur}{actual_loss:,.0f} <span style="font-size:13px;color:#FF6B6B88;">({loss_pct:.1f}% of position)</span></div>
           <div style="font-size:16px;color:#00FF88;font-weight:700;font-family:monospace;margin-top:4px;">+{cur}{actual_gain:,.0f} <span style="font-size:13px;color:#00FF8888;">if target hit</span></div>
@@ -4204,6 +4200,11 @@ def render_hud():
       <span style="color:#64748B;">Max loss <span style="color:#FF6B6B;">{cur}{actual_loss:,.0f} ({loss_pct:.1f}% of position)</span></span>
     </div>''', unsafe_allow_html=True)
 
+    st.markdown(
+        '<div style="text-align:center;font-size:13px;color:#4A6080;padding:6px 0 2px;">'
+        '⚠️ Educational position-sizing reference only — not financial advice</div>',
+        unsafe_allow_html=True)
+
     # ── EARNINGS ──────────────────────────────────────────────
     beat_str = a.get('last_earnings_beat', 'Unknown') or 'Unknown'
     if earnings_hist:
@@ -4224,7 +4225,7 @@ def render_hud():
             st.markdown(f'<div class="earn-bar"><div class="earn-label">{lbl}</div><div class="earn-val" style="color:{col2};">{val}</div></div>', unsafe_allow_html=True)
 
     # ── EARNINGS HISTORY ──────────────────────────────────────
-    st.markdown('<div class="section-header">Earnings History — Last 4 Quarters</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">EARNINGS HISTORY — LAST 4 QUARTERS</div>', unsafe_allow_html=True)
     if not earnings_hist:
         st.markdown('<div class="panel-body"><div style="padding:12px 14px;font-size:13px;color:#CBD5E1;">No earnings history available</div></div>', unsafe_allow_html=True)
     else:
@@ -4238,7 +4239,7 @@ def render_hud():
         st.markdown(eh_html + '</div>', unsafe_allow_html=True)
 
     # ── INSIDER TRADING ───────────────────────────────────────
-    st.markdown('<div class="section-header">Insider Transactions</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">INSIDER TRANSACTIONS</div>', unsafe_allow_html=True)
     if not insider_data:
         st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:13px;color:#CBD5E1;">No recent insider transactions found</div>', unsafe_allow_html=True)
     else:
@@ -4277,19 +4278,36 @@ def render_hud():
               </div>
             </div>''', unsafe_allow_html=True)
 
-        ins_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;">'
-        ins_html += '<div class="insider-row" style="background:#131F32;"><span style="font-size:13px;color:#CBD5E1;flex:1;">Insider</span><span style="font-size:13px;color:#CBD5E1;flex:1;">Role</span><span style="font-size:13px;color:#CBD5E1;width:60px;text-align:center;">Type</span><span style="font-size:13px;color:#CBD5E1;text-align:right;">Shares / Value</span></div>'
+        ins_html = '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;overflow:hidden;">'
+        ins_html += (
+            '<div class="insider-row insider-header">'
+            '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Insider</span>'
+            '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;">Role</span>'
+            '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;text-align:center;">Type</span>'
+            '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;text-align:right;">Shares</span>'
+            '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;text-align:right;">Value</span>'
+            '</div>'
+        )
         for ins in insider_data:
-            t_col = "#00FF88" if ins["type"]=="BUY" else "#FF6B6B"
-            val_str = f'${ins["value"]:,.0f}' if ins["value"] > 0 else "N/A"
-            ins_html += f'<div class="insider-row"><span class="insider-name">{ins["name"]}</span><span class="insider-role">{ins["role"]}</span><span style="color:{t_col};font-weight:700;font-size:13px;width:60px;text-align:center;">{ins["type"]}</span><span class="insider-shares">{ins["shares"]:,} / {val_str}</span></div>'
+            badge_cls = "insider-badge-buy" if ins["type"] == "BUY" else "insider-badge-sell"
+            val_str   = f'${ins["value"]:,.0f}' if ins["value"] > 0 else "—"
+            shares_str = f'{ins["shares"]:,}' if ins["shares"] > 0 else "—"
+            ins_html += (
+                f'<div class="insider-row">'
+                f'<span class="insider-name">{_html.escape(ins["name"])}</span>'
+                f'<span class="insider-role">{_html.escape(ins["role"]) if ins["role"] else "—"}</span>'
+                f'<span><span class="{badge_cls}">{ins["type"]}</span></span>'
+                f'<span class="insider-shares">{shares_str}</span>'
+                f'<span class="insider-value">{val_str}</span>'
+                f'</div>'
+            )
         st.markdown(ins_html + '</div>', unsafe_allow_html=True)
 
     # ── NEWS SENTIMENT ────────────────────────────────────────
     news_sentiment = a.get('news_sentiment', [])
     news_scores    = a.get('news_scores', [])
     net_score      = a.get('net_news_score', None)
-    st.markdown('<div class="section-header">News & Sentiment</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">NEWS & SENTIMENT</div>', unsafe_allow_html=True)
 
     if not news_items:
         st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:13px;color:#CBD5E1;">No recent news available</div>', unsafe_allow_html=True)
@@ -4386,7 +4404,7 @@ def render_hud():
     cycle_col = "#00FF88" if cycle=="Early" else "#38BDF8" if cycle=="Mid" else "#FACC15" if cycle=="Late" else "#FF6B6B"
     mkt_risk  = a.get('market_risk','')
     risk_col  = "#00FF88" if mkt_risk=="Low" else "#38BDF8" if mkt_risk=="Moderate" else "#FACC15" if mkt_risk=="High" else "#FF6B6B"
-    st.markdown('<div class="section-header" style="margin-top:8px;">Market Context & Business Cycle</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header" style="margin-top:8px;">MARKET CONTEXT & BUSINESS CYCLE</div>', unsafe_allow_html=True)
     mc1,mc2,mc3,mc4,mc5 = st.columns(5)
     for mcol, lbl, idx_key_chg, idx_key_sig in [
         (mc1, "S&P 500", "spy_1m",  "spy_signal"),
@@ -4414,14 +4432,9 @@ def render_hud():
               <div style="font-size:13px;color:#CBD5E1;margin-top:2px;">{desc2[:60]}</div>
             </div>''', unsafe_allow_html=True)
 
-    # ── LIVE CHART ────────────────────────────────────────────
-    st.markdown('<div class="section-header" style="margin-top:12px;">Live Chart · Daily Candles · 1 Year</div>', unsafe_allow_html=True)
-    chart_df = df.tail(252).copy()
-    st.plotly_chart(build_chart(chart_df, ticker), use_container_width=True, config={'displayModeBar': True})
-
     # ── CHART PATTERNS ────────────────────────────────────────
     chart_pats = a.get('chart_patterns', [])
-    st.markdown('<div class="section-header">Chart Patterns Detected</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">CHART PATTERNS DETECTED</div>', unsafe_allow_html=True)
     if not chart_pats:
         st.markdown('<div class="panel-body"><div style="padding:14px;text-align:center;font-size:13px;color:#CBD5E1;">No significant chart patterns detected in current price action</div></div>', unsafe_allow_html=True)
     else:
@@ -4462,7 +4475,7 @@ def render_hud():
                 </div>""", unsafe_allow_html=True)
 
     candle_pats = a.get('candle_patterns', [])
-    st.markdown('<div class="section-header">Candlestick Patterns · Last 5 Sessions</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">CANDLESTICK PATTERNS · LAST 5 SESSIONS</div>', unsafe_allow_html=True)
     if not candle_pats:
         st.markdown('<div class="panel-body"><div style="padding:14px;text-align:center;font-size:13px;color:#CBD5E1;">No significant candlestick patterns in the last 5 sessions</div></div>', unsafe_allow_html=True)
     else:
@@ -4484,7 +4497,7 @@ def render_hud():
                   <div style="font-size:13px;color:#CBD5E1;line-height:1.5;">{c.get("meaning","")}</div>
                 </div>''', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-header">Trend Context</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">TREND CONTEXT</div>', unsafe_allow_html=True)
     trend_items = [
         ("Short-term trend (5 days)",   a.get('trend_short','N/A'),  a.get('trend_short_desc','')),
         ("Medium-term trend (20 days)", a.get('trend_medium','N/A'), a.get('trend_medium_desc','')),
@@ -4549,15 +4562,15 @@ def render_earnings_analyzer():
                     c1,c2,c3 = st.columns(3)
                     c1.markdown(f'<div class="earn-bar" style="border-left-color:{tone_col};"><div class="earn-label">Overall Tone</div><div class="earn-val" style="color:{tone_col};">{ea.get("tone","")}</div></div>', unsafe_allow_html=True)
                     c2.markdown(f'<div class="earn-bar" style="border-left-color:{conf_col};"><div class="earn-label">Mgmt Confidence</div><div class="earn-val" style="color:{conf_col};">{ea.get("management_confidence","")}</div></div>', unsafe_allow_html=True)
-                    c3.markdown(f'<div class="earn-bar" style="border-left-color:#818CF8;"><div class="earn-label">Analyst Reception</div><div class="earn-val" style="color:#CBD5E1;font-size:13px;">{ea.get("analyst_reception","")[:60]}</div></div>', unsafe_allow_html=True)
-                    st.markdown(f'<div style="background:#1A2232;border:1px solid #14B8A6;border-radius:8px;padding:14px 18px;margin:8px 0;"><div style="font-size:13px;color:#CBD5E1;margin-bottom:6px;">VERDICT</div><div style="font-size:14px;color:#E2E8F0;line-height:1.6;">{ea.get("verdict","")}</div></div>', unsafe_allow_html=True)
+                    c3.markdown(f'<div class="earn-bar" style="border-left-color:#38BDF8;"><div class="earn-label">Analyst Reception</div><div class="earn-val" style="color:#CBD5E1;font-size:13px;">{ea.get("analyst_reception","")[:60]}</div></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="background:#1A2232;border:1px solid #5EEAD4;border-radius:8px;padding:14px 18px;margin:8px 0;"><div style="font-size:13px;color:#CBD5E1;margin-bottom:6px;">VERDICT</div><div style="font-size:14px;color:#E2E8F0;line-height:1.6;">{ea.get("verdict","")}</div></div>', unsafe_allow_html=True)
                     c1,c2 = st.columns(2)
                     with c1:
-                        st.markdown('<div class="section-header">Key Wins</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="section-header">KEY WINS</div>', unsafe_allow_html=True)
                         for w in ea.get("key_wins",[]):
                             st.markdown(f'<div class="reason-bull">+ {w}</div>', unsafe_allow_html=True)
                     with c2:
-                        st.markdown('<div class="section-header">Key Risks</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="section-header">KEY RISKS</div>', unsafe_allow_html=True)
                         for r in ea.get("key_risks",[]):
                             st.markdown(f'<div class="reason-bear">- {r}</div>', unsafe_allow_html=True)
                     if ea.get("guidance"):
