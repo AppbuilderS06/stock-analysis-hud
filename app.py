@@ -4303,7 +4303,7 @@ def render_hud():
         for i, news in enumerate(news_items):
             title     = _html.escape(str(news.get('title','')))
             pub       = _html.escape(str(news.get('publisher','')))
-            link      = news.get('link','')
+            link      = _html.escape(str(news.get('link','') or ''))
             published = news.get('published','')[:10] if news.get('published') else ''
 
             raw_title = news.get('title','')
@@ -4324,7 +4324,7 @@ def render_hud():
             mag_col   = '#F97316' if magnitude=='High' else '#FACC15' if magnitude=='Medium' else '#CBD5E1'
             border_b  = 'border-bottom:1px solid #243348;' if i < len(news_items)-1 else ''
 
-            title_html = f'<a href="{link}" target="_blank" style="color:#E2E8F0;text-decoration:none;font-size:13px;line-height:1.4;">{title}</a>' if link else f'<span style="color:#CBD5E1;font-size:13px;line-height:1.4;">{title}</span>'
+            title_html = f'<a href="{link}" target="_blank" rel="noopener" style="color:#E2E8F0;text-decoration:none;font-size:13px;line-height:1.4;">{title}</a>' if link else f'<span style="color:#CBD5E1;font-size:13px;line-height:1.4;">{title}</span>'
             mag_html   = f'<span style="font-size:13px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:{mag_col};">{magnitude}</span>' if magnitude else ''
             trig_html  = f'<span style="font-size:13px;color:#CBD5E1;">· {trigger}</span>' if trigger else ''
             reas_html  = f'<div style="font-size:13px;color:#CBD5E1;margin-top:2px;">{reason}</div>' if reason else ''
