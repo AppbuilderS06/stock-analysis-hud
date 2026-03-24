@@ -3339,28 +3339,47 @@ def render_hud():
             st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">📈 Position</div><div class="tf-note">{inv_note}</div></div>', unsafe_allow_html=True)
 
         # ── Quick Trade Setup — read-only math card ───────────
-        _entry_low  = float(a.get('entry_low', 0) or 0)
-        _entry_high = float(a.get('entry_high', 0) or 0)
-        _entry_mid  = round((_entry_low + _entry_high) / 2, 2) if _entry_low and _entry_high else close
-        _s1         = float(a.get('support1', 0) or 0)
-        _r1         = float(a.get('resistance1', 0) or 0)
-        _atr        = float(row['ATR'])
+        _s1  = float(a.get('support1', 0) or 0)
+        _s2  = float(a.get('support2', 0) or 0)
+        _r1  = float(a.get('resistance1', 0) or 0)
+        _r2  = float(a.get('resistance2', 0) or 0)
+        _atr = float(row['ATR'])
 
-        # Swing preset math (same logic as R/R calculator)
-        _stop   = round(_entry_mid - 1.5 * _atr, 2)
-        if _s1 > 0 and _s1 < _entry_mid and _s1 > _stop:
+        # Tight entry: just above nearest support, width = 0.5×ATR max
+        if _s1 > 0 and _s1 < close:
+            _entry_low  = round(_s1 * 1.005, 2)           # 0.5% above support
+        else:
+            _entry_low  = round(close - 0.25 * _atr, 2)   # quarter-ATR below close
+        _entry_high = round(_entry_low + 0.5 * _atr, 2)   # width capped at 0.5×ATR
+        _entry_mid  = round((_entry_low + _entry_high) / 2, 2)
+
+        # Stop: below support or 1.5×ATR below entry
+        _stop = round(_entry_low - 1.5 * _atr, 2)
+        if _s1 > 0 and _s1 < _entry_low and _s1 > _stop:
             _stop = round(_s1 - 0.01, 2)
-        _stop   = max(0.01, _stop)
-        _target = _r1 if _r1 > _entry_mid else round(_entry_mid + 3 * _atr, 2)
-        _target = max(_entry_mid + 0.01, _target)
+        _stop = max(0.01, _stop)
+        _risk = _entry_mid - _stop
 
-        _risk_pct   = round(abs(_entry_mid - _stop) / _entry_mid * 100, 1) if _entry_mid > 0 else 0
-        _reward_pct = round(abs(_target - _entry_mid) / _entry_mid * 100, 1) if _entry_mid > 0 else 0
-        _rr         = round((_target - _entry_mid) / (_entry_mid - _stop), 2) if (_entry_mid - _stop) > 0 else 0
-        _rr_col     = '#00FF88' if _rr >= 2 else '#FACC15' if _rr >= 1 else '#FF6B6B'
-        _rr_lbl     = 'Excellent' if _rr >= 3 else 'Good' if _rr >= 2 else 'Acceptable' if _rr >= 1 else 'Poor'
+        # Target: furthest level that gives ≥2:1, else construct 2:1 minimum
+        _min_target = round(_entry_mid + 2 * _risk, 2)
+        if _r2 > _entry_mid and (_r2 - _entry_mid) >= 2 * _risk:
+            _target = _r2
+        elif _r1 > _entry_mid and (_r1 - _entry_mid) >= 2 * _risk:
+            _target = _r1
+        else:
+            _target = _min_target   # construct 2:1 if no level qualifies
 
-        _entry_str  = f'{cur}{_entry_low:.2f} – {cur}{_entry_high:.2f}' if _entry_low and _entry_high else f'{cur}{_entry_mid:.2f}'
+        _risk_pct   = round(_risk / _entry_mid * 100, 1) if _entry_mid > 0 else 0
+        _reward_pct = round((_target - _entry_mid) / _entry_mid * 100, 1) if _entry_mid > 0 else 0
+        _rr         = round((_target - _entry_mid) / _risk, 2) if _risk > 0 else 0
+
+        # Correct professional thresholds
+        if _rr >= 3:    _rr_col, _rr_lbl = '#00FF88', 'Excellent'
+        elif _rr >= 2:  _rr_col, _rr_lbl = '#00FF88', 'Good'
+        elif _rr >= 1.5:_rr_col, _rr_lbl = '#FACC15', 'Marginal'
+        else:           _rr_col, _rr_lbl = '#FF6B6B', 'Poor — avoid'
+
+        _entry_str = f'{cur}{_entry_low:.2f} – {cur}{_entry_high:.2f}'
 
         st.markdown(f"""
         <div style="background:#070F1A;border:1px solid #1A2A3A;border-radius:8px;
