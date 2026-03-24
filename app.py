@@ -2928,6 +2928,22 @@ def run_analysis(ticker):
             _ed = _yf_ed_r[_yf_ed_r.index <= pd.Timestamp.now()]
             if not _ed.empty:
                 eh = _ed
+        # Hard FMP fallback — direct call if all yfinance sources returned empty
+        if (eh is None or (hasattr(eh,'empty') and eh.empty)) and fmp_key:
+            try:
+                _fmp_surp = _fmp_get(f"v3/earnings-surprises/{ticker}", fmp_key)
+                if _fmp_surp and isinstance(_fmp_surp, list):
+                    _fmp_rows = []
+                    for _e in _fmp_surp[:4]:
+                        _act = float(_e.get("actualEarningResult", _e.get("actualEps", 0)) or 0)
+                        _est = float(_e.get("estimatedEarning",    _e.get("estimatedEps", 0)) or 0)
+                        _sp  = ((_act - _est) / abs(_est) * 100) if _est != 0 else 0
+                        _fmp_rows.append({"period": _e.get("date",""), "epsEstimate": _est,
+                                          "epsActual": _act, "surprisePercent": _sp})
+                    if _fmp_rows:
+                        import pandas as _pd2
+                        eh = _pd2.DataFrame(_fmp_rows)
+            except: pass
         try:
             if eh is not None and not eh.empty:
                 for _, er in eh.head(4).iterrows():
@@ -3287,29 +3303,8 @@ def render_hud():
       </div>
     </div>''', unsafe_allow_html=True)
 
-    import zoneinfo, streamlit.components.v1 as components
-    try:
-        params  = st.query_params
-        user_tz = params.get("tz", "")
-        if not user_tz:
-            components.html("""
-                <script>
-                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                const url = new URL(window.parent.location.href);
-                if (!url.searchParams.get('tz')) {
-                    url.searchParams.set('tz', tz);
-                    window.parent.location.replace(url.toString());
-                }
-                </script>
-            """, height=0)
-            user_tz = "UTC"
-        try:
-            tz_obj   = zoneinfo.ZoneInfo(user_tz)
-            analyzed = datetime.now(tz_obj).strftime("%b %d · %I:%M %p")
-        except:
-            analyzed = datetime.now().strftime("%b %d · %I:%M %p")
-    except:
-        analyzed = datetime.now().strftime("%b %d · %I:%M %p")
+    from datetime import timezone as _tz
+    analyzed = datetime.now(_tz.utc).strftime("%b %d · %H:%M UTC")
 
     st.markdown(f'''
     <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
@@ -3488,12 +3483,12 @@ def render_hud():
 
         # Tight entry: just above nearest support, width = 0.5×ATR max
         # If price is already above s1 (or no s1), anchor to current close
-        if _s1 > 0 and _s1 < close and close - _s1 < 2 * _atr:
-            # Price near support — entry just above it
-            _entry_low  = round(_s1 * 1.005, 2)
+        # Entry zone always at or above current price
+        if _s1 > 0 and abs(close - _s1) < 0.5 * _atr:
+            _entry_low = round(max(_s1 * 1.005, close - 0.1 * _atr), 2)
         else:
-            # Price already extended above support — entry at current level
-            _entry_low  = round(close - 0.25 * _atr, 2)
+            _entry_low = round(close - 0.25 * _atr, 2)
+        _entry_low  = max(_entry_low, round(close - 0.5 * _atr, 2))
         _entry_high = round(_entry_low + 0.5 * _atr, 2)
         _entry_mid  = round((_entry_low + _entry_high) / 2, 2)
 
