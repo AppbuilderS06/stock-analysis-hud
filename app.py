@@ -2827,26 +2827,56 @@ def run_analysis(ticker):
         if num_ana == 0:
             num_ana = int(info.get('numberOfAnalystOpinions') or 0)
 
-        if target_mean == 0:
-            try:
-                _yt = yf.Ticker(ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A'))
-                apt = _yt.analyst_price_targets
-                if apt and isinstance(apt, dict):
-                    target_mean = float(apt.get('mean') or apt.get('current') or 0)
-                    target_low  = float(apt.get('low')  or 0)
-                    target_high = float(apt.get('high') or 0)
-            except: pass
-        if buy_cnt == 0:
-            try:
-                _yt = yf.Ticker(ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A'))
-                yrs = _yt.recommendations_summary
-                if yrs is not None and not yrs.empty:
-                    r = yrs.iloc[0]
-                    buy_cnt  = int((r.get('strongBuy', r.get('strong_buy', 0)) or 0) + (r.get('buy', 0) or 0))
-                    hold_cnt = int(r.get('hold', 0) or 0)
-                    sell_cnt = int((r.get('strongSell', r.get('strong_sell', 0)) or 0) + (r.get('sell', 0) or 0))
-                    num_ana  = max(num_ana, buy_cnt + hold_cnt + sell_cnt)
-            except: pass
+        # ── yfinance fallback for analyst + earnings + insider ───
+        # One Ticker instance, all fallback fetches in parallel
+        _yf_sym = ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A')
+        _yt = None
+        try: _yt = yf.Ticker(_yf_sym)
+        except: pass
+
+        if _yt is not None:
+            from concurrent.futures import ThreadPoolExecutor as _TPE
+            def _yf_apt():
+                try: return _yt.analyst_price_targets
+                except: return None
+            def _yf_recs():
+                try: return _yt.recommendations_summary
+                except: return None
+            def _yf_eh():
+                try: return _yt.earnings_history
+                except: return None
+            def _yf_ed():
+                try: return _yt.earnings_dates
+                except: return None
+            def _yf_ins():
+                try: return _yt.insider_transactions
+                except: return None
+
+            with _TPE(max_workers=5) as _p:
+                _f_apt  = _p.submit(_yf_apt)
+                _f_recs = _p.submit(_yf_recs)
+                _f_eh   = _p.submit(_yf_eh)
+                _f_ed   = _p.submit(_yf_ed)
+                _f_ins  = _p.submit(_yf_ins)
+                _yf_apt_r  = _f_apt.result()
+                _yf_recs_r = _f_recs.result()
+                _yf_eh_r   = _f_eh.result()
+                _yf_ed_r   = _f_ed.result()
+                _yf_ins_r  = _f_ins.result()
+        else:
+            _yf_apt_r = _yf_recs_r = _yf_eh_r = _yf_ed_r = _yf_ins_r = None
+
+        if target_mean == 0 and _yf_apt_r and isinstance(_yf_apt_r, dict):
+            target_mean = float(_yf_apt_r.get('mean') or _yf_apt_r.get('current') or 0)
+            target_low  = float(_yf_apt_r.get('low')  or 0)
+            target_high = float(_yf_apt_r.get('high') or 0)
+
+        if buy_cnt == 0 and _yf_recs_r is not None and not _yf_recs_r.empty:
+            r = _yf_recs_r.iloc[0]
+            buy_cnt  = int((r.get('strongBuy', r.get('strong_buy', 0)) or 0) + (r.get('buy', 0) or 0))
+            hold_cnt = int(r.get('hold', 0) or 0)
+            sell_cnt = int((r.get('strongSell', r.get('strong_sell', 0)) or 0) + (r.get('sell', 0) or 0))
+            num_ana  = max(num_ana, buy_cnt + hold_cnt + sell_cnt)
 
         rec_mean = float(info.get('recommendationMean') or 0)
         rec_key  = str(info.get('recommendationKey') or '')
@@ -2873,20 +2903,12 @@ def run_analysis(ticker):
             }
 
         eh = data.get('earn_hist')
-        if eh is None or (hasattr(eh,'empty') and eh.empty):
-            try:
-                _rt = yf.Ticker(ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A'))
-                eh  = _rt.earnings_history
-            except: pass
-        if eh is None or (hasattr(eh,'empty') and eh.empty):
-            try:
-                _rt = yf.Ticker(ticker.replace('BRK.B','BRK-B').replace('BRK.A','BRK-A'))
-                _ed = _rt.earnings_dates
-                if _ed is not None and not _ed.empty:
-                    _ed = _ed[_ed.index <= pd.Timestamp.now()]
-                    if not _ed.empty:
-                        eh = _ed
-            except: pass
+        if (eh is None or (hasattr(eh,'empty') and eh.empty)) and _yf_eh_r is not None and not _yf_eh_r.empty:
+            eh = _yf_eh_r
+        if (eh is None or (hasattr(eh,'empty') and eh.empty)) and _yf_ed_r is not None and not _yf_ed_r.empty:
+            _ed = _yf_ed_r[_yf_ed_r.index <= pd.Timestamp.now()]
+            if not _ed.empty:
+                eh = _ed
         try:
             if eh is not None and not eh.empty:
                 for _, er in eh.head(4).iterrows():
@@ -2906,11 +2928,8 @@ def run_analysis(ticker):
 
         try:
             ins = data.get('insider')
-            if ins is None or (hasattr(ins,'empty') and ins.empty):
-                try:
-                    _rt2 = yf.Ticker(ticker.replace('BRK.B','BRK-B'))
-                    ins  = _rt2.insider_transactions
-                except: pass
+            if (ins is None or (hasattr(ins,'empty') and ins.empty)) and _yf_ins_r is not None and not _yf_ins_r.empty:
+                ins = _yf_ins_r
             if ins is not None and not ins.empty:
                 for _, ri in ins.head(5).iterrows():
                     shares = int(ri.get('Shares', ri.get('shares', 0)) or 0)
@@ -3144,8 +3163,17 @@ def render_hud():
     stk_returns   = st.session_state.get('stk_returns', {})
 
     # Read precomputed values from session state — no recomputation on reruns
-    sector_name_hud = str(info.get('sector') or '')
+    sector_name_hud = (
+        str(info.get('sector') or '') or
+        str(info.get('sectorDisp') or '') or
+        str(info.get('industry') or '')
+    ).strip()
     sector_etf_hud  = SECTOR_ETF_MAP.get(sector_name_hud, '')
+    if not sector_etf_hud and sector_name_hud:
+        for k, v in SECTOR_ETF_MAP.items():
+            if k.lower() in sector_name_hud.lower() or sector_name_hud.lower() in k.lower():
+                sector_etf_hud = v
+                break
     mkt_phase_hud   = st.session_state.get('mkt_phase_pre') or get_market_phase()
     sec_phase_hud   = st.session_state.get('sec_phase_pre') or (get_sector_phase(sector_etf_hud) if sector_etf_hud else (0,'N/A','No ETF','#94A3B8',0,'',''))
 
@@ -4225,22 +4253,20 @@ def render_hud():
     if not news_items:
         st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:12px 14px;font-size:13px;color:#CBD5E1;">No recent news available</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:4px 0;">', unsafe_allow_html=True)
+        news_html_rows = []
         for i, news in enumerate(news_items):
             title     = _html.escape(str(news.get('title','')))
             pub       = _html.escape(str(news.get('publisher','')))
-            link      = news.get('link','')  # URL — not escaped, needed for href
+            link      = news.get('link','')
             published = news.get('published','')[:10] if news.get('published') else ''
 
-            # Match to Claude's sentiment scoring
-            raw_title = news.get('title','')  # unescaped for matching only
+            raw_title = news.get('title','')
             sent_data = next((s for s in news_sentiment
                               if raw_title[:20] in s.get('headline','')
                               or s.get('headline','')[:20] in raw_title), None)
             sent      = sent_data.get('sentiment','neutral') if sent_data else 'neutral'
             reason    = _html.escape(str(sent_data.get('reason','') if sent_data else ''))
 
-            # Match to news_scores for keyword trigger + magnitude
             score_data = next((s for s in news_scores
                                if raw_title[:25] in s.get('headline','')
                                or s.get('headline','')[:25] in raw_title), None)
@@ -4249,34 +4275,16 @@ def render_hud():
 
             sent_col  = '#00FF88' if sent=='bullish' else '#FF6B6B' if sent=='bearish' else '#FACC15'
             sent_icon = '▲' if sent=='bullish' else '▼' if sent=='bearish' else '↔'
-            mag_col   = '#F97316' if magnitude=='High' else '#FACC15' if magnitude=='Medium' else '#64748B'
+            mag_col   = '#F97316' if magnitude=='High' else '#FACC15' if magnitude=='Medium' else '#CBD5E1'
             border_b  = 'border-bottom:1px solid #243348;' if i < len(news_items)-1 else ''
 
-            # Pre-compute all conditional HTML as variables — no ternaries inside f-string
-            if link:
-                title_html = f'<a href="{link}" target="_blank" style="color:#E2E8F0;text-decoration:none;font-size:13px;line-height:1.4;">{title}</a>'
-            else:
-                title_html = f'<span style="color:#CBD5E1;font-size:13px;line-height:1.4;">{title}</span>'
+            title_html = f'<a href="{link}" target="_blank" style="color:#E2E8F0;text-decoration:none;font-size:13px;line-height:1.4;">{title}</a>' if link else f'<span style="color:#CBD5E1;font-size:13px;line-height:1.4;">{title}</span>'
+            mag_html   = f'<span style="font-size:13px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:{mag_col};">{magnitude}</span>' if magnitude else ''
+            trig_html  = f'<span style="font-size:13px;color:#CBD5E1;">· {trigger}</span>' if trigger else ''
+            reas_html  = f'<div style="font-size:13px;color:#CBD5E1;margin-top:2px;">{reason}</div>' if reason else ''
+            pub_date   = f"{pub}{' · ' + published if published else ''}"
 
-            if magnitude:
-                mag_html = f'<span style="font-size:13px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:{mag_col};">{magnitude}</span>'
-            else:
-                mag_html = ''
-
-            if trigger:
-                trigger_html = f'<span style="font-size:13px;color:#CBD5E1;">· {trigger}</span>'
-            else:
-                trigger_html = ''
-
-            if reason:
-                reason_html = f'<div style="font-size:13px;color:#CBD5E1;margin-top:2px;">{reason}</div>'
-            else:
-                reason_html = ''
-
-            pub_date = f"{pub}{' · ' + published if published else ''}"
-
-            # Headline row — no conditionals inside f-string
-            st.markdown(f"""
+            news_html_rows.append(f"""
             <div style="padding:8px 14px;{border_b}">
               <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
                 <div style="flex:1;min-width:0;">{title_html}</div>
@@ -4287,12 +4295,18 @@ def render_hud():
               </div>
               <div style="display:flex;gap:8px;margin-top:3px;align-items:center;">
                 <span style="font-size:13px;color:#CBD5E1;">{pub_date}</span>
-                {trigger_html}
+                {trig_html}
               </div>
-              {reason_html}
-            </div>""", unsafe_allow_html=True)
+              {reas_html}
+            </div>""")
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        # Single st.markdown call — no split div leak
+        st.markdown(
+            '<div style="background:#1A2232;border:1px solid #243348;border-radius:0 0 8px 8px;padding:4px 0;">'
+            + ''.join(news_html_rows)
+            + '</div>',
+            unsafe_allow_html=True
+        )
 
         # Net news score bar — separate st.markdown, no nesting issue
         if net_score is not None:
