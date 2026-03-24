@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import anthropic
 import json
+import re
 import html as _html
 from datetime import datetime, timedelta
 
@@ -876,7 +877,7 @@ st.markdown("""
 
   .insider-row { display: grid; grid-template-columns: 2fr 1.5fr 80px 1.2fr 1.2fr; align-items: center; padding: 11px 16px; border-bottom: 1px solid #111827; gap: 8px; }
   .insider-row:last-child { border-bottom: none; }
-  .insider-header { background: #131F32; border-radius: 0; }
+  .insider-header { background: #131F32; }
   .insider-name { color: #E2E8F0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .insider-role { color: #94A3B8; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .insider-badge-buy  { display: inline-block; background: #052A14; border: 1px solid #00FF88; color: #00FF88; font-weight: 800; font-size:13px; padding: 3px 10px; border-radius: 4px; letter-spacing: 1px; text-align: center; }
@@ -1530,6 +1531,9 @@ SECTOR_ETF_MAP = {
     "Semiconductors":              "XLK",
     # FMP sector names (often different from yfinance)
     "Semiconductor":               "XLK",
+    "Memory Chips":                "XLK",
+    "Semiconductor Memory":        "XLK",
+    "Semiconductors & Equipment":  "XLK",
     "Software":                    "XLK",
     "Technology Services":         "XLK",
     "Hardware":                    "XLK",
@@ -2124,7 +2128,6 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         end   = raw.rfind('}')
         if start != -1 and end != -1 and end > start:
             raw = raw[start:end+1]
-        import re
         raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', raw)
         parsed = json.loads(raw.strip())
         # Validate minimum required keys
@@ -2922,6 +2925,21 @@ def run_analysis(ticker):
             _ed = _yf_ed_r[_yf_ed_r.index <= pd.Timestamp.now()]
             if not _ed.empty:
                 eh = _ed
+        # Hard FMP fallback — direct call if all yfinance sources returned empty
+        if (eh is None or (hasattr(eh,'empty') and eh.empty)) and fmp_key:
+            try:
+                _fmp_surp = _fmp_get(f"v3/earnings-surprises/{ticker}", fmp_key)
+                if _fmp_surp and isinstance(_fmp_surp, list):
+                    _fmp_rows = []
+                    for _e in _fmp_surp[:4]:
+                        _act = float(_e.get("actualEarningResult", _e.get("actualEps", 0)) or 0)
+                        _est = float(_e.get("estimatedEarning",    _e.get("estimatedEps", 0)) or 0)
+                        _sp  = ((_act - _est) / abs(_est) * 100) if _est != 0 else 0
+                        _fmp_rows.append({"period": _e.get("date",""), "epsEstimate": _est,
+                                          "epsActual": _act, "surprisePercent": _sp})
+                    if _fmp_rows:
+                        eh = pd.DataFrame(_fmp_rows)
+            except: pass
         try:
             if eh is not None and not eh.empty:
                 for _, er in eh.head(4).iterrows():
@@ -3473,14 +3491,12 @@ def render_hud():
         _r2  = float(a.get('resistance2', 0) or 0)
         _atr = float(row['ATR'])
 
-        # Tight entry: just above nearest support, width = 0.5×ATR max
-        # If price is already above s1 (or no s1), anchor to current close
-        if _s1 > 0 and _s1 < close and close - _s1 < 2 * _atr:
-            # Price near support — entry just above it
-            _entry_low  = round(_s1 * 1.005, 2)
+        # Entry zone always at or above current price
+        if _s1 > 0 and abs(close - _s1) < 0.5 * _atr:
+            _entry_low = round(max(_s1 * 1.005, close - 0.1 * _atr), 2)
         else:
-            # Price already extended above support — entry at current level
-            _entry_low  = round(close - 0.25 * _atr, 2)
+            _entry_low = round(close - 0.25 * _atr, 2)
+        _entry_low  = max(_entry_low, round(close - 0.5 * _atr, 2))
         _entry_high = round(_entry_low + 0.5 * _atr, 2)
         _entry_mid  = round((_entry_low + _entry_high) / 2, 2)
 
@@ -4535,7 +4551,11 @@ def render_earnings_analyzer():
         else:
             with st.spinner("Analyzing earnings call..."):
                 try:
-                    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+                    _ea_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+                    if not _ea_key:
+                        st.error("Anthropic API key not configured.")
+                        return
+                    client = anthropic.Anthropic(api_key=_ea_key)
                     msg = client.messages.create(
                         model="claude-sonnet-4-20250514",
                         max_tokens=1000,
