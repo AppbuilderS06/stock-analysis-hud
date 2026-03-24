@@ -715,11 +715,14 @@ st.markdown("""
   .reason-bull { background: #0D2818; border-left: 2px solid #00FF88; padding: 8px 12px; font-size:13px; color: #86EFAC; border-radius: 0 6px 6px 0; line-height: 1.5; margin-bottom: 4px; }
   .reason-bear { background: #2D1015; border-left: 2px solid #FF6B6B; padding: 8px 12px; font-size:13px; color: #FCA5A5; border-radius: 0 6px 6px 0; line-height: 1.5; margin-bottom: 4px; }
 
-  .tf-day   { background: #1A1000; border: 1px solid #FACC1533; border-radius: 8px; padding: 12px 14px; }
-  .tf-swing { background: #0D1525; border: 1px solid #38BDF833; border-radius: 8px; padding: 12px 14px; }
-  .tf-inv   { background: #0D2010; border: 1px solid #00FF8833; border-radius: 8px; padding: 12px 14px; }
-  .tf-label { font-size:13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
-  .tf-note  { font-size: 13px; color: #CBD5E1; line-height: 1.6; }
+  .tf-day   { background: #111827; border: 1px solid #FACC1533; border-radius: 10px; overflow: hidden; margin-bottom: 6px; }
+  .tf-swing { background: #111827; border: 1px solid #38BDF833; border-radius: 10px; overflow: hidden; margin-bottom: 6px; }
+  .tf-inv   { background: #111827; border: 1px solid #00FF8833; border-radius: 10px; overflow: hidden; margin-bottom: 6px; }
+  .tf-label { font-size:13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+  .tf-note  { font-size: 13px; color: #E2E8F0; line-height: 1.7; padding: 12px 16px; }
+  .tf-header-day   { background: linear-gradient(135deg, #251800 0%, #141525 100%); padding: 9px 16px; border-bottom: 1px solid #FACC1533; display: flex; align-items: center; gap: 8px; }
+  .tf-header-swing { background: linear-gradient(135deg, #0A1E2C 0%, #0A1525 100%); padding: 9px 16px; border-bottom: 1px solid #38BDF833; display: flex; align-items: center; gap: 8px; }
+  .tf-header-inv   { background: linear-gradient(135deg, #052A14 0%, #0A1525 100%); padding: 9px 16px; border-bottom: 1px solid #00FF8833; display: flex; align-items: center; gap: 8px; }
 
   .earn-bar { background: #1A2232; border: 1px solid #243348; border-left: 3px solid #38BDF8; border-radius: 8px; padding: 10px 16px; }
   .earn-label { font-size: 9px; color: #4A6080; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
@@ -3478,11 +3481,38 @@ def render_hud():
         swing_note = a.get('swing_note', '')
         inv_note   = a.get('invest_note', '')
         if day_note:
-            st.markdown(f'<div class="tf-day"><div class="tf-label" style="color:#FACC15;">⚡ Day Trade</div><div class="tf-note">{day_note}</div></div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="tf-day">'
+                f'<div class="tf-header-day">'
+                f'<span style="font-size:15px;">⚡</span>'
+                f'<span class="tf-label" style="color:#FACC15;">Day Trade</span>'
+                f'<span style="margin-left:auto;font-size:13px;color:#FACC1588;font-family:monospace;">Hours – 48hrs</span>'
+                f'</div>'
+                f'<div class="tf-note">{day_note}</div>'
+                f'</div>',
+                unsafe_allow_html=True)
         if swing_note:
-            st.markdown(f'<div class="tf-swing"><div class="tf-label" style="color:#38BDF8;">🔄 Swing Trade</div><div class="tf-note">{swing_note}</div></div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="tf-swing">'
+                f'<div class="tf-header-swing">'
+                f'<span style="font-size:15px;">🔄</span>'
+                f'<span class="tf-label" style="color:#38BDF8;">Swing Trade</span>'
+                f'<span style="margin-left:auto;font-size:13px;color:#38BDF888;font-family:monospace;">1–8 weeks</span>'
+                f'</div>'
+                f'<div class="tf-note">{swing_note}</div>'
+                f'</div>',
+                unsafe_allow_html=True)
         if inv_note:
-            st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">📈 Position</div><div class="tf-note">{inv_note}</div></div>', unsafe_allow_html=True)
+            st.markdown(
+                f'<div class="tf-inv">'
+                f'<div class="tf-header-inv">'
+                f'<span style="font-size:15px;">📈</span>'
+                f'<span class="tf-label" style="color:#00FF88;">Position</span>'
+                f'<span style="margin-left:auto;font-size:13px;color:#00FF8888;font-family:monospace;">3–12 months</span>'
+                f'</div>'
+                f'<div class="tf-note">{inv_note}</div>'
+                f'</div>',
+                unsafe_allow_html=True)
 
         # ── Quick Trade Setup — read-only math card ───────────
         _s1  = float(a.get('support1', 0) or 0)
@@ -3809,21 +3839,21 @@ def render_hud():
     <div style="background:#0D1525;border:1px solid #1E2D42;border-radius:10px;
                 padding:14px 18px;margin:8px 0;display:grid;
                 grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
-      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {mkt_phase[3]};padding-top:10px;">
         <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">MARKET · SPY</div>
         <div style="font-size:16px;font-weight:800;color:{mkt_phase[3]};font-family:'JetBrains Mono',monospace;">{mkt_phase[1]}</div>
         <div style="font-size:13px;color:{mkt_phase[3]};margin-top:2px;">{mkt_phase[2]}</div>
         <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{mkt_phase[6][:55]}</div>
       </div>
-      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {sec_phase[3]};padding-top:10px;">
         <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">SECTOR · {sector_etf or "N/A"}</div>
         <div style="font-size:16px;font-weight:800;color:{sec_phase[3]};font-family:'JetBrains Mono',monospace;">{sec_phase[1]}</div>
         <div style="font-size:13px;color:{sec_phase[3]};margin-top:2px;">{sec_phase[2]}</div>
         <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{sec_phase[6][:55]}</div>
       </div>
-      <div style="border-right:1px solid #1E2D42;padding-right:12px;">
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {ph_col};padding-top:10px;">
         <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">STOCK · {ticker}</div>
         <div style="font-size:16px;font-weight:800;color:{ph_col};font-family:'JetBrains Mono',monospace;">{ph_label}</div>
@@ -3831,7 +3861,7 @@ def render_hud():
         <div style="font-size:13px;color:{ph_conf_col};margin-top:4px;">{ph_conf_text}</div>
         <div style="font-size:13px;color:#CBD5E1;margin-top:2px;line-height:1.4;">{ph_desc[:55]}</div>
       </div>
-      <div>
+      <div style="border-top:2px solid {tw_col};padding-top:10px;">
         <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">THREE TAILWINDS</div>
         <div style="font-size:36px;font-weight:800;color:{tw_col};font-family:'JetBrains Mono',monospace;line-height:1;">
@@ -4368,21 +4398,22 @@ def render_hud():
             reas_html  = f'<div style="font-size:13px;color:#CBD5E1;margin-top:2px;">{reason}</div>' if reason else ''
             pub_date   = f"{pub}{' · ' + published if published else ''}"
 
-            news_html_rows.append(f"""
-            <div style="padding:8px 14px;{border_b}">
-              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-                <div style="flex:1;min-width:0;">{title_html}</div>
-                <div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">
-                  {mag_html}
-                  <span style="font-size:13px;font-weight:700;color:{sent_col};">{sent_icon} {sent.capitalize()}</span>
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;margin-top:3px;align-items:center;">
-                <span style="font-size:13px;color:#CBD5E1;">{pub_date}</span>
-                {trig_html}
-              </div>
-              {reas_html}
-            </div>""")
+            _left_accent = f'border-left:3px solid {sent_col};' if magnitude == "High" else ''
+            _row = (
+                f'<div style="padding:10px 14px;{border_b}{_left_accent}">'
+                f'<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px;">'
+                f'<div style="flex:1;min-width:0;">' + title_html + '</div>'
+                f'<div style="display:flex;gap:4px;flex-shrink:0;align-items:center;">'
+                + (f'<span style="font-size:13px;font-weight:700;padding:2px 5px;border-radius:3px;background:#111827;color:{mag_col};">{magnitude}</span>' if magnitude else '')
+                + f'<span style="font-size:13px;font-weight:700;color:{sent_col};">{sent_icon} {sent.capitalize()}</span>'
+                f'</div></div>'
+                f'<div style="font-size:13px;color:#94A3B8;">{pub_date}'
+                + (f' &nbsp;·&nbsp; <span style="color:#4A6080;">{trigger}</span>' if trigger else '')
+                + '</div>'
+                + (f'<div style="font-size:13px;color:#CBD5E1;margin-top:4px;">{reason}</div>' if reason else '')
+                + '</div>'
+            )
+            news_html_rows.append(_row)
 
         # Single st.markdown call — no split div leak
         st.markdown(
@@ -4820,7 +4851,7 @@ def render_screener():
                         <div style="font-size:13px;color:{chg_col};font-weight:600;">{sign}{r["chg"]:.2f}%</div>
                       </div>
                       <div style="text-align:center;min-width:60px;">
-                        <div style="font-size:13px;color:#A78BFA;font-family:monospace;font-weight:700;">{r["rsi"]:.0f}</div>
+                        <div style="font-size:13px;color:#38BDF8;font-family:monospace;font-weight:700;">{r["rsi"]:.0f}</div>
                         <div style="font-size:13px;color:#CBD5E1;">RSI</div>
                       </div>
                       <div style="text-align:center;min-width:50px;">
@@ -4878,7 +4909,7 @@ def render_screener():
                           <div style="font-size:19px;font-weight:800;color:{sc_col};font-family:monospace;min-width:30px;">{sc}</div>
                           <div style="font-family:monospace;font-size:15px;font-weight:700;color:#F1F5F9;">{cur_w}{close:.2f}</div>
                           <div style="font-size:13px;color:{chg_col};font-weight:700;">{sign}{chg_pct:.2f}%</div>
-                          <div style="font-size:13px;color:#A78BFA;font-family:monospace;">{float(row["RSI"]):.0f} RSI</div>
+                          <div style="font-size:13px;color:#38BDF8;font-family:monospace;">{float(row["RSI"]):.0f} RSI</div>
                         </div>''', unsafe_allow_html=True)
                     with c2:
                         if st.button(f"Analyze", key=f"wl_an_{sym}"):
