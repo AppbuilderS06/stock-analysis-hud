@@ -3708,35 +3708,44 @@ def render_hud():
 
     # ── AI Summary — 3 paragraph layout ─────────────────────
     def render_summary_para(label, icon, text, sentiment):
-        """Render one summary paragraph. Color driven by sentiment field."""
+        """Render one summary paragraph — Option C: colored gradient header strip, neutral dark body."""
         if not text:
             return
         s = str(sentiment).lower().strip()
         if s == 'bullish':
-            border_col = '#00FF88'
-            bg_col     = '#030F07'
-            label_col  = '#00FF88'
+            accent     = '#00FF88'
+            grad_start = '#052A14'
+            grad_end   = '#0A1525'
             dot_char   = '▲'
+            glow       = 'rgba(0,255,136,0.08)'
         elif s == 'bearish':
-            border_col = '#FF6B6B'
-            bg_col     = '#0F0505'
-            label_col  = '#FF6B6B'
+            accent     = '#FF6B6B'
+            grad_start = '#2D1015'
+            grad_end   = '#1A1525'
             dot_char   = '▼'
+            glow       = 'rgba(255,107,107,0.08)'
         else:
-            border_col = '#FACC15'
-            bg_col     = '#0C0B04'
-            label_col  = '#FACC15'
+            accent     = '#FACC15'
+            grad_start = '#251800'
+            grad_end   = '#141525'
             dot_char   = '◆'
+            glow       = 'rgba(250,204,21,0.08)'
 
         st.markdown(f"""
-        <div style="background:{bg_col};border-left:3px solid {border_col};
-                    border-radius:0 8px 8px 0;padding:13px 16px;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;margin-bottom:8px;">
-            <span style="color:{label_col};font-size:16px;margin-right:8px;">{dot_char}</span>
-            <span style="font-size:13px;color:{label_col};letter-spacing:2px;
-                         text-transform:uppercase;font-weight:800;">{icon} {label}</span>
+        <div style="background:#111827;border:1px solid {accent}33;border-radius:10px;
+                    margin-bottom:8px;overflow:hidden;box-shadow:0 2px 16px {glow};">
+          <div style="background:linear-gradient(135deg,{grad_start} 0%,{grad_end} 100%);
+                      padding:10px 16px;display:flex;align-items:center;gap:10px;
+                      border-bottom:1px solid {accent}33;">
+            <span style="font-size:14px;">{icon}</span>
+            <span style="font-size:13px;color:{accent};letter-spacing:2px;
+                         text-transform:uppercase;font-weight:800;">{label}</span>
+            <span style="margin-left:auto;font-size:13px;font-weight:800;
+                         color:{accent};">{dot_char}</span>
           </div>
-          <div style="font-size:13px;color:#CBD5E1;line-height:1.75;">{text}</div>
+          <div style="padding:14px 16px;">
+            <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{text}</div>
+          </div>
         </div>""", unsafe_allow_html=True)
 
     s_tech       = a.get('summary_technical', '')
