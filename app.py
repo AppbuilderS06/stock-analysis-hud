@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import anthropic
 import json
+import re
 import html as _html
 from datetime import datetime, timedelta
 
@@ -1528,6 +1529,9 @@ SECTOR_ETF_MAP = {
     "Semiconductors":              "XLK",
     # FMP sector names (often different from yfinance)
     "Semiconductor":               "XLK",
+    "Memory Chips":                "XLK",
+    "Semiconductor Memory":        "XLK",
+    "Semiconductors & Equipment":  "XLK",
     "Software":                    "XLK",
     "Technology Services":         "XLK",
     "Hardware":                    "XLK",
@@ -2122,7 +2126,6 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         end   = raw.rfind('}')
         if start != -1 and end != -1 and end > start:
             raw = raw[start:end+1]
-        import re
         raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', raw)
         parsed = json.loads(raw.strip())
         # Validate minimum required keys
@@ -4529,7 +4532,11 @@ def render_earnings_analyzer():
         else:
             with st.spinner("Analyzing earnings call..."):
                 try:
-                    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+                    _ea_key = st.secrets.get("ANTHROPIC_API_KEY", "")
+                    if not _ea_key:
+                        st.error("Anthropic API key not configured.")
+                        return
+                    client = anthropic.Anthropic(api_key=_ea_key)
                     msg = client.messages.create(
                         model="claude-sonnet-4-20250514",
                         max_tokens=1000,
