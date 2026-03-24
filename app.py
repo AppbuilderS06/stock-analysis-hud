@@ -6,7 +6,6 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import anthropic
 import json
-import re
 import html as _html
 from datetime import datetime, timedelta
 
@@ -1529,9 +1528,6 @@ SECTOR_ETF_MAP = {
     "Semiconductors":              "XLK",
     # FMP sector names (often different from yfinance)
     "Semiconductor":               "XLK",
-    "Memory Chips":                "XLK",
-    "Semiconductor Memory":        "XLK",
-    "Semiconductors & Equipment":  "XLK",
     "Software":                    "XLK",
     "Technology Services":         "XLK",
     "Hardware":                    "XLK",
@@ -2126,6 +2122,7 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         end   = raw.rfind('}')
         if start != -1 and end != -1 and end > start:
             raw = raw[start:end+1]
+        import re
         raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', raw)
         parsed = json.loads(raw.strip())
         # Validate minimum required keys
@@ -2928,22 +2925,6 @@ def run_analysis(ticker):
             _ed = _yf_ed_r[_yf_ed_r.index <= pd.Timestamp.now()]
             if not _ed.empty:
                 eh = _ed
-        # Hard FMP fallback — direct call if all yfinance sources returned empty
-        if (eh is None or (hasattr(eh,'empty') and eh.empty)) and fmp_key:
-            try:
-                _fmp_surp = _fmp_get(f"v3/earnings-surprises/{ticker}", fmp_key)
-                if _fmp_surp and isinstance(_fmp_surp, list):
-                    _fmp_rows = []
-                    for _e in _fmp_surp[:4]:
-                        _act = float(_e.get("actualEarningResult", _e.get("actualEps", 0)) or 0)
-                        _est = float(_e.get("estimatedEarning",    _e.get("estimatedEps", 0)) or 0)
-                        _sp  = ((_act - _est) / abs(_est) * 100) if _est != 0 else 0
-                        _fmp_rows.append({"period": _e.get("date",""), "epsEstimate": _est,
-                                          "epsActual": _act, "surprisePercent": _sp})
-                    if _fmp_rows:
-                        import pandas as _pd2
-                        eh = _pd2.DataFrame(_fmp_rows)
-            except: pass
         try:
             if eh is not None and not eh.empty:
                 for _, er in eh.head(4).iterrows():
@@ -3303,8 +3284,7 @@ def render_hud():
       </div>
     </div>''', unsafe_allow_html=True)
 
-    from datetime import timezone as _tz
-    analyzed = datetime.now(_tz.utc).strftime("%b %d · %H:%M UTC")
+    import streamlit.components.v1 as components
 
     st.markdown(f'''
     <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
@@ -3316,8 +3296,23 @@ def render_hud():
         <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["VolTrend"]:.2f}x</div><div style="font-size:13px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
         <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:13px;color:#CBD5E1;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
       </div>
-      <div style="color:#CBD5E1;font-size:13px;">{analyzed}</div>
+      <div id="hud-localtime" style="color:#CBD5E1;font-size:13px;">--</div>
     </div>''', unsafe_allow_html=True)
+
+    # Local time — JS reads browser clock directly
+    components.html(
+        """
+        <script>
+        (function() {
+            var now = new Date();
+            var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            var h = now.getHours(), m = now.getMinutes().toString().padStart(2,"0");
+            var str = months[now.getMonth()] + " " + now.getDate() + " \u00b7 "
+                    + (h % 12 || 12) + ":" + m + " " + (h >= 12 ? "PM" : "AM");
+            try { var el = window.parent.document.getElementById("hud-localtime"); if (el) el.innerText = str; } catch(e) {}
+        })();
+        </script>
+        """, height=0)
 
     # ── Volume Breakout Flag ─────────────────────────────────
     vol_ratio      = float(row['VolTrend'])
@@ -3483,12 +3478,12 @@ def render_hud():
 
         # Tight entry: just above nearest support, width = 0.5×ATR max
         # If price is already above s1 (or no s1), anchor to current close
-        # Entry zone always at or above current price
-        if _s1 > 0 and abs(close - _s1) < 0.5 * _atr:
-            _entry_low = round(max(_s1 * 1.005, close - 0.1 * _atr), 2)
+        if _s1 > 0 and _s1 < close and close - _s1 < 2 * _atr:
+            # Price near support — entry just above it
+            _entry_low  = round(_s1 * 1.005, 2)
         else:
-            _entry_low = round(close - 0.25 * _atr, 2)
-        _entry_low  = max(_entry_low, round(close - 0.5 * _atr, 2))
+            # Price already extended above support — entry at current level
+            _entry_low  = round(close - 0.25 * _atr, 2)
         _entry_high = round(_entry_low + 0.5 * _atr, 2)
         _entry_mid  = round((_entry_low + _entry_high) / 2, 2)
 
@@ -4527,11 +4522,7 @@ def render_earnings_analyzer():
         else:
             with st.spinner("Analyzing earnings call..."):
                 try:
-                    _ea_key = st.secrets.get("ANTHROPIC_API_KEY", "")
-                    if not _ea_key:
-                        st.error("Anthropic API key not configured.")
-                        return
-                    client = anthropic.Anthropic(api_key=_ea_key)
+                    client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
                     msg = client.messages.create(
                         model="claude-sonnet-4-20250514",
                         max_tokens=1000,
