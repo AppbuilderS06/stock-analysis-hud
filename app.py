@@ -3337,6 +3337,69 @@ def render_hud():
             st.markdown(f'<div class="tf-swing"><div class="tf-label" style="color:#38BDF8;">🔄 Swing Trade</div><div class="tf-note">{swing_note}</div></div>', unsafe_allow_html=True)
         if inv_note:
             st.markdown(f'<div class="tf-inv"><div class="tf-label" style="color:#00FF88;">📈 Position</div><div class="tf-note">{inv_note}</div></div>', unsafe_allow_html=True)
+
+        # ── Quick Trade Setup — read-only math card ───────────
+        _entry_low  = float(a.get('entry_low', 0) or 0)
+        _entry_high = float(a.get('entry_high', 0) or 0)
+        _entry_mid  = round((_entry_low + _entry_high) / 2, 2) if _entry_low and _entry_high else close
+        _s1         = float(a.get('support1', 0) or 0)
+        _r1         = float(a.get('resistance1', 0) or 0)
+        _atr        = float(row['ATR'])
+
+        # Swing preset math (same logic as R/R calculator)
+        _stop   = round(_entry_mid - 1.5 * _atr, 2)
+        if _s1 > 0 and _s1 < _entry_mid and _s1 > _stop:
+            _stop = round(_s1 - 0.01, 2)
+        _stop   = max(0.01, _stop)
+        _target = _r1 if _r1 > _entry_mid else round(_entry_mid + 3 * _atr, 2)
+        _target = max(_entry_mid + 0.01, _target)
+
+        _risk_pct   = round(abs(_entry_mid - _stop) / _entry_mid * 100, 1) if _entry_mid > 0 else 0
+        _reward_pct = round(abs(_target - _entry_mid) / _entry_mid * 100, 1) if _entry_mid > 0 else 0
+        _rr         = round((_target - _entry_mid) / (_entry_mid - _stop), 2) if (_entry_mid - _stop) > 0 else 0
+        _rr_col     = '#00FF88' if _rr >= 2 else '#FACC15' if _rr >= 1 else '#FF6B6B'
+        _rr_lbl     = 'Excellent' if _rr >= 3 else 'Good' if _rr >= 2 else 'Acceptable' if _rr >= 1 else 'Poor'
+
+        _entry_str  = f'{cur}{_entry_low:.2f} – {cur}{_entry_high:.2f}' if _entry_low and _entry_high else f'{cur}{_entry_mid:.2f}'
+
+        st.markdown(f"""
+        <div style="background:#070F1A;border:1px solid #1A2A3A;border-radius:8px;
+                    padding:12px 14px;margin-top:6px;">
+          <div style="font-size:9px;color:#5EEAD4;letter-spacing:2px;text-transform:uppercase;
+                      font-weight:700;margin-bottom:10px;">📐 Swing Trade Math
+            <span style="color:#374151;font-size:9px;margin-left:8px;text-transform:none;
+                         letter-spacing:0;">· For educational position-sizing reference only</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid #1A2A3A;">
+            <span style="font-size:11px;color:#94A3B8;">Entry Zone</span>
+            <span style="font-size:13px;font-weight:800;color:#FACC15;
+                         font-family:'JetBrains Mono',monospace;">{_entry_str}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid #1A2A3A;">
+            <span style="font-size:11px;color:#94A3B8;">Stop Level</span>
+            <span style="font-size:13px;font-weight:800;color:#FF6B6B;
+                         font-family:'JetBrains Mono',monospace;">{cur}{_stop:.2f}
+              <span style="font-size:10px;font-weight:600;color:#FF6B6B88;"> −{_risk_pct:.1f}%</span>
+            </span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid #1A2A3A;">
+            <span style="font-size:11px;color:#94A3B8;">Target Level</span>
+            <span style="font-size:13px;font-weight:800;color:#00FF88;
+                         font-family:'JetBrains Mono',monospace;">{cur}{_target:.2f}
+              <span style="font-size:10px;font-weight:600;color:#00FF8888;"> +{_reward_pct:.1f}%</span>
+            </span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:11px;color:#94A3B8;">Risk / Reward</span>
+            <span style="font-size:14px;font-weight:900;color:{_rr_col};
+                         font-family:'JetBrains Mono',monospace;">1 : {_rr}
+              <span style="font-size:10px;font-weight:600;color:{_rr_col}88;"> {_rr_lbl}</span>
+            </span>
+          </div>
+        </div>""", unsafe_allow_html=True)
     with c2:
         st.markdown(f"""
         <div class="score-card">
