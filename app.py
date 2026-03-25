@@ -2131,8 +2131,15 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         end   = raw.rfind('}')
         if start != -1 and end != -1 and end > start:
             raw = raw[start:end+1]
-        raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', ' ', raw)
-        parsed = json.loads(raw.strip())
+        raw = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\xb6\u2028\u2029]', ' ', raw)
+        try:
+            parsed = json.loads(raw.strip())
+        except json.JSONDecodeError:
+            # Second attempt — strip ALL control chars + fix trailing commas
+            raw2 = re.sub(r'[\x00-\x1f\x7f]', ' ', raw)
+            raw2 = re.sub(r',\s*}', '}', raw2)
+            raw2 = re.sub(r',\s*]', ']', raw2)
+            parsed = json.loads(raw2.strip())
         # Validate minimum required keys
         if 'verdict' not in parsed:
             return {"error": "Claude response missing required fields"}
@@ -2375,7 +2382,7 @@ def main():
                         font-weight:700;margin-bottom:10px;font-family:'JetBrains Mono',monospace;">KEY TERMS</div>""",
                         unsafe_allow_html=True)
             glossary = [
-                ("Signal Score — Day Trade","#FACC15","Rates setup quality for a same-day or 48-hour trade. Weighted toward: ATR range viability, volume participation, MACD momentum, RSI zone, and price vs 20MA. Fundamentals have zero weight — business quality cannot predict a 6-hour price move. Score 7+ = strong conditions. Score below 4 = avoid."),
+
                 ("Signal Score — Swing Trade","#38BDF8","Rates setup quality for a 1–8 week hold. Weighted toward: Weinstein Phase (dominant), MA stack alignment, OBV institutional flow, Three Tailwinds regime, volume, and news catalyst quality. Fundamentals act as a multiplier. Score 7+ = strong setup. Default view."),
                 ("Signal Score — Position","#00FF88","Rates setup quality for a 3–12 month hold. Weighted toward: fundamental business quality (dominant), analyst consensus vs price, Three Tailwinds macro regime, and business cycle alignment. RSI, MACD, and candles have no weight. Score 7+ = strong long-term case. Use for evaluating whether to own the business, not for timing entries."),
                 ("ADR %","#00FF88","Average Daily Range %. How much the stock moves from low to high on an average day, as a percentage of price. At $176 with 3.2% ADR, that's ~$5.72 of daily movement. · Under 1.5%: Too slow — not enough range to trade profitably after commissions. · 1.5–4% Sweet spot: Ideal for day and swing trading — enough movement for good R/R, not so wild it stops you out constantly. · 4–6% High momentum: Good for experienced day traders, risky for beginners. · Above 6% Dangerous: Whipsaws are frequent, position sizing must be very small. For investing, ADR% is mostly noise — only matters if it's rapidly expanding (rising volatility = potential catalyst or deterioration)."),
@@ -3476,19 +3483,18 @@ def render_hud():
     fs_bucket_str = f" · Evaluated as: {fs['bucket']}" if fs['bucket'] else ''
 
     # Timeframe navigation state — default Swing
-    tf_order = ['Day', 'Swing', 'Position']
-    tf_labels = {'Day': '⚡ Day Trade', 'Swing': '🔄 Swing Trade', 'Position': '📈 Position'}
+    tf_order = ['Swing', 'Position']
+    tf_labels = {'Swing': '🔄 Swing Trade', 'Position': '📈 Position'}
     tf_desc   = {
-        'Day':      'Hours to 48hrs — volatility, momentum, volume',
         'Swing':    '1–8 weeks — trend structure, phase, OBV',
         'Position': '3–12 months — fundamentals, macro, analyst consensus',
     }
     tf_signals_used = {
-        'Day':      'ATR range · Volume · MACD · RSI zone · 20MA · Candle pattern',
         'Swing':    'Weinstein Phase · MA stack · OBV · Tailwinds · Volume · News catalyst · RSI',
         'Position': 'Fundamental quality · Analyst target · Tailwinds · Phase · 50/200MA · OBV · Cycle',
     }
-    if 'score_timeframe' not in st.session_state:
+    # Reset stale 'Day' value if stored from previous session
+    if st.session_state.get('score_timeframe') not in tf_order:
         st.session_state['score_timeframe'] = 'Swing'
     cur_tf   = st.session_state['score_timeframe']
     cur_idx  = tf_order.index(cur_tf)
@@ -3515,17 +3521,7 @@ def render_hud():
         day_note   = a.get('day_trade_note', '')
         swing_note = a.get('swing_note', '')
         inv_note   = a.get('invest_note', '')
-        if day_note:
-            st.markdown(
-                f'<div class="tf-day">'
-                f'<div class="tf-header-day">'
-                f'<span style="font-size:15px;">⚡</span>'
-                f'<span class="tf-label" style="color:#FACC15;">Day Trade</span>'
-                f'<span style="margin-left:auto;font-size:13px;color:#FACC1588;font-family:monospace;">Hours – 48hrs</span>'
-                f'</div>'
-                f'<div class="tf-note">{day_note}</div>'
-                f'</div>',
-                unsafe_allow_html=True)
+
         if swing_note:
             st.markdown(
                 f'<div class="tf-swing">'
@@ -3661,10 +3657,10 @@ def render_hud():
         arr_l, arr_m, arr_r = st.columns([1, 2, 1])
         with arr_l:
             if st.button("◀", key="tf_prev", use_container_width=True):
-                st.session_state['score_timeframe'] = tf_order[(cur_idx - 1) % 3]
+                st.session_state['score_timeframe'] = tf_order[(cur_idx - 1) % 2]
                 st.rerun()
         with arr_m:
-            tf_full_names = {'Day': 'DAY TRADE', 'Swing': 'SWING TRADE', 'Position': 'POSITION'}
+            tf_full_names = {'Swing': 'SWING TRADE', 'Position': 'POSITION'}
             st.markdown(
                 f'<div style="text-align:center;padding-top:2px;font-size:15px;'
                 f'font-weight:900;color:{score_col};letter-spacing:1px;">'
@@ -3672,7 +3668,7 @@ def render_hud():
                 unsafe_allow_html=True)
         with arr_r:
             if st.button("▶", key="tf_next", use_container_width=True):
-                st.session_state['score_timeframe'] = tf_order[(cur_idx + 1) % 3]
+                st.session_state['score_timeframe'] = tf_order[(cur_idx + 1) % 2]
                 st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -3843,86 +3839,6 @@ def render_hud():
           <div style="font-size:13px;color:#E2E8F0;line-height:1.8;">{s_fall}</div>
         </div>""", unsafe_allow_html=True)
 
-    # ── WEINSTEIN PHASE + THREE TAILWINDS ────────────────────
-    ph_num, ph_label, ph_sub, ph_col, ph_conf, ph_conf_text, ph_desc = phase_result
-    sector_name = (
-        str(info.get('sector','') or '') or
-        str(info.get('sectorDisp','') or '') or
-        str(info.get('industry','') or '')
-    ).strip()
-    sector_etf = SECTOR_ETF_MAP.get(sector_name, '')
-    if not sector_etf and sector_name:
-        for k, v in SECTOR_ETF_MAP.items():
-            if k.lower() in sector_name.lower() or sector_name.lower() in k.lower():
-                sector_etf = v
-                break
-
-    mkt_phase = mkt_phase_hud   # already read from session state above
-    sec_phase = sec_phase_hud   # already read from session state above
-
-    tw_market = 1 if mkt_phase[0] == 2 else 0
-    tw_sector = 1 if sec_phase[0] == 2 else 0
-    tw_stock  = 1 if ph_num == 2 else 0
-    tw_score  = tw_market + tw_sector + tw_stock
-    tw_col    = "#00FF88" if tw_score == 3 else "#FACC15" if tw_score == 2 else "#F97316" if tw_score == 1 else "#FF6B6B"
-    tw_label  = {3:"All tailwinds aligned ✓", 2:"2 of 3 aligned", 1:"1 of 3 aligned", 0:"No tailwinds"}[tw_score]
-
-    phase_conf_colors = ["#94A3B8","#F97316","#FACC15","#00FF88"]
-    ph_conf_col = phase_conf_colors[min(ph_conf, 3)]
-
-    st.markdown(f'''
-    <div style="background:#0D1525;border:1px solid #1E2D42;border-radius:10px;
-                padding:14px 18px;margin:8px 0;display:grid;
-                grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
-      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {mkt_phase[3]};padding-top:10px;">
-        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
-                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">MARKET · SPY</div>
-        <div style="font-size:16px;font-weight:800;color:{mkt_phase[3]};font-family:'JetBrains Mono',monospace;">{mkt_phase[1]}</div>
-        <div style="font-size:13px;color:{mkt_phase[3]};margin-top:2px;">{mkt_phase[2]}</div>
-        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{mkt_phase[6][:55]}</div>
-      </div>
-      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {sec_phase[3]};padding-top:10px;">
-        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
-                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">SECTOR · {sector_etf or "N/A"}</div>
-        <div style="font-size:16px;font-weight:800;color:{sec_phase[3]};font-family:'JetBrains Mono',monospace;">{sec_phase[1]}</div>
-        <div style="font-size:13px;color:{sec_phase[3]};margin-top:2px;">{sec_phase[2]}</div>
-        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{sec_phase[6][:55]}</div>
-      </div>
-      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {ph_col};padding-top:10px;">
-        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
-                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">STOCK · {ticker}</div>
-        <div style="font-size:16px;font-weight:800;color:{ph_col};font-family:'JetBrains Mono',monospace;">{ph_label}</div>
-        <div style="font-size:13px;color:{ph_col};margin-top:2px;">{ph_sub}</div>
-        <div style="font-size:13px;color:{ph_conf_col};margin-top:4px;">{ph_conf_text}</div>
-        <div style="font-size:13px;color:#CBD5E1;margin-top:2px;line-height:1.4;">{ph_desc[:55]}</div>
-      </div>
-      <div style="border-top:2px solid {tw_col};padding-top:10px;">
-        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
-                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">THREE TAILWINDS</div>
-        <div style="font-size:36px;font-weight:800;color:{tw_col};font-family:'JetBrains Mono',monospace;line-height:1;">
-          {tw_score}<span style="font-size:18px;color:#4A6080;">/3</span></div>
-        <div style="font-size:13px;color:{tw_col};margin-top:4px;font-weight:700;">{tw_label}</div>
-        <div style="display:flex;gap:4px;margin-top:8px;">
-          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_market else "#243348"};"></div>
-          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_sector else "#243348"};"></div>
-          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_stock else "#243348"};"></div>
-        </div>
-        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;">Market · Sector · Stock</div>
-      </div>
-    </div>''', unsafe_allow_html=True)
-
-    sig_keys = ['MA20','MA50','MA200','RSI','MACD','OBV','Vol','ATR']
-    cols = st.columns(8)
-    for i, k in enumerate(sig_keys):
-        s = signals[k]
-        with cols[i]:
-            st.markdown(sig_html(s['label'], s['val'], s['bull'], s.get('neut', False), s.get('subtitle', '')), unsafe_allow_html=True)
-
-    # ── LIVE CHART ────────────────────────────────────────────
-    st.markdown('<div class="section-header" style="margin-top:8px;">LIVE CHART · DAILY CANDLES · 1 YEAR</div>', unsafe_allow_html=True)
-    chart_df = df.tail(252).copy()
-    st.plotly_chart(build_chart(chart_df, ticker), use_container_width=True, config={'displayModeBar': True})
-
     vwap   = float(a.get('vwap', close))
     ema100 = float(a.get('ema100', float(row['MA100'])))
     fib382, fib500, fib618 = fibs
@@ -4083,6 +3999,86 @@ def render_hud():
     with c2:
         for b in bears:
             st.markdown(f'<div class="reason-bear">− &nbsp;{b}</div>', unsafe_allow_html=True)
+
+    # ── WEINSTEIN PHASE + THREE TAILWINDS ────────────────────
+    ph_num, ph_label, ph_sub, ph_col, ph_conf, ph_conf_text, ph_desc = phase_result
+    sector_name = (
+        str(info.get('sector','') or '') or
+        str(info.get('sectorDisp','') or '') or
+        str(info.get('industry','') or '')
+    ).strip()
+    sector_etf = SECTOR_ETF_MAP.get(sector_name, '')
+    if not sector_etf and sector_name:
+        for k, v in SECTOR_ETF_MAP.items():
+            if k.lower() in sector_name.lower() or sector_name.lower() in k.lower():
+                sector_etf = v
+                break
+
+    mkt_phase = mkt_phase_hud   # already read from session state above
+    sec_phase = sec_phase_hud   # already read from session state above
+
+    tw_market = 1 if mkt_phase[0] == 2 else 0
+    tw_sector = 1 if sec_phase[0] == 2 else 0
+    tw_stock  = 1 if ph_num == 2 else 0
+    tw_score  = tw_market + tw_sector + tw_stock
+    tw_col    = "#00FF88" if tw_score == 3 else "#FACC15" if tw_score == 2 else "#F97316" if tw_score == 1 else "#FF6B6B"
+    tw_label  = {3:"All tailwinds aligned ✓", 2:"2 of 3 aligned", 1:"1 of 3 aligned", 0:"No tailwinds"}[tw_score]
+
+    phase_conf_colors = ["#94A3B8","#F97316","#FACC15","#00FF88"]
+    ph_conf_col = phase_conf_colors[min(ph_conf, 3)]
+
+    st.markdown(f'''
+    <div style="background:#0D1525;border:1px solid #1E2D42;border-radius:10px;
+                padding:14px 18px;margin:8px 0;display:grid;
+                grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;">
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {mkt_phase[3]};padding-top:10px;">
+        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">MARKET · SPY</div>
+        <div style="font-size:16px;font-weight:800;color:{mkt_phase[3]};font-family:'JetBrains Mono',monospace;">{mkt_phase[1]}</div>
+        <div style="font-size:13px;color:{mkt_phase[3]};margin-top:2px;">{mkt_phase[2]}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{mkt_phase[6][:55]}</div>
+      </div>
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {sec_phase[3]};padding-top:10px;">
+        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">SECTOR · {sector_etf or "N/A"}</div>
+        <div style="font-size:16px;font-weight:800;color:{sec_phase[3]};font-family:'JetBrains Mono',monospace;">{sec_phase[1]}</div>
+        <div style="font-size:13px;color:{sec_phase[3]};margin-top:2px;">{sec_phase[2]}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{sec_phase[6][:55]}</div>
+      </div>
+      <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {ph_col};padding-top:10px;">
+        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">STOCK · {ticker}</div>
+        <div style="font-size:16px;font-weight:800;color:{ph_col};font-family:'JetBrains Mono',monospace;">{ph_label}</div>
+        <div style="font-size:13px;color:{ph_col};margin-top:2px;">{ph_sub}</div>
+        <div style="font-size:13px;color:{ph_conf_col};margin-top:4px;">{ph_conf_text}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:2px;line-height:1.4;">{ph_desc[:55]}</div>
+      </div>
+      <div style="border-top:2px solid {tw_col};padding-top:10px;">
+        <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
+                    font-family:'JetBrains Mono',monospace;margin-bottom:6px;">THREE TAILWINDS</div>
+        <div style="font-size:36px;font-weight:800;color:{tw_col};font-family:'JetBrains Mono',monospace;line-height:1;">
+          {tw_score}<span style="font-size:18px;color:#4A6080;">/3</span></div>
+        <div style="font-size:13px;color:{tw_col};margin-top:4px;font-weight:700;">{tw_label}</div>
+        <div style="display:flex;gap:4px;margin-top:8px;">
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_market else "#243348"};"></div>
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_sector else "#243348"};"></div>
+          <div style="width:28px;height:6px;border-radius:3px;background:{"#00FF88" if tw_stock else "#243348"};"></div>
+        </div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;">Market · Sector · Stock</div>
+      </div>
+    </div>''', unsafe_allow_html=True)
+
+    sig_keys = ['MA20','MA50','MA200','RSI','MACD','OBV','Vol','ATR']
+    cols = st.columns(8)
+    for i, k in enumerate(sig_keys):
+        s = signals[k]
+        with cols[i]:
+            st.markdown(sig_html(s['label'], s['val'], s['bull'], s.get('neut', False), s.get('subtitle', '')), unsafe_allow_html=True)
+
+    # ── LIVE CHART ────────────────────────────────────────────
+    st.markdown('<div class="section-header" style="margin-top:8px;">LIVE CHART · DAILY CANDLES · 1 YEAR</div>', unsafe_allow_html=True)
+    chart_df = df.tail(252).copy()
+    st.plotly_chart(build_chart(chart_df, ticker), use_container_width=True, config={'displayModeBar': True})
 
     # ── VOLATILITY ───────────────────────────────────────────
     cur_close = float(row['Close'])
