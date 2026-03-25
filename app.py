@@ -2110,12 +2110,55 @@ def get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, mark
         if not _api_key:
             return {"error": "Anthropic API key not configured. Add ANTHROPIC_API_KEY to Streamlit secrets."}
         client = anthropic.Anthropic(api_key=_api_key)
-        msg = client.messages.create(
-            model=model_name,
-            max_tokens=max_tok,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw = msg.content[0].text.strip()
+        # ── FIX-024: retry up to 2 times on 529 overload ─────
+        import time as _time
+        _last_err = None
+        _msg = None
+        for _attempt in range(2):
+            try:
+                _msg = client.messages.create(
+                    model=model_name,
+                    max_tokens=max_tok,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                break  # success
+            except Exception as _e:
+                _last_err = _e
+                err_str = str(_e)
+                if '529' in err_str or 'overloaded' in err_str.lower():
+                    if _attempt == 0:
+                        _time.sleep(8)  # wait 8 seconds then retry once
+                        continue
+                    # Second failure — return friendly message instead of crash
+                    return {
+                        "verdict": "WATCH",
+                        "confidence": "Low",
+                        "risk": "Medium",
+                        "risk_reason": "Analysis temporarily unavailable — Anthropic servers busy.",
+                        "summary": "Anthropic's servers are currently overloaded. This is temporary — please try again in 30-60 seconds.",
+                        "summary_macro": "Anthropic API unavailable (error 529). Try again in 30-60 seconds.",
+                        "summary_macro_sentiment": "mixed",
+                        "reasons_bull": ["Retry in 30-60 seconds — Anthropic overloaded"],
+                        "reasons_bear": ["Analysis not available"],
+                        "day_trade_note": "",
+                        "swing_note": "Server busy — retry shortly.",
+                        "invest_note": "",
+                        "news_scores": [], "net_news_score": 0,
+                        "trend_short": "Unknown", "trend_short_desc": "Retry required",
+                        "trend_medium": "Unknown", "trend_medium_desc": "Retry required",
+                        "trend_long": "Unknown", "trend_long_desc": "Retry required",
+                        "pattern_bias": "Neutral", "pattern_bias_desc": "",
+                        "chart_patterns": [], "candle_patterns": [],
+                        "cycle_phase": "Unknown", "cycle_desc": "",
+                        "market_risk": "Moderate", "market_risk_desc": "",
+                        "news_sentiment": [],
+                        "_overloaded": True
+                    }
+                else:
+                    raise  # non-529 error — let the outer except handle it
+        if _msg is None:
+            raise _last_err
+        raw = _msg.content[0].text.strip()
         # Strip markdown fences
         if '```' in raw:
             parts = raw.split('```')
@@ -2645,7 +2688,7 @@ def main():
                                 else:
                                     # Check if input looks like a company name (not a ticker)
                                     _looks_like_name = (
-                                        len(ticker_upper) > 5 and
+                                        len(ticker_upper) > 4 and
                                         not any(c.isdigit() for c in ticker_upper) and
                                         ticker_upper not in MULTI_LISTED
                                     )
@@ -2841,7 +2884,11 @@ def run_analysis(ticker):
         analysis = get_claude_analysis(ticker, info, df, signals, score, fibs, news_items, market_ctx, mode=analysis_mode)
         if 'error' in analysis:
             prog.empty()
-            st.error(f"Claude API error: {analysis['error']}")
+            err_msg = analysis['error']
+            if '529' in err_msg or 'overloaded' in err_msg.lower():
+                st.warning("⏳ Anthropic servers are busy right now. This happens during peak hours — please wait 30-60 seconds and try again.")
+            else:
+                st.error(f"Claude API error: {err_msg}")
             return
 
         prog.info("⏳ Processing analyst & earnings data...")
