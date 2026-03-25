@@ -333,22 +333,41 @@ def fetch_ticker_data(ticker, fmp_key="", _v=17):
                 }
                 extra_kw = sector_kw.get(sector, []) + sector_kw.get(industry[:20], [])
 
+                # Build ticker variants for matching (handles CSU.TO → csu, constellation)
+                tick_base    = tick_lower  # already stripped of .to/.l etc
+                tick_orig    = ticker.lower()  # e.g. "csu.to"
+                # Company name words longer than 3 chars for matching
+                name_words   = [w for w in company_name.split() if len(w) > 3
+                                and w not in ('inc.','inc','corp','corp.','ltd','ltd.',
+                                              'the','and','for','group','holdings','limited')]
+                is_canadian  = ticker.upper().endswith('.TO') or ticker.upper().endswith('.CN')
+
                 def relevance_score(title):
                     t = title.lower()
                     score = 0
-                    # Direct company/ticker mention = highest weight
-                    if tick_lower in t: score += 10
-                    if company_name and any(w in t for w in company_name.split() if len(w) > 3):
+                    # Direct ticker/company mention = highest weight
+                    if tick_base in t:                           score += 10
+                    if tick_orig in t:                           score += 10
+                    if name_words and any(w in t for w in name_words[:3]):
                         score += 8
-                    # Sector/industry keywords
+                    # Sector keywords
                     for kw in extra_kw:
                         if kw in t: score += 2
                     # Generic filler penalty
                     filler = ['$1,000','passive income','buy this etf','10 years ago',
-                              'chipotle','coca-cola','dividend','here\'s how much',
-                              'warren buffett','best stocks to buy','should you buy']
+                              'chipotle','coca-cola','here\'s how much',
+                              'warren buffett','best stocks to buy','should you buy',
+                              'sabr','sabre corporation','unrelated']
                     for f in filler:
-                        if f in t: score -= 5
+                        if f in t: score -= 8
+                    # For Canadian tickers: heavily penalise US-only company mentions
+                    # that couldn't possibly relate to this stock
+                    if is_canadian:
+                        us_only = ['apple ','microsoft ','nvidia ','amazon ','meta ',
+                                   'google ','netflix ','disney ','jpmorgan ','goldman']
+                        for u in us_only:
+                            if u in t and tick_base not in t and not any(w in t for w in name_words):
+                                score -= 6
                     return score
 
                 scored = []
@@ -365,9 +384,13 @@ def fetch_ticker_data(ticker, fmp_key="", _v=17):
                 # Sort by relevance, keep top 8 with score > 0
                 scored.sort(key=lambda x: x[0], reverse=True)
                 news = [item for score, item in scored if score > 0][:8]
-                # If filtering was too aggressive, fall back to top 5 unfiltered
+                # Fallback: for Canadian tickers require at least score>-3 to avoid garbage
+                # For US tickers: use unfiltered top 5 if nothing scored positive
                 if not news:
-                    news = [item for _, item in scored[:5]]
+                    if is_canadian:
+                        news = [item for score, item in scored if score > -3][:5]
+                    else:
+                        news = [item for _, item in scored[:5]]
         except: pass
 
     # yfinance news as fallback when FMP returns nothing
@@ -1566,6 +1589,59 @@ SECTOR_ETF_MAP = {
     "Media":                       "XLC",
     "Entertainment":               "XLC",
     "Internet":                    "XLC",
+    # Canadian / yfinance industry-level strings (TSX tickers)
+    "Software—Application":        "XLK",
+    "Software - Application":      "XLK",
+    "Software—Infrastructure":     "XLK",
+    "Software - Infrastructure":   "XLK",
+    "Information Technology Services": "XLK",
+    "IT Services":                 "XLK",
+    "Systems Software":            "XLK",
+    "Application Software":        "XLK",
+    "Internet Content & Information": "XLC",
+    "Interactive Media & Services":"XLC",
+    "Diversified Industrials":     "XLI",
+    "Capital Markets":             "XLF",
+    "Asset Management":            "XLF",
+    "Diversified Financial Services": "XLF",
+    "Banks—Diversified":           "XLF",
+    "Banks - Diversified":         "XLF",
+    "Insurance—Diversified":       "XLF",
+    "Insurance - Diversified":     "XLF",
+    "Life Insurance":              "XLF",
+    "Oil & Gas E&P":               "XLE",
+    "Oil & Gas Integrated":        "XLE",
+    "Oil & Gas Midstream":         "XLE",
+    "Oil & Gas Equipment & Services": "XLE",
+    "Gold":                        "XLB",
+    "Copper":                      "XLB",
+    "Lumber & Wood Production":    "XLB",
+    "Paper & Forest Products":     "XLB",
+    "Agricultural Inputs":         "XLB",
+    "Specialty Chemicals":         "XLB",
+    "Railroads":                   "XLI",
+    "Trucking":                    "XLI",
+    "Waste Management":            "XLI",
+    "Engineering & Construction":  "XLI",
+    "Farm & Heavy Construction Machinery": "XLI",
+    "Specialty Retail":            "XLY",
+    "Grocery Stores":              "XLP",
+    "Food Distribution":           "XLP",
+    "Beverages—Non-Alcoholic":     "XLP",
+    "Household Products":          "XLP",
+    "Drug Stores":                 "XLP",
+    "Utilities—Regulated Electric": "XLU",
+    "Utilities—Regulated Gas":     "XLU",
+    "Utilities—Renewable":         "XLU",
+    "Real Estate Services":        "XLRE",
+    "REIT—Diversified":            "XLRE",
+    "REIT—Retail":                 "XLRE",
+    "REIT—Office":                 "XLRE",
+    "REIT—Industrial":             "XLRE",
+    "Diagnostics & Research":      "XLV",
+    "Medical Devices":             "XLV",
+    "Medical Instruments & Supplies": "XLV",
+    "Drug Manufacturers—General":  "XLV",
 }
 
 
