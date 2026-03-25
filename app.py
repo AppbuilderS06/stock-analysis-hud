@@ -901,7 +901,7 @@ st.markdown("""
   .earn-beat { color: #00FF88; font-weight: 700; }
   .earn-miss { color: #FF6B6B; font-weight: 700; }
 
-  .insider-row { display: grid; grid-template-columns: 2fr 1.5fr 80px 1.2fr 1.2fr; align-items: center; padding: 11px 16px; border-bottom: 1px solid #111827; gap: 8px; }
+  .insider-row { display: grid; grid-template-columns: 2fr 1.5fr 80px 1.2fr 1.2fr 90px; align-items: center; padding: 11px 16px; border-bottom: 1px solid #111827; gap: 8px; }
   .insider-row:last-child { border-bottom: none; }
   .insider-header { background: #131F32; }
   .insider-name { color: #E2E8F0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -4495,12 +4495,20 @@ def render_hud():
             '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;text-align:center;">Type</span>'
             '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;text-align:right;">Shares</span>'
             '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;text-align:right;">Value</span>'
+            '<span style="font-size:13px;color:#5EEAD4;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;text-align:right;">Date</span>'
             '</div>'
         )
         for ins in insider_data:
             badge_cls = "insider-badge-buy" if ins["type"] == "BUY" else "insider-badge-sell"
             val_str   = f'${ins["value"]:,.0f}' if ins["value"] > 0 else "—"
             shares_str = f'{ins["shares"]:,}' if ins["shares"] > 0 else "—"
+            # Format date — shorten to Mon DD 'YY
+            _date_raw = ins.get('date', '')
+            try:
+                from datetime import datetime as _dt
+                _date_fmt = _dt.strptime(_date_raw[:10], '%Y-%m-%d').strftime("%b %d '%y") if _date_raw else '—'
+            except:
+                _date_fmt = _date_raw[:10] if _date_raw else '—'
             ins_html += (
                 f'<div class="insider-row">'
                 f'<span class="insider-name">{_html.escape(ins["name"])}</span>'
@@ -4508,6 +4516,7 @@ def render_hud():
                 f'<span><span class="{badge_cls}">{ins["type"]}</span></span>'
                 f'<span class="insider-shares">{shares_str}</span>'
                 f'<span class="insider-value">{val_str}</span>'
+                f'<span style="font-size:13px;color:#64748B;font-family:monospace;text-align:right;">{_date_fmt}</span>'
                 f'</div>'
             )
         st.markdown(ins_html + '</div>', unsafe_allow_html=True)
