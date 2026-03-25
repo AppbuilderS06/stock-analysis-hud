@@ -2636,11 +2636,33 @@ def main():
                                     m = matches[0]
                                     _confirm(m["sym"], m["name"], m["exchange"], m["currency"])
                                 else:
-                                    # Unknown ticker — show verify card + confirm button
-                                    render_preview_card(ticker_upper, "", "", "", name_found=False)
-                                    if st.button(f"Select {ticker_upper} →", type="primary",
-                                                 use_container_width=True, key="select_unk"):
-                                        _confirm(ticker_upper, "", "", "", name_found=False)
+                                    # Check if input looks like a company name (not a ticker)
+                                    _looks_like_name = (
+                                        len(ticker_upper) > 5 and
+                                        not any(c.isdigit() for c in ticker_upper) and
+                                        ticker_upper not in MULTI_LISTED
+                                    )
+                                    if _looks_like_name:
+                                        st.markdown(f"""
+                                        <div style="background:#1A1000;border:1px solid #FACC1566;
+                                            border-radius:10px;padding:14px 18px;margin-top:8px;">
+                                          <div style="font-size:14px;font-weight:700;color:#FACC15;
+                                            margin-bottom:6px;">⚠️ Company name not found</div>
+                                          <div style="font-size:13px;color:#CBD5E1;line-height:1.6;">
+                                            Try the ticker symbol instead.<br>
+                                            Examples: <span style="color:#00FF88;font-family:monospace;
+                                            font-weight:700;">GOOGL</span> for Google &nbsp;·&nbsp;
+                                            <span style="color:#00FF88;font-family:monospace;
+                                            font-weight:700;">TSLA</span> for Tesla &nbsp;·&nbsp;
+                                            <span style="color:#00FF88;font-family:monospace;
+                                            font-weight:700;">AAPL</span> for Apple
+                                          </div>
+                                        </div>""", unsafe_allow_html=True)
+                                    else:
+                                        render_preview_card(ticker_upper, "", "", "", name_found=False)
+                                        if st.button(f"Select {ticker_upper} →", type="primary",
+                                                     use_container_width=True, key="select_unk"):
+                                            _confirm(ticker_upper, "", "", "", name_found=False)
                         else:
                             # No FMP key — auto-confirm directly
                             _confirm(ticker_upper, "", "", "", name_found=False)
