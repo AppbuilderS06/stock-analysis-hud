@@ -4159,14 +4159,14 @@ def render_hud():
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">MARKET · SPY</div>
         <div style="font-size:16px;font-weight:800;color:{mkt_phase[3]};font-family:'JetBrains Mono',monospace;">{mkt_phase[1]}</div>
         <div style="font-size:13px;color:{mkt_phase[3]};margin-top:2px;">{mkt_phase[2]}</div>
-        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{mkt_phase[6][:55]}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{mkt_phase[6]}</div>
       </div>
       <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {sec_phase[3]};padding-top:10px;">
         <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
                     font-family:'JetBrains Mono',monospace;margin-bottom:6px;">SECTOR · {sector_etf or "N/A"}</div>
         <div style="font-size:16px;font-weight:800;color:{sec_phase[3]};font-family:'JetBrains Mono',monospace;">{sec_phase[1]}</div>
         <div style="font-size:13px;color:{sec_phase[3]};margin-top:2px;">{sec_phase[2]}</div>
-        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{sec_phase[6][:55]}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:4px;line-height:1.4;">{sec_phase[6]}</div>
       </div>
       <div style="border-right:1px solid #1E2D42;padding-right:12px;border-top:2px solid {ph_col};padding-top:10px;">
         <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
@@ -4174,7 +4174,7 @@ def render_hud():
         <div style="font-size:16px;font-weight:800;color:{ph_col};font-family:'JetBrains Mono',monospace;">{ph_label}</div>
         <div style="font-size:13px;color:{ph_col};margin-top:2px;">{ph_sub}</div>
         <div style="font-size:13px;color:{ph_conf_col};margin-top:4px;">{ph_conf_text}</div>
-        <div style="font-size:13px;color:#CBD5E1;margin-top:2px;line-height:1.4;">{ph_desc[:55]}</div>
+        <div style="font-size:13px;color:#CBD5E1;margin-top:2px;line-height:1.4;">{ph_desc}</div>
       </div>
       <div style="border-top:2px solid {tw_col};padding-top:10px;">
         <div style="font-size:13px;color:#CBD5E1;letter-spacing:2px;text-transform:uppercase;
