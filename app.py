@@ -658,30 +658,31 @@ st.markdown("""
   }
 
   .identity-bar {
-    background: linear-gradient(135deg, #0A1F12 0%, #0A1530 100%);
-    border: 1px solid #5EEAD4;
+    background: #111113;
+    border: 1px solid #27272A;
     border-radius: 10px;
-    padding: 16px 22px;
+    padding: 18px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 6px;
   }
-  .ticker-name { font-family: 'JetBrains Mono', monospace; font-size: 42px; font-weight: 800; color: #4ADE80; letter-spacing: 4px; text-shadow: 0 0 20px #4ADE8040; }
-  .company-name { font-size: 16px; font-weight: 600; color: #F4F4F5; }
-  .exchange-pill { font-size:13px; color: #99F6E4; background: #0C1F1F; border: 1px solid #5EEAD4; padding: 3px 10px; border-radius: 4px; letter-spacing: 1px; }
-  .price-display { font-family: 'JetBrains Mono', monospace; font-size: 36px; font-weight: 800; color: #FBBF24; text-align: right; }
-  .price-change-up { display: inline-block; background: #0A1F0F; border: 1px solid #4ADE8044; border-radius: 6px; padding: 4px 12px; font-size: 14px; font-weight: 700; color: #4ADE80; font-family: 'JetBrains Mono', monospace; }
-  .price-change-dn { display: inline-block; background: #1F0808; border: 1px solid #F8717144; border-radius: 6px; padding: 4px 12px; font-size: 14px; font-weight: 700; color: #F87171; font-family: 'JetBrains Mono', monospace; }
+  .ticker-name { font-family: 'JetBrains Mono', monospace; font-size: 40px; font-weight: 700; color: #F4F4F5; letter-spacing: 3px; }
+  .company-name { font-size: 14px; font-weight: 500; color: #A1A1AA; letter-spacing: 0.2px; }
+  .exchange-pill { font-size:11px; color: #52525B; background: #1C1C1F; border: 1px solid #27272A; padding: 2px 8px; border-radius: 3px; letter-spacing: 1.5px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+  .price-display { font-family: 'JetBrains Mono', monospace; font-size: 38px; font-weight: 700; color: #FBBF24; text-align: right; letter-spacing: -0.5px; }
+  .price-change-up { display: inline-block; background: transparent; border: none; border-radius: 4px; padding: 2px 0; font-size: 14px; font-weight: 700; color: #4ADE80; font-family: 'JetBrains Mono', monospace; }
+  .price-change-dn { display: inline-block; background: transparent; border: none; border-radius: 4px; padding: 2px 0; font-size: 14px; font-weight: 700; color: #F87171; font-family: 'JetBrains Mono', monospace; }
 
   .status-bar {
-    background: linear-gradient(90deg, #0B1A10 0%, #0B1625 100%);
+    background: #111113;
+    border: 1px solid #27272A;
     border-radius: 6px; padding: 7px 16px;
     font-family: 'JetBrains Mono', monospace;
-    font-size:13px; color: #3D6050;
+    font-size:13px; color: #52525B;
     margin-bottom: 10px;
   }
-  .status-bar span { color: #99F6E4; font-weight: 600; }
+  .status-bar span { color: #A1A1AA; font-weight: 600; }
 
   .section-header {
     background: #0C1F1F;
@@ -727,14 +728,14 @@ st.markdown("""
   .sig-val-r { font-size: 14px; font-weight: 700; color: #F87171; font-family: 'JetBrains Mono', monospace; }
   .sig-val-y { font-size: 14px; font-weight: 700; color: #FBBF24; font-family: 'JetBrains Mono', monospace; }
 
-  .verdict-card { border-radius: 8px; padding: 16px 18px; border-left-width: 3px; border-left-style: solid; }
+  .verdict-card { border-radius: 8px; padding: 16px 18px; border-left-width: 2px; border-left-style: solid; }
   .verdict-label { font-size:13px; letter-spacing: 2px; text-transform: uppercase; opacity: 0.8; margin-bottom: 5px; }
   .verdict-value { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
   .verdict-meta { font-size:13px; color: #71717A; margin-top: 4px; }
   .verdict-note { font-size:13px; margin-top: 6px; line-height: 1.5; opacity: 0.9; }
 
-  .score-card { background: #0A0F1A; border: 1px solid #27272A; border-left: 3px solid #60A5FA; border-radius: 8px; padding: 16px 18px; }
-  .score-label { font-size:13px; color: #60A5FA; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .score-card { background: #111113; border: 1px solid #27272A; border-radius: 8px; padding: 16px 18px; }
+  .score-label { font-size:11px; color: #52525B; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
   .score-num { font-family: 'JetBrains Mono', monospace; font-size: 52px; font-weight: 800; line-height: 1; }
   .score-denom { font-size: 20px; color: #52525B; }
 
@@ -750,7 +751,7 @@ st.markdown("""
   .tf-header-swing { background: linear-gradient(135deg, #0A0F1F 0%, #0A0F1A 100%); padding: 9px 16px; border-bottom: 1px solid #60A5FA33; display: flex; align-items: center; gap: 8px; }
   .tf-header-inv   { background: linear-gradient(135deg, #0A1F0F 0%, #0A0F1A 100%); padding: 9px 16px; border-bottom: 1px solid #4ADE8033; display: flex; align-items: center; gap: 8px; }
 
-  .earn-bar { background: #111113; border: 1px solid #27272A; border-left: 3px solid #60A5FA; border-radius: 8px; padding: 10px 16px; }
+  .earn-bar { background: #111113; border: 1px solid #27272A; border-left: 2px solid #60A5FA; border-radius: 8px; padding: 10px 16px; }
   .earn-label { font-size: 9px; color: #52525B; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 3px; }
   .earn-val { font-size: 13px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
 
@@ -779,28 +780,31 @@ st.markdown("""
   .range-dot { position: absolute; top: -4px; width: 12px; height: 12px; background: #F4F4F5; border-radius: 50%; transform: translateX(-50%); border: 2px solid #09090B; }
 
   .stTextInput input {
-    background: #060A08 !important;
-    border: 2px solid #4ADE80 !important;
+    background: #1C1C1F !important;
+    border: 1px solid #27272A !important;
     border-radius: 8px !important;
-    color: #4ADE80 !important;
+    color: #F4F4F5 !important;
     font-size: 22px !important;
-    font-weight: 800 !important;
+    font-weight: 700 !important;
     font-family: 'JetBrains Mono', monospace !important;
     text-align: center !important;
     letter-spacing: 4px !important;
     text-transform: uppercase !important;
     padding: 12px !important;
   }
-  .stTextInput input:focus { box-shadow: 0 0 0 3px #4ADE8018 !important; }
+  .stTextInput input:focus {
+    border-color: #5EEAD4 !important;
+    box-shadow: 0 0 0 2px #5EEAD410 !important;
+  }
   [data-testid="stForm"] .stButton button,
   .stTextInput + div .stButton button,
   button[kind="primary"] {
-    background: #4ADE80 !important;
-    color: #080E18 !important;
-    border: none !important;
+    background: #111113 !important;
+    color: #4ADE80 !important;
+    border: 1px solid #4ADE8066 !important;
     border-radius: 8px !important;
     font-size: 15px !important;
-    font-weight: 800 !important;
+    font-weight: 700 !important;
     letter-spacing: 1px !important;
     width: 100% !important;
     padding: 14px !important;
@@ -2510,12 +2514,12 @@ def main():
                 mp1, mp2 = st.columns(2)
                 with mp1:
                     if cur_mode == "Quick":
-                        st.markdown("""<div style="background:#060A08;border:2px solid #4ADE80;
+                        st.markdown("""<div style="background:#111113;border:1.5px solid #4ADE80;
                             border-radius:8px;padding:12px 14px;margin-bottom:2px;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                               font-weight:800;color:#4ADE80;letter-spacing:1.5px;">⚡ QUICK</span>
-                            <span style="font-size:13px;color:#4ADE80;font-weight:700;">● ACTIVE</span>
+                            <span style="font-size:11px;color:#4ADE80;font-weight:700;letter-spacing:1.5px;">ACTIVE</span>
                           </div>
                           <div style="font-size:13px;color:#A1A1AA;margin-top:4px;">Sonnet · ~15s · Full analysis</div>
                         </div>""", unsafe_allow_html=True)
@@ -2533,13 +2537,12 @@ def main():
                         st.rerun()
                 with mp2:
                     if cur_mode == "Deep Research":
-                        st.markdown("""<div style="background:#06060E;border:2px solid #60A5FA;
-                            border-radius:8px;padding:12px 14px;margin-bottom:2px;
-                            box-shadow:0 0 18px rgba(96,165,250,0.15);">
+                        st.markdown("""<div style="background:#111113;border:1.5px solid #60A5FA;
+                            border-radius:8px;padding:12px 14px;margin-bottom:2px;">
                           <div style="display:flex;justify-content:space-between;align-items:center;">
                             <span style="font-family:'JetBrains Mono',monospace;font-size:13px;
                               font-weight:800;color:#60A5FA;letter-spacing:1.5px;">🔬 DEEP RESEARCH</span>
-                            <span style="font-size:13px;color:#60A5FA;font-weight:700;">● ACTIVE</span>
+                            <span style="font-size:11px;color:#60A5FA;font-weight:700;letter-spacing:1.5px;">ACTIVE</span>
                           </div>
                           <div style="font-size:13px;color:#A1A1AA;margin-top:4px;">Opus · ~45s · 4× more thorough</div>
                         </div>""", unsafe_allow_html=True)
@@ -2587,7 +2590,7 @@ def main():
                         name_col  = "#F4F4F5" if name_found else "#FBBF24"
                         name_txt  = name if name_found else "Name not found — verify this symbol"
                         exch_txt  = f"{exch} &nbsp;·&nbsp; {curr}" if exch else "Exchange unknown"
-                        st.markdown(f"""<div style="background:linear-gradient(135deg,#0A0F1F,#0F0F11);
+                        st.markdown(f"""<div style="background:#111113;
                             border:1px solid {border};border-radius:10px;padding:12px 16px;
                             margin:8px 0 4px;display:flex;align-items:center;gap:14px;">
                           <div style="font-family:'JetBrains Mono',monospace;font-size:22px;
@@ -2748,7 +2751,7 @@ def main():
                     name_display = name if name else sym
                     exch_display = f"{exch} &nbsp;·&nbsp; {curr}" if exch else ""
 
-                    st.markdown(f"""<div style="background:linear-gradient(135deg,#0A0F1F,#0F0F11);
+                    st.markdown(f"""<div style="background:#111113;
                         border:1px solid {card_border};border-radius:12px;
                         padding:16px 20px;margin-top:4px;
                         box-shadow:0 4px 24px rgba(0,0,0,0.3);">
@@ -3386,7 +3389,7 @@ def render_hud():
                  f'<span class="price-change-dn">▼ {chg:.2f} ({chg_pct:.2f}%)</span>')
 
     st.markdown(f'''
-    <div class="identity-bar" style="border-top:3px solid {vc["border"]};">
+    <div class="identity-bar" style="border-left:4px solid {phase_result[3]};">
       <div style="display:flex;align-items:center;gap:18px;">
         <div class="ticker-name">{ticker}</div>
         <div>
@@ -3401,7 +3404,7 @@ def render_hud():
         <div class="price-display">{cur}{close:.2f}</div>
         <div style="text-align:right;margin-top:6px;">{chg_badge}</div>
         <div style="margin-top:5px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;">
-          {"<span style='background:#0A1C10;border:1px solid #4ADE80;border-radius:4px;padding:2px 8px;font-size:13px;color:#A1A1AA;letter-spacing:1px;'>&#x26A1; FMP</span>" if st.secrets.get("FMP_API_KEY","") else "<span style='background:#130E00;border:1px solid #FBBF24;border-radius:4px;padding:2px 8px;font-size:13px;color:#A1A1AA;letter-spacing:1px;'>&#x26A0; yfinance</span>"}
+          {"<span style='display:inline-flex;align-items:center;gap:5px;background:#1C1C1F;border:1px solid #27272A;border-radius:4px;padding:2px 8px;font-size:11px;color:#52525B;letter-spacing:1px;font-family:monospace;'><span style='width:6px;height:6px;border-radius:50%;background:#4ADE80;display:inline-block;flex-shrink:0;'></span>FMP</span>" if st.secrets.get("FMP_API_KEY","") else "<span style='display:inline-flex;align-items:center;gap:5px;background:#1C1C1F;border:1px solid #27272A;border-radius:4px;padding:2px 8px;font-size:11px;color:#52525B;letter-spacing:1px;font-family:monospace;'><span style='width:6px;height:6px;border-radius:50%;background:#FBBF24;display:inline-block;flex-shrink:0;'></span>yfinance</span>"}
           <span style="background:{phase_result[3]}18;border:1px solid {phase_result[3]};border-radius:4px;padding:2px 10px;font-size:13px;color:{phase_result[3]};letter-spacing:1px;font-weight:800;font-family:'JetBrains Mono',monospace;">{phase_result[1]} · {phase_result[2]}</span>
         </div>
       </div>
@@ -3412,12 +3415,12 @@ def render_hud():
     st.markdown(f'''
     <div class="status-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
       <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["Open"]:.2f}</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["High"]:.2f}</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">High</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["Low"]:.2f}</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{fmt_vol(vol)}</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{row["VolTrend"]:.2f}x</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
-        <div style="text-align:center;"><div style="color:#99F6E4;font-weight:700;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
+        <div style="text-align:center;"><div style="color:#F4F4F5;font-weight:600;">{row["Open"]:.2f}</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Open</div></div>
+        <div style="text-align:center;"><div style="color:#F4F4F5;font-weight:600;">{row["High"]:.2f}</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">High</div></div>
+        <div style="text-align:center;"><div style="color:#F4F4F5;font-weight:600;">{row["Low"]:.2f}</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Low</div></div>
+        <div style="text-align:center;"><div style="color:#F4F4F5;font-weight:600;">{fmt_vol(vol)}</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Volume</div></div>
+        <div style="text-align:center;"><div style="color:#F4F4F5;font-weight:600;">{row["VolTrend"]:.2f}x</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Avg Vol</div></div>
+        <div style="text-align:center;"><div style="color:#F4F4F5;font-weight:600;">{cur}{float(row["ATR"]):.2f} ({atr_pct*100:.1f}%)</div><div style="font-size:13px;color:#A1A1AA;letter-spacing:1px;text-transform:uppercase;">Daily Range</div></div>
       </div>
       <div id="hud-localtime" style="color:#A1A1AA;font-size:13px;">--</div>
     </div>''', unsafe_allow_html=True)
